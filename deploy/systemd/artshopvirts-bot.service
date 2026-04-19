@@ -1,0 +1,22 @@
+[Unit]
+Description=ARTSHOPVIRTS Telegram bot (grammy, long polling)
+Documentation=https://github.com/SiteCraftorCPP/mini-app-artyom130609
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=artshopvirts
+Group=artshopvirts
+WorkingDirectory=/srv/artshopvirts/mini-app-artyom130609/bot
+EnvironmentFile=-/srv/artshopvirts/mini-app-artyom130609/bot/.env
+ExecStart=/usr/bin/node dist/index.js
+Restart=on-failure
+RestartSec=5
+Nice=5
+
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
