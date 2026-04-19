@@ -87,7 +87,23 @@ function resolveInstructionVideoPath(): string | null {
   return null;
 }
 
+/** Старая reply-клавиатура «залипает» у клиента, пока не придёт remove_keyboard (в одном сообщении с inline её нельзя совместить). */
+async function clearReplyKeyboard(ctx: Context) {
+  const chatId = ctx.chat?.id;
+  if (chatId === undefined) return;
+  const m = await ctx.reply("\u2060", {
+    reply_markup: { remove_keyboard: true },
+  });
+  try {
+    await ctx.api.deleteMessage(chatId, m.message_id);
+  } catch {
+    /* не критично */
+  }
+}
+
 async function sendWelcome(ctx: Context) {
+  await clearReplyKeyboard(ctx);
+
   const markup = mainMenuInlineKeyboard(miniAppUrl);
   const photo = resolveWelcomePhoto();
 
