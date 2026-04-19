@@ -4,27 +4,6 @@
 
 @custom-variant dark (&:is(.dark *));
 
-@utility tw-bg-glow-large {
-  background: var(--app-glow-large);
-  filter: blur(var(--blur-app-glow-large));
-  opacity: var(--opacity-app-glow-large);
-  transform: translateZ(0);
-}
-
-@utility tw-bg-glow-small {
-  background: var(--app-glow-small);
-  filter: blur(var(--blur-app-glow-small));
-  opacity: var(--opacity-app-glow-small);
-  transform: translateZ(0);
-}
-
-@utility tw-bg-glow-noise-large {
-  background-image: var(--texture-app-glow-noise);
-  background-size: var(--texture-app-glow-noise-size);
-  mask-image: var(--mask-app-glow-noise-large);
-  transform: scale(var(--scale-app-glow-noise)) translateZ(0);
-}
-
 @utility tw-bg-gradient-home-card {
   background: var(--gradient-home-card);
 }
@@ -293,22 +272,12 @@
 
 [data-theme="artshop"] {
   --app-background: var(--deep-aqua-black);
-  --app-glow-large: var(--aqua);
-  --app-glow-small: var(--aqua-base-68);
-  --blur-app-glow-large: 100px;
-  --blur-app-glow-small: 30px;
-  --opacity-app-glow-large: 0.82;
-  --opacity-app-glow-small: 1;
-  --scale-app-glow-noise: 1.04;
-  --texture-app-glow-noise-size: 800px 800px;
-  --texture-app-glow-noise: url("data:image/svg+xml,%3Csvg viewBox='0 0 120 120' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='2.85' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3CfeComponentTransfer%3E%3CfeFuncR type='linear' slope='1.85' intercept='-0.36'/%3E%3CfeFuncG type='linear' slope='1.85' intercept='-0.36'/%3E%3CfeFuncB type='linear' slope='1.85' intercept='-0.36'/%3E%3CfeFuncA type='table' tableValues='0 0.5'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23noise)'/%3E%3C/svg%3E");
-  --mask-app-glow-noise-large: radial-gradient(
-    circle,
-    var(--white) 0%,
-    rgba(255, 255, 255, 0.82) 24%,
-    rgba(255, 255, 255, 0.2) 46%,
-    rgba(255, 255, 255, 0.00035) 64%,
-    transparent 78%
+  /* Один линейный градиент без слоёв кругов — иначе в WebView «точки»/зерно на тёмном */
+  --app-background-gradient: linear-gradient(
+    168deg,
+    #112f32 0%,
+    #0c2123 40%,
+    #0a191a 100%
   );
   --gradient-home-card: linear-gradient(
     90deg,
@@ -404,6 +373,16 @@
   --app-surface-overlay-hover: var(--white-16);
   --app-text-muted: var(--white-72);
   --app-highlight-shadow: var(--aqua-26-shadow);
+}
+
+/* Telegram Desktop / широкий Web: без верхних отступов; mobile Mini App — без изменений */
+html[data-tg-desktop="true"] {
+  --app-telegram-top-clearance: 0px;
+  --app-telegram-popup-top-clearance: 0px;
+}
+
+html[data-tg-desktop="true"] [data-tg-dialog-popup] {
+  top: 0 !important;
 }
 
 /* Скролл только внутри layout (main); иначе body тащит fixed bottom-nav в Telegram WebView */
