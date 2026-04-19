@@ -1,16 +1,15 @@
-import { InlineKeyboard, Keyboard } from "grammy";
+import { InlineKeyboard } from "grammy";
 
 import { BTN_ABOUT, BTN_BACK, BTN_HOW_TO_ORDER, BTN_OPEN_SHOP } from "./texts.js";
 
-export function mainMenuKeyboard(miniAppUrl: string) {
-  return new Keyboard()
+/** Инлайн-кнопки под баннером (как в макете). */
+export function mainMenuInlineKeyboard(miniAppUrl: string) {
+  return new InlineKeyboard()
     .webApp(BTN_OPEN_SHOP, miniAppUrl)
     .row()
-    .text(BTN_HOW_TO_ORDER)
+    .text(BTN_HOW_TO_ORDER, "menu:how")
     .row()
-    .text(BTN_ABOUT)
-    .resized()
-    .persistent();
+    .text(BTN_ABOUT, "menu:about");
 }
 
 export function aboutBackKeyboard() {

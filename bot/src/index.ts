@@ -5,11 +5,9 @@ import { fileURLToPath } from "node:url";
 import { config } from "dotenv";
 import { Bot, InputFile, type Context } from "grammy";
 
-import { aboutBackKeyboard, mainMenuKeyboard } from "./keyboards.js";
+import { aboutBackKeyboard, mainMenuInlineKeyboard } from "./keyboards.js";
 import {
   ABOUT_SHOP,
-  BTN_ABOUT,
-  BTN_HOW_TO_ORDER,
   VIDEO_CAPTION,
   WELCOME,
 } from "./texts.js";
@@ -47,6 +45,32 @@ if (!token) {
 
 const bot = new Bot(token);
 
+type WelcomePhoto =
+  | { type: "url"; url: string }
+  | { type: "file"; path: string };
+
+function resolveWelcomePhoto(): WelcomePhoto | null {
+  const url = process.env.WELCOME_PHOTO_URL?.trim();
+  if (url && /^https?:\/\//i.test(url)) {
+    return { type: "url", url };
+  }
+  const fromEnv = process.env.WELCOME_PHOTO_PATH?.trim();
+  const botRoot = resolve(__dirname, "..");
+  const repoRoot = resolve(__dirname, "../..");
+  const candidates = [
+    fromEnv && resolve(botRoot, fromEnv),
+    resolve(botRoot, "images", "welcome.jpg"),
+    resolve(botRoot, "images", "welcome.png"),
+    resolve(botRoot, "images", "photo_2026-04-07_20-21-06.jpg"),
+    resolve(repoRoot, "images", "photo_2026-04-07_20-21-06.jpg"),
+  ].filter((p): p is string => Boolean(p));
+
+  for (const p of candidates) {
+    if (existsSync(p)) return { type: "file", path: p };
+  }
+  return null;
+}
+
 function resolveInstructionVideoPath(): string | null {
   const fromEnv = process.env.INSTRUCTION_VIDEO_PATH?.trim();
   const base = resolve(__dirname, "..");
@@ -64,29 +88,53 @@ function resolveInstructionVideoPath(): string | null {
 }
 
 async function sendWelcome(ctx: Context) {
-  await ctx.reply(WELCOME, {
-    reply_markup: mainMenuKeyboard(miniAppUrl),
-  });
+  const markup = mainMenuInlineKeyboard(miniAppUrl);
+  const photo = resolveWelcomePhoto();
+
+  if (!photo) {
+    console.warn(
+      "Баннер не найден: задайте WELCOME_PHOTO_URL или положите файл (см. WELCOME_PHOTO_PATH / bot/images/welcome.jpg).",
+    );
+    await ctx.reply(WELCOME, { reply_markup: markup });
+    return;
+  }
+
+  const extra = {
+    caption: WELCOME,
+    reply_markup: markup,
+  };
+
+  if (photo.type === "url") {
+    await ctx.replyWithPhoto(photo.url, extra);
+  } else {
+    await ctx.replyWithPhoto(new InputFile(photo.path), extra);
+  }
 }
 
 bot.command("start", async (ctx) => {
   await sendWelcome(ctx);
 });
 
-bot.hears(BTN_HOW_TO_ORDER, async (ctx) => {
+async function sendHowToVideo(ctx: Context) {
   const path = resolveInstructionVideoPath();
   if (!path) {
     await ctx.reply(
-      "Видео «Как оформить заказ» пока не загружено. Положите файл в папку bot/images/ (см. INSTRUCTION_VIDEO_PATH в .env).",
+      "Видео «Как оформить заказ» пока не загружено. Положите файл в bot/images/ или задайте INSTRUCTION_VIDEO_PATH в .env.",
     );
     return;
   }
   await ctx.replyWithVideo(new InputFile(path), {
     caption: VIDEO_CAPTION,
   });
+}
+
+bot.callbackQuery("menu:how", async (ctx) => {
+  await ctx.answerCallbackQuery();
+  await sendHowToVideo(ctx);
 });
 
-bot.hears(BTN_ABOUT, async (ctx) => {
+bot.callbackQuery("menu:about", async (ctx) => {
+  await ctx.answerCallbackQuery();
   await ctx.reply(ABOUT_SHOP, {
     reply_markup: aboutBackKeyboard(),
   });
