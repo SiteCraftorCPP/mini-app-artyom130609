@@ -9,17 +9,15 @@ export const Layout = () => {
   return (
     <BgLayout>
       <>
-        <div className="relative z-10">
+        <header className="relative z-10 shrink-0">
           <AppHeader />
-        </div>
+        </header>
 
-        <main className="relative z-10 pb-24">
+        <main className="relative z-10 min-h-0 w-full flex-1 overflow-y-auto overscroll-y-contain pb-24 [-webkit-overflow-scrolling:touch]">
           <Outlet />
         </main>
 
-        <div className="relative max-w-[var(--maxWidth)]">
-          <BottomNavigation />
-        </div>
+        <BottomNavigation />
       </>
     </BgLayout>
   );

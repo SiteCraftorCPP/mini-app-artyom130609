@@ -69,7 +69,7 @@ export const BgLayout = ({ children }: BgLayoutProps) => {
           </div>
         </div>
       </div>
-      <div className="relative z-10 mx-auto flex h-full min-h-[100vh] max-w-[var(--maxWidth)] flex-col gap-4 overflow-hidden p-4">
+      <div className="relative z-10 mx-auto flex h-dvh max-h-dvh min-h-0 w-full max-w-[var(--maxWidth)] flex-col gap-6 overflow-x-hidden px-4 pb-4 pt-[max(1rem,env(safe-area-inset-top,0px))]">
         {children}
       </div>
     </div>
