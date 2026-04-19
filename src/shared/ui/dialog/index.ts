@@ -8,4 +8,5 @@ export {
   DialogPortal,
   DialogTitle,
   DialogTrigger,
+  dialogPopupCloseButtonClassName,
 } from "./dialog";

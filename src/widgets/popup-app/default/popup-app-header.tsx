@@ -1,5 +1,8 @@
+import { X } from "lucide-react";
+
 import { AppText } from "@/ui/app-text";
 import { Button } from "@/ui/button";
+import { DialogClose, dialogPopupCloseButtonClassName } from "@/ui/dialog";
 
 import ArrowLeft from "@/assets/icon/button-back.svg";
 
@@ -10,25 +13,34 @@ type PopupAppHeaderProps = {
 
 export const PopupAppHeader = ({ onBack, title }: PopupAppHeaderProps) => {
   return (
-    <div className="flex items-center gap-2 px-4 pt-2 pr-6 pb-1">
-      <div className="flex-1">
-        <div className="tw-bg-gradient-badge-background flex h-8 w-fit items-center justify-center rounded-[6px] border px-3 border-white/50">
+    <div className="flex items-center gap-2 px-3 pb-1 sm:px-4">
+      <div className="min-w-0 flex-1">
+        <div className="tw-bg-gradient-badge-background flex h-8 w-fit max-w-full items-center justify-center rounded-[6px] border border-white/50 px-3">
           <AppText variant="primaryStrong" size="popupBadge">
             {title}
           </AppText>
         </div>
-      </div> 
-      {onBack ? (
-        <Button
+      </div>
+      <div className="flex shrink-0 items-center gap-2">
+        {onBack ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="tw-bg-popup-submit hover:bg-app-surface-overlay-hover size-8 rounded-[6px] border border-white px-0 text-white"
+            onClick={onBack}
+          >
+            <ArrowLeft className="size-6" />
+          </Button>
+        ) : null}
+        <DialogClose
           type="button"
-          variant="ghost"
-          size="sm"
-          className="tw-bg-popup-submit hover:bg-app-surface-overlay-hover size-8 rounded-[6px] border border-white px-0 text-white"
-          onClick={onBack}
+          className={dialogPopupCloseButtonClassName}
+          aria-label="Закрыть"
         >
-          <ArrowLeft className="size-6" />
-        </Button>
-      ) : null}
+          <X className="size-5" strokeWidth={2.5} />
+        </DialogClose>
+      </div>
     </div>
   );
 };

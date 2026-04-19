@@ -10,15 +10,19 @@ export const Dialog = DialogPrimitive.Root;
 export const DialogTrigger = DialogPrimitive.Trigger;
 export const DialogClose = DialogPrimitive.Close;
 
+/** Крестик в строке с бейджем (PopupAppHeader), не absolute */
+export const dialogPopupCloseButtonClassName =
+  "inline-flex size-8 shrink-0 items-center justify-center rounded-[4px] border border-app-border-soft bg-app-highlight text-app-highlight-foreground shadow-[0_4px_10px_var(--app-highlight-shadow)] transition hover:cursor-pointer hover:brightness-105";
+
 const dialogContentVariants = cva(
-  "fixed top-1/2 left-1/2 z-50 flex w-[calc(100vw-(var(--popup-viewport-offset)*2))] max-w-sm -translate-x-1/2 -translate-y-1/2 flex-col outline-hidden",
+  "fixed left-1/2 z-50 flex w-[calc(100vw-(var(--popup-viewport-offset)*2))] -translate-x-1/2 flex-col outline-hidden",
   {
     variants: {
       variant: {
         default:
-          "rounded-[16px] p-6 text-text-primary shadow-[0_24px_60px_var(--app-shadow)]",
+          "top-1/2 max-w-sm -translate-y-1/2 rounded-[16px] p-6 text-text-primary shadow-[0_24px_60px_var(--app-shadow)]",
         popup:
-          "max-h-[calc(100dvh-(var(--popup-viewport-offset)*2))] overflow-hidden rounded-[16px] shadow-[0_24px_60px_var(--app-shadow)]",
+          "top-[max(0.25rem,min(8vh,4rem))] bottom-[max(0.25rem,var(--popup-viewport-offset))] max-w-md translate-y-0 overflow-hidden rounded-[16px] shadow-[0_24px_60px_var(--app-shadow)]",
       },
     },
     defaultVariants: {
@@ -77,6 +81,8 @@ export const DialogContent = ({
   }) => {
   useLockBodyScroll(lockBodyScroll);
 
+  const resolvedVariant = variant ?? "popup";
+
   return (
     <DialogPortal>
       <DialogOverlay />
@@ -84,24 +90,26 @@ export const DialogContent = ({
         className={cn(dialogContentVariants({ variant }), className)}
         {...props}
       >
-        {variant === "popup" ? (
+        {resolvedVariant === "popup" ? (
           <div className="tw-bg-gradient-card-border relative flex max-h-full min-h-0 flex-1 rounded-[16px] p-px">
-            <div className="tw-bg-gradient-popup-surface text-text-primary relative flex max-h-full min-h-0 flex-1 flex-col rounded-[15px] pt-[max(var(--app-telegram-top-clearance,120px),var(--tg-content-top,0px),var(--tg-safe-top,0px),env(safe-area-inset-top,0px))] backdrop-blur-[2px]">
+            <div className="tw-bg-gradient-popup-surface text-text-primary relative flex max-h-full min-h-0 flex-1 flex-col rounded-[15px] pt-[max(var(--app-telegram-popup-top-clearance,56px),var(--tg-content-top,0px),var(--tg-safe-top,0px),env(safe-area-inset-top,0px))] backdrop-blur-[2px]">
               {children}
             </div>
           </div>
         ) : (
           children
         )}
-        <DialogPrimitive.Close
-          className={cn(
-            dialogCloseVariants({ variant }),
-            "hover:cursor-pointer",
-          )}
-        >
-          <X className="size-6" />
-          <span className="sr-only">Close</span>
-        </DialogPrimitive.Close>
+        {resolvedVariant === "default" ? (
+          <DialogPrimitive.Close
+            className={cn(
+              dialogCloseVariants({ variant: resolvedVariant }),
+              "hover:cursor-pointer",
+            )}
+          >
+            <X className="size-6" />
+            <span className="sr-only">Close</span>
+          </DialogPrimitive.Close>
+        ) : null}
       </DialogPrimitive.Content>
     </DialogPortal>
   );

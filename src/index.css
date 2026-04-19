@@ -160,7 +160,7 @@
   --maxWidth: 600px;
   --maxWidthForm: 270px;
   --radius: 0.625rem;
-  --popup-viewport-offset: 16px;
+  --popup-viewport-offset: 8px;
   --buy-account-popup-height: 90dvh;
   --bottom-nav-height: 80px;
   --bottom-nav-offset: 16px;
@@ -169,6 +169,8 @@
   );
   /* Минимум под нативную шапку Mini App («Закрыть»), если --tg-* = 0 */
   --app-telegram-top-clearance: 120px;
+  /* Попапы (Dialog): меньше, чем главный экран — контент выше */
+  --app-telegram-popup-top-clearance: 56px;
 
   --background: oklch(1 0 0);
   --primary: oklch(0.205 0 0);
