@@ -170,7 +170,7 @@
   /* Минимум под нативную шапку Mini App («Закрыть»), если --tg-* = 0 */
   --app-telegram-top-clearance: 120px;
   /* Попапы (Dialog): меньше, чем главный экран — контент выше */
-  --app-telegram-popup-top-clearance: 48px;
+  --app-telegram-popup-top-clearance: 52px;
 
   --background: oklch(1 0 0);
   --primary: oklch(0.205 0 0);
