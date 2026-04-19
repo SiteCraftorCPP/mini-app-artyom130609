@@ -7,6 +7,8 @@ import { type FC, type PropsWithChildren, useEffect } from "react";
 
 import { isMobileDevice } from "@/shared/lib/is-mobile-device";
 
+import { TelegramSafeAreaBridge } from "./telegram-safe-area-bridge";
+
 export const AppWebProvider: FC<PropsWithChildren> = ({ children }) => {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [_isExpanded, expand] = useExpand();
@@ -28,6 +30,7 @@ export const AppWebProvider: FC<PropsWithChildren> = ({ children }) => {
   }, [isMobile]);
   return (
     <WebAppProvider options={{ smoothButtonsTransition: true }}>
+      <TelegramSafeAreaBridge />
       {children}
     </WebAppProvider>
   );

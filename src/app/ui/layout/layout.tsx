@@ -13,7 +13,7 @@ export const Layout = () => {
           <AppHeader />
         </header>
 
-        <main className="relative z-10 min-h-0 w-full flex-1 overflow-y-auto overscroll-y-contain pb-24 [-webkit-overflow-scrolling:touch]">
+        <main className="relative z-10 min-h-0 w-full flex-1 overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]">
           <Outlet />
         </main>
 

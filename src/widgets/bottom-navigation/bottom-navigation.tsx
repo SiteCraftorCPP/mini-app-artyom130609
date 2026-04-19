@@ -12,7 +12,7 @@ export const BottomNavigation = () => {
   return (
     <nav
       aria-label="Основная навигация"
-      className="fixed inset-x-0 bottom-[max(1rem,env(safe-area-inset-bottom,0px))] z-50 m-auto flex w-full max-w-[var(--maxWidth)] justify-center px-4"
+      className="relative z-50 mx-auto mt-auto flex w-full max-w-[var(--maxWidth)] shrink-0 justify-center px-4 pb-[max(0.75rem,var(--tg-safe-bottom,0px),env(safe-area-inset-bottom,0px))] pt-2"
     >
       <Card
         className="tw-bg-gradient-bottom-nav w-full max-w-[calc(var(--maxWidth)-32px)] rounded-[16px] px-5 py-4"

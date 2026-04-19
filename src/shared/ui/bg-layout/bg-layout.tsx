@@ -13,7 +13,7 @@ export const BgLayout = ({ children }: BgLayoutProps) => {
   return (
     <div
       data-theme={APP_THEME.defaultTheme}
-      className="bg-app-background relative min-h-dvh"
+      className="bg-app-background relative flex min-h-0 flex-1 flex-col overflow-hidden"
     >
       <div
         aria-hidden="true"
@@ -69,7 +69,7 @@ export const BgLayout = ({ children }: BgLayoutProps) => {
           </div>
         </div>
       </div>
-      <div className="relative z-10 mx-auto flex h-dvh max-h-dvh min-h-0 w-full max-w-[var(--maxWidth)] flex-col gap-6 overflow-x-hidden px-4 pb-4 pt-[max(1rem,env(safe-area-inset-top,0px))]">
+      <div className="relative z-10 mx-auto flex min-h-0 w-full max-w-[var(--maxWidth)] flex-1 flex-col gap-6 overflow-x-hidden px-4 pb-4 pt-[max(12px,var(--tg-content-top,0px),var(--tg-safe-top,0px),env(safe-area-inset-top,0px))]">
         {children}
       </div>
     </div>
