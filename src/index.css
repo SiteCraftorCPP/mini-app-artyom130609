@@ -4,6 +4,28 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* rgba в градиенте — без color-mix и без filter:blur (WebView меньше «точек») */
+@utility tw-bg-glow-large {
+  background: radial-gradient(
+    circle at center,
+    rgba(45, 202, 212, 0.42) 0%,
+    rgba(45, 202, 212, 0.16) 46%,
+    rgba(45, 202, 212, 0.04) 68%,
+    transparent 74%
+  );
+  transform: translateZ(0);
+}
+
+@utility tw-bg-glow-small {
+  background: radial-gradient(
+    circle at center,
+    rgba(45, 202, 212, 0.48) 0%,
+    rgba(45, 202, 212, 0.2) 54%,
+    transparent 72%
+  );
+  transform: translateZ(0);
+}
+
 @utility tw-bg-gradient-home-card {
   background: var(--gradient-home-card);
 }
@@ -272,7 +294,7 @@
 
 [data-theme="artshop"] {
   --app-background: var(--deep-aqua-black);
-  /* Один линейный градиент без слоёв кругов — иначе в WebView «точки»/зерно на тёмном */
+  /* Подложка; круги сверху — отдельные слои без blur */
   --app-background-gradient: linear-gradient(
     168deg,
     #112f32 0%,
