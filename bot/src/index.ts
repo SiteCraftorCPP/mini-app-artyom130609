@@ -135,7 +135,7 @@ async function sendHowToVideo(ctx: Context) {
   const path = resolveInstructionVideoPath();
   if (!path) {
     await ctx.reply(
-      "Видео «Как оформить заказ» пока не загружено. Положите файл в bot/images/ или задайте INSTRUCTION_VIDEO_PATH в .env.",
+      "Видео «Как оформить заказ» пока не загружено: bot/images/ или задайте INSTRUCTION_VIDEO_PATH в .env.",
     );
     return;
   }
