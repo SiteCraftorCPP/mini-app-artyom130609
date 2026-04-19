@@ -168,7 +168,7 @@
     var(--bottom-nav-height) + var(--bottom-nav-offset)
   );
   /* Минимум под нативную шапку Mini App («Закрыть»), если --tg-* = 0 */
-  --app-telegram-top-clearance: 3.5rem;
+  --app-telegram-top-clearance: 5rem;
 
   --background: oklch(1 0 0);
   --primary: oklch(0.205 0 0);

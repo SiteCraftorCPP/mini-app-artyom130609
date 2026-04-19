@@ -69,7 +69,7 @@ export const BgLayout = ({ children }: BgLayoutProps) => {
           </div>
         </div>
       </div>
-      <div className="relative z-10 mx-auto flex min-h-0 w-full max-w-[var(--maxWidth)] flex-1 flex-col gap-6 overflow-x-hidden px-4 pb-4 pt-[max(var(--app-telegram-top-clearance,3.5rem),var(--tg-content-top,0px),var(--tg-safe-top,0px),env(safe-area-inset-top,0px))]">
+      <div className="relative z-10 mx-auto flex min-h-0 w-full max-w-[var(--maxWidth)] flex-1 flex-col gap-6 overflow-x-hidden px-4 pb-4 pt-[max(var(--app-telegram-top-clearance,5rem),var(--tg-content-top,0px),var(--tg-safe-top,0px),env(safe-area-inset-top,0px))]">
         {children}
       </div>
     </div>
