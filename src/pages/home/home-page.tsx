@@ -49,7 +49,7 @@ export const HomePage = () => {
                       ].join(" ")}
                     >
                       <AppText
-                        className="relative z-10"
+                        className="relative z-10 text-[22px] font-bold leading-tight tracking-tight"
                         variant="heroButton"
                         size="heroButton"
                       >

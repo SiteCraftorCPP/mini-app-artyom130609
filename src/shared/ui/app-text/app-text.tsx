@@ -78,7 +78,7 @@ function TextWrapper({
   const Tag = tag;
 
   return (
-    <Tag className={cn(textVariant({ variant, size, className }))}>
+    <Tag className={cn(textVariant({ variant, size }), className)}>
       {children}
     </Tag>
   );
