@@ -17,9 +17,9 @@ type FaqProps = {
 
 export const Faq = ({ items }: FaqProps) => {
   return (
-    <Card className="space-y-5 p-4" bordered={true}>
+    <Card className="space-y-5 p-4" bordered={true} glow="none">
       <section aria-labelledby="faq-title" className="space-y-3 pb-3">
-        <ul className="mb-8 flex flex-col gap-2">
+        <ul className="mb-8 flex flex-col gap-4">
           {items.map((item) => (
             <li key={item.id}>
               <PopupApp

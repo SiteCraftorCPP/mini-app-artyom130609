@@ -15,7 +15,7 @@ const buttonVariants = cva(
           "tw-bg-gradient-badge-background w-full justify-start rounded-[16px] border  text-white shadow-[0_8px_20px_var(--app-shadow)] hover:brightness-110",
         brand:
           "tw-bg-gradient-home-action-primary text-app-highlight-foreground shadow-[0_10px_30px_var(--app-shadow)] hover:brightness-105",
-        faq: "group w-full justify-start rounded-[6px] bg-white text-left text-text-dark-cyan shadow-none duration-200 hover:tw-bg-gradient-badge-background hover:text-white hover:brightness-105 [&_svg_*]:fill-current",
+        faq: "group w-full justify-start overflow-hidden rounded-[6px] bg-white text-left text-text-dark-cyan shadow-none duration-200 hover:tw-bg-gradient-badge-background hover:text-white hover:brightness-105 [&_svg_*]:fill-current",
         ghost:
           "hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50",
         link: "tw-bg-gradient-badge-background text-primary border  rounded-[50px]",

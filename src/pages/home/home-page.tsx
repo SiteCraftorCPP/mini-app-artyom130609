@@ -22,16 +22,12 @@ export const HomePage = () => {
         <h2 id="home-hero-title" className="sr-only">
           {HOME_SCREEN_TEXT.hero.title}
         </h2>
-        <Card
-          className="rounded-2xl p-4"
-          bordered={true}
-          classNameWrapper="rounded-2xl"
-        >
+        <Card className="p-4" bordered={true} classNameWrapper="rounded-2xl">
           <div className="mb-2 flex flex-col items-center">
             <Logo />
           </div>
 
-          <ul className="flex flex-col gap-2">
+          <ul className="flex flex-col gap-4">
             {HOME_SCREEN_MOCK.actions.map((action) => {
               return (
                 <li key={action.id}>

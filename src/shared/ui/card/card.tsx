@@ -24,9 +24,12 @@ export const Card = ({
   const content = (
     <div
       className={cn(
-        "tw-bg-gradient-home-card text-app-panel-foreground rounded-[16px]",
+        "tw-bg-gradient-home-card text-app-panel-foreground overflow-hidden",
+        !bordered && "rounded-[16px]",
         glowClassNames[glow],
         className,
+        /* На 1px меньше внешнего радиуса из-за p-px у обводки — иначе в углах «квадрат» */
+        bordered && "rounded-[15px]",
       )}
       {...props}
     />
@@ -37,8 +40,8 @@ export const Card = ({
   return (
     <div
       className={cn(
-        "tw-bg-gradient-card-border rounded-[16px] p-px w-[inherit]",
-        classNameWrapper,
+        "tw-bg-gradient-card-border w-[inherit] overflow-hidden p-px",
+        classNameWrapper ?? "rounded-[16px]",
       )}
     >
       {content}
