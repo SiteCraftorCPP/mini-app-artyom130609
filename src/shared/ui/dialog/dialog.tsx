@@ -86,7 +86,7 @@ export const DialogContent = ({
       >
         {variant === "popup" ? (
           <div className="tw-bg-gradient-card-border relative flex max-h-full min-h-0 flex-1 rounded-[16px] p-px">
-            <div className="tw-bg-gradient-popup-surface text-text-primary relative flex max-h-full min-h-0 flex-1 flex-col rounded-[15px] backdrop-blur-[2px]">
+            <div className="tw-bg-gradient-popup-surface text-text-primary relative flex max-h-full min-h-0 flex-1 flex-col rounded-[15px] pt-[max(var(--app-telegram-top-clearance,120px),var(--tg-content-top,0px),var(--tg-safe-top,0px),env(safe-area-inset-top,0px))] backdrop-blur-[2px]">
               {children}
             </div>
           </div>

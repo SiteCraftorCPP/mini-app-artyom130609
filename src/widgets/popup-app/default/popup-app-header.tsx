@@ -10,7 +10,7 @@ type PopupAppHeaderProps = {
 
 export const PopupAppHeader = ({ onBack, title }: PopupAppHeaderProps) => {
   return (
-    <div className="flex items-center gap-2 px-4 pt-4 pr-6 pb-1">
+    <div className="flex items-center gap-2 px-4 pt-2 pr-6 pb-1">
       <div className="flex-1">
         <div className="tw-bg-gradient-badge-background flex h-8 w-fit items-center justify-center rounded-[6px] border px-3 border-white/50">
           <AppText variant="primaryStrong" size="popupBadge">
