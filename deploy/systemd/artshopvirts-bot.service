@@ -1,6 +1,7 @@
 [Unit]
 Description=ARTSHOPVIRTS Telegram bot (grammy, long polling)
 Documentation=https://github.com/SiteCraftorCPP/mini-app-artyom130609
+# Нужен dist/: в каталоге bot выполнить npm ci (prepare собирает TS) или npm run build
 After=network-online.target
 Wants=network-online.target
 

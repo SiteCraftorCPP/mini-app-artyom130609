@@ -6,15 +6,16 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "start": "node dist/index.js",
-    "build": "tsc -p tsconfig.json"
+    "build": "tsc -p tsconfig.json",
+    "prepare": "npm run build"
   },
   "dependencies": {
+    "@types/node": "^22.10.5",
     "dotenv": "^16.4.7",
-    "grammy": "^1.36.1"
+    "grammy": "^1.36.1",
+    "typescript": "~5.8.3"
   },
   "devDependencies": {
-    "@types/node": "^22.10.5",
-    "tsx": "^4.19.2",
-    "typescript": "~5.8.3"
+    "tsx": "^4.19.2"
   }
 }
