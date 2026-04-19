@@ -22,7 +22,7 @@ const dialogContentVariants = cva(
         default:
           "top-1/2 max-w-sm -translate-y-1/2 rounded-[16px] p-6 text-text-primary shadow-[0_24px_60px_var(--app-shadow)]",
         popup:
-          "top-[max(0.25rem,min(8vh,4rem))] bottom-[max(0.25rem,var(--popup-viewport-offset))] max-w-md translate-y-0 overflow-hidden rounded-[16px] shadow-[0_24px_60px_var(--app-shadow)]",
+          "top-[max(0.25rem,min(5vh,2.5rem))] bottom-[max(0.25rem,var(--popup-viewport-offset))] max-w-md translate-y-0 overflow-hidden rounded-[16px] shadow-[0_24px_60px_var(--app-shadow)]",
       },
     },
     defaultVariants: {
@@ -92,7 +92,7 @@ export const DialogContent = ({
       >
         {resolvedVariant === "popup" ? (
           <div className="tw-bg-gradient-card-border relative flex max-h-full min-h-0 flex-1 rounded-[16px] p-px">
-            <div className="tw-bg-gradient-popup-surface text-text-primary relative flex max-h-full min-h-0 flex-1 flex-col rounded-[15px] pt-[max(var(--app-telegram-popup-top-clearance,56px),var(--tg-content-top,0px),var(--tg-safe-top,0px),env(safe-area-inset-top,0px))] backdrop-blur-[2px]">
+            <div className="tw-bg-gradient-popup-surface text-text-primary relative flex max-h-full min-h-0 flex-1 flex-col rounded-[15px] pt-[max(var(--app-telegram-popup-top-clearance,48px),var(--tg-content-top,0px),var(--tg-safe-top,0px),env(safe-area-inset-top,0px))] backdrop-blur-[2px]">
               {children}
             </div>
           </div>
