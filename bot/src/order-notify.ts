@@ -37,9 +37,28 @@ function resolvePathFromEnv(raw: string | undefined, botRoot: string): string | 
   return resolve(botRoot, t);
 }
 
+/** Корни, где ищем bot/images/ (на сервере cwd systemd часто = папка bot, а __dirname = …/bot/dist). */
+function orderPhotoInstallRoots(): string[] {
+  const seen = new Set<string>();
+  const add = (p: string) => {
+    const n = resolve(p);
+    if (!seen.has(n)) {
+      seen.add(n);
+    }
+  };
+  add(resolve(__dirname, ".."));
+  add(process.cwd());
+  const extra = process.env.BOT_INSTALL_ROOT?.trim();
+  if (extra) {
+    add(extra);
+  }
+  return [...seen];
+}
+
 function resolveOrderSuccessPhoto(): OrderSuccessPhoto | null {
   const botRoot = resolve(__dirname, "..");
   const repoRoot = resolve(__dirname, "../..");
+  const installRoots = orderPhotoInstallRoots();
 
   const names = [
     "order-success.jpg",
@@ -59,8 +78,13 @@ function resolveOrderSuccessPhoto(): OrderSuccessPhoto | null {
 
   push(resolvePathFromEnv(process.env.ORDER_SUCCESS_IMAGE_PATH, botRoot));
 
+  for (const root of installRoots) {
+    for (const name of names) {
+      push(resolve(root, "images", name));
+    }
+  }
+
   for (const name of names) {
-    push(resolve(botRoot, "images", name));
     push(resolve(repoRoot, "images", name));
   }
 
@@ -72,7 +96,11 @@ function resolveOrderSuccessPhoto(): OrderSuccessPhoto | null {
   }
 
   console.warn(
-    "[virt-order] фото заказа на диске не найдено. Проверьте путь (Linux: папка images с маленькой буквы). Кандидаты:",
+    "[virt-order] фото заказа на диске не найдено. __dirname→botRoot=",
+    botRoot,
+    "cwd=",
+    process.cwd(),
+    "кандидаты:",
     fileCandidates,
   );
 
