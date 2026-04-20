@@ -13,34 +13,30 @@ type PopupAppHeaderProps = {
 
 export const PopupAppHeader = ({ onBack, title }: PopupAppHeaderProps) => {
   return (
-    <div className="flex w-full items-center justify-between gap-3 px-3 pb-1 sm:gap-4 sm:px-4">
-      <div className="min-w-0">
-        <div className="tw-bg-gradient-badge-background flex h-8 w-fit max-w-full items-center justify-center rounded-[6px] border border-white/50 px-3">
-          <AppText variant="primaryStrong" size="popupBadge">
-            {title}
-          </AppText>
-        </div>
+    <div className="flex w-full flex-wrap items-center gap-2 px-3 pb-1 sm:gap-3 sm:px-4">
+      <div className="tw-bg-gradient-badge-background flex h-8 w-fit max-w-full shrink-0 items-center justify-center rounded-[6px] border border-white/50 px-3">
+        <AppText variant="primaryStrong" size="popupBadge">
+          {title}
+        </AppText>
       </div>
-      <div className="flex shrink-0 items-center gap-2">
-        {onBack ? (
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="tw-bg-popup-submit hover:bg-app-surface-overlay-hover size-8 rounded-[6px] border border-white px-0 text-white"
-            onClick={onBack}
-          >
-            <ArrowLeft className="size-6" />
-          </Button>
-        ) : null}
-        <DialogClose
+      {onBack ? (
+        <Button
           type="button"
-          className={dialogPopupCloseButtonClassName}
-          aria-label="Закрыть"
+          variant="ghost"
+          size="sm"
+          className="tw-bg-popup-submit hover:bg-app-surface-overlay-hover size-8 shrink-0 rounded-[6px] border border-white px-0 text-white"
+          onClick={onBack}
         >
-          <X className="size-5" strokeWidth={2.5} />
-        </DialogClose>
-      </div>
+          <ArrowLeft className="size-6" />
+        </Button>
+      ) : null}
+      <DialogClose
+        type="button"
+        className={dialogPopupCloseButtonClassName}
+        aria-label="Закрыть"
+      >
+        <X className="size-5" strokeWidth={2.5} />
+      </DialogClose>
     </div>
   );
 };
