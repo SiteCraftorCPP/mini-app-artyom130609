@@ -1,42 +1,25 @@
-import { createHmac } from "node:crypto";
+import { parse, validate } from "@telegram-apps/init-data-node";
 
 /**
- * Проверка initData мини-аппа (https://core.telegram.org/bots/webapps#validating-data-received-via-the-mini-app).
- * Возвращает telegram user id или null.
+ * Проверка initData мини-аппа (библиотека совпадает с документацией Telegram).
+ * expiresIn: 0 — не отклонять старый auth_date (иначе фоновая вкладка могла давать истёкшие данные).
  */
 export function getTelegramUserIdFromWebAppInitData(
   initData: string,
   botToken: string,
 ): number | null {
   try {
-    const params = new URLSearchParams(initData);
-    const hash = params.get("hash");
-    if (!hash) {
-      return null;
-    }
-    params.delete("hash");
-    const pairs = Array.from(params.entries()).sort(([a], [b]) =>
-      a.localeCompare(b),
-    );
-    const dataCheckString = pairs.map(([k, v]) => `${k}=${v}`).join("\n");
-    const secretKey = createHmac("sha256", "WebAppData")
-      .update(botToken)
-      .digest();
-    const computed = createHmac("sha256", secretKey)
-      .update(dataCheckString)
-      .digest("hex");
-    if (computed !== hash) {
-      console.warn("[virt-order] initData: неверная подпись hash");
-      return null;
-    }
-    const userRaw = params.get("user");
-    if (!userRaw) {
-      return null;
-    }
-    const user = JSON.parse(userRaw) as { id?: number };
-    return typeof user.id === "number" ? user.id : null;
+    validate(initData, botToken, { expiresIn: 0 });
   } catch (e) {
-    console.warn("[virt-order] initData: ошибка разбора", e);
+    console.warn("[virt-order] initData: validate не прошла", e);
+    return null;
+  }
+  try {
+    const data = parse(initData);
+    const id = data.user?.id;
+    return typeof id === "number" ? id : null;
+  } catch (e) {
+    console.warn("[virt-order] initData: parse", e);
     return null;
   }
 }

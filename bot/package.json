@@ -10,6 +10,7 @@
     "prepare": "npm run build"
   },
   "dependencies": {
+    "@telegram-apps/init-data-node": "^2.0.10",
     "@types/node": "^22.10.5",
     "dotenv": "^16.4.7",
     "grammy": "^1.36.1",

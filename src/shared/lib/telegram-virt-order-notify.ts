@@ -15,10 +15,31 @@ function resolveNotifyUrl(): string {
   return "";
 }
 
+type WebAppLike = { initData?: string };
+
+function resolveInitData(webApp: WebAppLike | null | undefined): string {
+  const fromHook = webApp?.initData?.trim();
+  if (fromHook) {
+    return fromHook;
+  }
+  if (typeof window !== "undefined") {
+    const tg = (
+      window as unknown as {
+        Telegram?: { WebApp?: { initData?: string } };
+      }
+    ).Telegram?.WebApp;
+    const raw = tg?.initData?.trim();
+    if (raw) {
+      return raw;
+    }
+  }
+  return "";
+}
+
 export async function notifyVirtOrderSuccessFromMiniApp(
-  webApp: { initData?: string } | null | undefined,
+  webApp: WebAppLike | null | undefined,
 ): Promise<void> {
-  const initData = webApp?.initData;
+  const initData = resolveInitData(webApp);
   if (!initData) {
     console.warn(
       LOG,
