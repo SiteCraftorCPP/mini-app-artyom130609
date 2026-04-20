@@ -83,25 +83,47 @@ export async function sendVirtOrderSuccess(
   const photoUrl = resolveOrderSuccessPhotoUrl();
   const imagePath = resolveOrderSuccessImagePath();
 
-  if (photoUrl) {
-    console.info("[virt-order] sendPhoto по URL (ORDER_SUCCESS_PHOTO_URL)");
-    await bot.api.sendPhoto(payload.telegramUserId, photoUrl, {
-      caption,
-      reply_markup,
-    });
-  } else if (imagePath) {
-    await bot.api.sendPhoto(payload.telegramUserId, new InputFile(imagePath), {
-      caption,
-      reply_markup,
-    });
-  } else {
-    console.warn(
-      "ORDER_SUCCESS: нет фото — задайте ORDER_SUCCESS_PHOTO_URL (https://...) или положите файл в bot/images/ или ORDER_SUCCESS_IMAGE_PATH — отправляю только текст.",
-    );
+  const sendTextOnly = async () => {
     await bot.api.sendMessage(payload.telegramUserId, caption, {
       reply_markup,
     });
+  };
+
+  if (photoUrl) {
+    try {
+      console.info("[virt-order] sendPhoto по URL (ORDER_SUCCESS_PHOTO_URL)");
+      await bot.api.sendPhoto(payload.telegramUserId, photoUrl, {
+        caption,
+        reply_markup,
+      });
+      return;
+    } catch (e) {
+      console.error(
+        "[virt-order] sendPhoto по URL не удался — пробую файл или текст",
+        e,
+      );
+    }
   }
+
+  if (imagePath) {
+    try {
+      await bot.api.sendPhoto(payload.telegramUserId, new InputFile(imagePath), {
+        caption,
+        reply_markup,
+      });
+      return;
+    } catch (e) {
+      console.error(
+        "[virt-order] sendPhoto с диска не удался — отправляю текст",
+        e,
+      );
+    }
+  }
+
+  console.warn(
+    "ORDER_SUCCESS: отправляю только текст (фото недоступно или не настроено).",
+  );
+  await sendTextOnly();
 }
 
 type NotifyBody = {
