@@ -49,30 +49,6 @@ if (!token) {
 
 const bot = new Bot(token);
 
-type WelcomePhoto =
-  | { type: "url"; url: string }
-  | { type: "file"; path: string };
-
-function resolveWelcomePhoto(): WelcomePhoto | null {
-  const url = process.env.WELCOME_PHOTO_URL?.trim();
-  if (url && /^https?:\/\//i.test(url)) {
-    return { type: "url", url };
-  }
-  const fromEnv = process.env.WELCOME_PHOTO_PATH?.trim();
-  const botRoot = resolve(__dirname, "..");
-  /** Только welcome.* или путь из env — не смешивать с фото «заказ оформлен» (order-notify). */
-  const candidates = [
-    fromEnv && resolve(botRoot, fromEnv),
-    resolve(botRoot, "images", "welcome.jpg"),
-    resolve(botRoot, "images", "welcome.png"),
-  ].filter((p): p is string => Boolean(p));
-
-  for (const p of candidates) {
-    if (existsSync(p)) return { type: "file", path: p };
-  }
-  return null;
-}
-
 function resolveInstructionVideoPath(): string | null {
   const fromEnv = process.env.INSTRUCTION_VIDEO_PATH?.trim();
   const base = resolve(__dirname, "..");
@@ -107,26 +83,8 @@ async function sendWelcome(ctx: Context) {
   await clearReplyKeyboard(ctx);
 
   const markup = mainMenuInlineKeyboard(miniAppUrl);
-  const photo = resolveWelcomePhoto();
-
-  if (!photo) {
-    console.warn(
-      "Баннер не найден: задайте WELCOME_PHOTO_URL или положите файл (см. WELCOME_PHOTO_PATH / bot/images/welcome.jpg).",
-    );
-    await ctx.reply(WELCOME, { reply_markup: markup });
-    return;
-  }
-
-  const extra = {
-    caption: WELCOME,
-    reply_markup: markup,
-  };
-
-  if (photo.type === "url") {
-    await ctx.replyWithPhoto(photo.url, extra);
-  } else {
-    await ctx.replyWithPhoto(new InputFile(photo.path), extra);
-  }
+  /** /start — только текст; фото «заказ оформлен» отправляется из order-notify. */
+  await ctx.reply(WELCOME, { reply_markup: markup });
 }
 
 bot.command("start", async (ctx) => {
