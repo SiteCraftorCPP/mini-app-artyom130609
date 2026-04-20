@@ -20,30 +20,46 @@ export type VirtOrderSuccessPayload = {
   telegramUserId: number;
 };
 
-function resolveOrderSuccessImagePath(): string | null {
+/**
+ * Как resolveWelcomePhoto в index.ts: сначала файлы на диске (надёжно, как /start),
+ * потом URL — иначе ORDER_SUCCESS_PHOTO_URL с 404 ломал всю отправку.
+ */
+type OrderSuccessPhoto =
+  | { type: "url"; url: string }
+  | { type: "file"; path: string };
+
+function resolveOrderSuccessPhoto(): OrderSuccessPhoto | null {
   const botRoot = resolve(__dirname, "..");
   const repoRoot = resolve(__dirname, "../..");
   const fromEnv = process.env.ORDER_SUCCESS_IMAGE_PATH?.trim();
-  const candidates = [
+  const fileCandidates = [
     fromEnv && resolve(botRoot, fromEnv),
     resolve(botRoot, "images", "photo_2026-04-07_20-21-21.jpg"),
     resolve(botRoot, "images", "photo_2026-04-07_20-21-21.png"),
     resolve(repoRoot, "images", "photo_2026-04-07_20-21-21.jpg"),
     resolve(repoRoot, "images", "photo_2026-04-07_20-21-21.png"),
+    resolve(botRoot, "images", "welcome.jpg"),
+    resolve(botRoot, "images", "welcome.png"),
+    resolve(botRoot, "images", "photo_2026-04-07_20-21-06.jpg"),
+    resolve(repoRoot, "images", "photo_2026-04-07_20-21-06.jpg"),
   ].filter((p): p is string => Boolean(p));
 
-  for (const p of candidates) {
-    if (existsSync(p)) return p;
+  for (const p of fileCandidates) {
+    if (existsSync(p)) {
+      return { type: "file", path: p };
+    }
   }
-  return null;
-}
 
-/** Публичный URL картинки (Telegram скачает сам); если задан — не нужен файл на диске у бота. */
-function resolveOrderSuccessPhotoUrl(): string | null {
-  const u = process.env.ORDER_SUCCESS_PHOTO_URL?.trim();
-  if (u && /^https?:\/\//i.test(u)) {
-    return u;
+  const orderUrl = process.env.ORDER_SUCCESS_PHOTO_URL?.trim();
+  if (orderUrl && /^https?:\/\//i.test(orderUrl)) {
+    return { type: "url", url: orderUrl };
   }
+
+  const welcomeUrl = process.env.WELCOME_PHOTO_URL?.trim();
+  if (welcomeUrl && /^https?:\/\//i.test(welcomeUrl)) {
+    return { type: "url", url: welcomeUrl };
+  }
+
   return null;
 }
 
@@ -80,8 +96,7 @@ export async function sendVirtOrderSuccess(
   });
   const caption = buildVirtOrderSuccessCaption(payload.orderNumber);
   const reply_markup = buildOrderDetailsKeyboard(miniAppUrl, payload.orderId);
-  const photoUrl = resolveOrderSuccessPhotoUrl();
-  const imagePath = resolveOrderSuccessImagePath();
+  const photo = resolveOrderSuccessPhoto();
 
   const sendTextOnly = async () => {
     await bot.api.sendMessage(payload.telegramUserId, caption, {
@@ -89,41 +104,32 @@ export async function sendVirtOrderSuccess(
     });
   };
 
-  if (photoUrl) {
-    try {
-      console.info("[virt-order] sendPhoto по URL (ORDER_SUCCESS_PHOTO_URL)");
-      await bot.api.sendPhoto(payload.telegramUserId, photoUrl, {
+  if (!photo) {
+    console.warn(
+      "ORDER_SUCCESS: нет фото на диске и нет рабочего URL — только текст.",
+    );
+    await sendTextOnly();
+    return;
+  }
+
+  try {
+    if (photo.type === "url") {
+      console.info("[virt-order] sendPhoto по URL", photo.url.slice(0, 72));
+      await bot.api.sendPhoto(payload.telegramUserId, photo.url, {
         caption,
         reply_markup,
       });
-      return;
-    } catch (e) {
-      console.error(
-        "[virt-order] sendPhoto по URL не удался — пробую файл или текст",
-        e,
-      );
-    }
-  }
-
-  if (imagePath) {
-    try {
-      await bot.api.sendPhoto(payload.telegramUserId, new InputFile(imagePath), {
+    } else {
+      console.info("[virt-order] sendPhoto с диска (как /start)", photo.path);
+      await bot.api.sendPhoto(payload.telegramUserId, new InputFile(photo.path), {
         caption,
         reply_markup,
       });
-      return;
-    } catch (e) {
-      console.error(
-        "[virt-order] sendPhoto с диска не удался — отправляю текст",
-        e,
-      );
     }
+  } catch (e) {
+    console.error("[virt-order] sendPhoto не удался — отправляю текст", e);
+    await sendTextOnly();
   }
-
-  console.warn(
-    "ORDER_SUCCESS: отправляю только текст (фото недоступно или не настроено).",
-  );
-  await sendTextOnly();
 }
 
 type NotifyBody = {
