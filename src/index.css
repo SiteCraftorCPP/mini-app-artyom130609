@@ -4,26 +4,15 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* rgba в градиенте — без color-mix и без filter:blur (WebView меньше «точек») */
+/* Смягчённые альфы + без translateZ — меньше муара/точек при наслоении в WebView */
 @utility tw-bg-glow-large {
   background: radial-gradient(
     circle at center,
-    rgba(45, 202, 212, 0.42) 0%,
-    rgba(45, 202, 212, 0.16) 46%,
-    rgba(45, 202, 212, 0.04) 68%,
-    transparent 74%
+    rgba(45, 202, 212, 0.28) 0%,
+    rgba(45, 202, 212, 0.1) 48%,
+    rgba(45, 202, 212, 0.03) 70%,
+    transparent 76%
   );
-  transform: translateZ(0);
-}
-
-@utility tw-bg-glow-small {
-  background: radial-gradient(
-    circle at center,
-    rgba(45, 202, 212, 0.48) 0%,
-    rgba(45, 202, 212, 0.2) 54%,
-    transparent 72%
-  );
-  transform: translateZ(0);
 }
 
 @utility tw-bg-gradient-home-card {
@@ -298,7 +287,8 @@
   --app-background-gradient: linear-gradient(
     168deg,
     #112f32 0%,
-    #0c2123 40%,
+    #0e282b 32%,
+    #0c2123 58%,
     #0a191a 100%
   );
   --gradient-home-card: linear-gradient(

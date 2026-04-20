@@ -89,6 +89,7 @@ export const DialogContent = ({
       <DialogPrimitive.Content
         className={cn(dialogContentVariants({ variant }), className)}
         {...props}
+        data-tg-dialog-popup={resolvedVariant === "popup" ? "true" : undefined}
       >
         {resolvedVariant === "popup" ? (
           <div className="tw-bg-gradient-card-border relative flex max-h-full min-h-0 flex-1 rounded-[16px] p-px">

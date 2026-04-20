@@ -48,22 +48,10 @@ export const BgLayout = ({ children }: BgLayoutProps) => {
                 }}
               />
             ))}
-            {APP_BACKGROUND_GLOWS.small.map((glow, index) => (
-              <div
-                key={`small-${index}`}
-                className="tw-bg-glow-small absolute z-10 rounded-full"
-                style={{
-                  height: `${glow.height}px`,
-                  left: `${glow.x}px`,
-                  top: `${glow.y}px`,
-                  width: `${glow.width}px`,
-                }}
-              />
-            ))}
           </div>
         </div>
       </div>
-      <div className="relative z-10 mx-auto flex min-h-0 w-full max-w-[var(--maxWidth)] flex-1 flex-col gap-12 overflow-x-hidden px-4 pb-4 pt-[max(var(--app-telegram-top-clearance,120px),var(--tg-content-top,0px),var(--tg-safe-top,0px),env(safe-area-inset-top,0px))]">
+      <div className="relative z-10 mx-auto flex min-h-0 w-full max-w-[var(--maxWidth)] flex-1 flex-col gap-4 overflow-x-hidden px-4 pb-4 pt-[max(var(--app-telegram-top-clearance,120px),var(--tg-content-top,0px),var(--tg-safe-top,0px),env(safe-area-inset-top,0px))]">
         {children}
       </div>
     </div>
