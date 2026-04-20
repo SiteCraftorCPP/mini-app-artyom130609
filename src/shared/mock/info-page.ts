@@ -25,7 +25,7 @@ export const INFO_FAQ_MOCK: InfoFaqItem[] = [
   },
   {
     id: "can-i-pay-from-rf",
-    question: "Могу ли я оплатить, если я не из России?",
+    question: "Могу ли я оплатить, если я не из Рф?",
     answer:
       "Да, можете, у нас поддерживаются международные оплаты.",
   },

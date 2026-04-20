@@ -35,6 +35,11 @@ export const AppHeader = () => {
             ) : null}
 
             <CardInfoHeader
+              className={
+                SHOW_USER_STATUS_BADGE
+                  ? undefined
+                  : "ml-auto w-[calc((100%-0.75rem)/2)] max-w-[calc((100%-0.75rem)/2)] flex-none"
+              }
               icon={<Wallet />}
               info={
                 <AppText variant="darkStrong" size="headerInfo">
