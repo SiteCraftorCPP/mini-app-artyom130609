@@ -13,12 +13,25 @@ import { AccountActionsDialog } from "../popup-app/account-actions-dialog";
 
 import { ACCOUNT_POPUP_MENU_ITEMS, type AccountPopupMenuItem } from "./model";
 
-export const AccountMenu = () => {
+type AccountMenuProps = {
+  /** Ссылка из Telegram: открыть «Актуальные заказы» */
+  openCurrentOrdersFromLink?: boolean;
+};
+
+export const AccountMenu = ({
+  openCurrentOrdersFromLink = false,
+}: AccountMenuProps) => {
   return (
     <section aria-label={ACCOUNT_PAGE_TEXT.pageTitle}>
       <ul className="flex flex-col gap-2">
         {ACCOUNT_POPUP_MENU_ITEMS.slice(0, 2).map((item) => (
-          <AccountMenuPopupItem key={item.actionId} item={item} />
+          <AccountMenuPopupItem
+            key={item.actionId}
+            defaultOpen={
+              openCurrentOrdersFromLink && item.actionId === "currentOrders"
+            }
+            item={item}
+          />
         ))}
         <li>
           <Button asChild variant="accountMenu" size="accountMenu">
@@ -47,10 +60,16 @@ export const AccountMenu = () => {
   );
 };
 
-const AccountMenuPopupItem = ({ item }: { item: AccountPopupMenuItem }) => {
+const AccountMenuPopupItem = ({
+  item,
+  defaultOpen = false,
+}: {
+  item: AccountPopupMenuItem;
+  defaultOpen?: boolean;
+}) => {
   return (
     <li>
-      <AccountActionsDialog actionId={item.actionId}>
+      <AccountActionsDialog actionId={item.actionId} defaultOpen={defaultOpen}>
         <Button
           type="button"
           variant="accountMenu"

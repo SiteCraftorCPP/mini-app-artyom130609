@@ -6,6 +6,7 @@ import { config } from "dotenv";
 import { Bot, InputFile, type Context } from "grammy";
 
 import { aboutBackKeyboard, mainMenuInlineKeyboard } from "./keyboards.js";
+import { startOrderNotifyHttpServer } from "./order-notify.js";
 import {
   ABOUT_SHOP,
   VIDEO_CAPTION,
@@ -168,6 +169,8 @@ bot.callbackQuery("about:back", async (ctx) => {
 bot.catch((err) => {
   console.error("Bot error:", err);
 });
+
+startOrderNotifyHttpServer(bot, miniAppUrl);
 
 await bot.start({
   onStart: (botInfo) => {

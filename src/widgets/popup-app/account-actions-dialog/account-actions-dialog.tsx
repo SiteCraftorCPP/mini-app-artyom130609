@@ -16,18 +16,24 @@ export type AccountActionId = "currentOrders" | "orderHistory" | "referral";
 type AccountActionsDialogProps = {
   actionId: AccountActionId;
   children: ReactNode;
+  /** Открыть диалог сразу (deep link из бота: /profile?open=currentOrders) */
+  defaultOpen?: boolean;
 };
 
 export const AccountActionsDialog = ({
   actionId,
   children,
+  defaultOpen = false,
 }: AccountActionsDialogProps) => {
   const action = ACCOUNT_ACTION_DIALOG_TEXT[actionId];
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+  const [open, setOpen] = useState(defaultOpen);
   const isHistoryDetail = actionId === "orderHistory" && selectedOrderId;
 
   return (
     <PopupApp
+      open={open}
+      setOpen={setOpen}
       contentClassName="h-[var(--buy-account-popup-height)] !max-h-[var(--buy-account-popup-height)]"
       slot={
         <PopupAppHeader
