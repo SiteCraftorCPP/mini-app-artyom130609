@@ -6,7 +6,7 @@ import { useForm } from "react-hook-form";
 import { DEFAULT } from "@/shared/constants/default";
 import { VIRT_FORM_TEXT } from "@/shared/constants/text";
 import { showErrorMessage, showSuccessMessage } from "@/shared/lib/notify";
-import { trySendVirtOrderSuccessToBot } from "@/shared/lib/telegram-virt-order-notify";
+import { notifyVirtOrderSuccessFromMiniApp } from "@/shared/lib/telegram-virt-order-notify";
 
 import {
   type VirtRequestFormValues,
@@ -111,10 +111,8 @@ export const useVirtRequestForm = ({ virt }: UseVirtRequestFormParams) => {
         server: values.server,
       });
 
-      const sentToBot = trySendVirtOrderSuccessToBot(webApp);
-      if (!sentToBot) {
-        showSuccessMessage(VIRT_FORM_TEXT.paymentSuccess);
-      }
+      showSuccessMessage(VIRT_FORM_TEXT.paymentSuccess);
+      void notifyVirtOrderSuccessFromMiniApp(webApp);
     } catch {
       showErrorMessage(VIRT_FORM_TEXT.paymentError);
     }

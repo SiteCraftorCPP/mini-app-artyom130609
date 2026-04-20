@@ -1,64 +1,54 @@
 /**
- * Уведомление бота о «успешной заявке» через Telegram WebApp.sendData.
- * Данные приходят в тот бот, с которого открыт мини-апп (без отдельного HTTP и секрета).
- * См. обработчик в bot/src/index.ts.
+ * Уведомление бота после «успешной» заявки: POST на /notify/virt-order-webapp с initData.
+ * WebApp.sendData в Telegram часто недоступен для мини-аппа с inline-кнопки — поэтому HTTP + проверка подписи на боте.
  */
-export type VirtOrderSuccessSendDataPayload = {
-  v: 1;
-  t: "virt_order_success";
-  orderId: string;
-  orderNumber: string;
-};
-
-type WebAppWithSendData = {
-  sendData: (data: string) => void;
-  initDataUnsafe?: { user?: { id: number } };
-};
-
 const LOG = "[virt-order]";
 
-export function trySendVirtOrderSuccessToBot(
-  webApp: WebAppWithSendData | null | undefined,
-): boolean {
-  if (!webApp?.sendData) {
-    console.warn(
-      LOG,
-      "sendData недоступен — уведомление в бот не уйдёт (откройте мини-апп из Telegram, не из браузера)",
-    );
-    return false;
+function resolveNotifyUrl(): string {
+  const fromEnv = import.meta.env.VITE_VIRT_ORDER_NOTIFY_URL?.trim();
+  if (fromEnv) {
+    return fromEnv.replace(/\/$/, "");
   }
-  const userId = webApp.initDataUnsafe?.user?.id;
-  if (!userId) {
+  if (typeof window !== "undefined" && window.location?.origin) {
+    return `${window.location.origin}/notify/virt-order-webapp`;
+  }
+  return "";
+}
+
+export async function notifyVirtOrderSuccessFromMiniApp(
+  webApp: { initData?: string } | null | undefined,
+): Promise<void> {
+  const initData = webApp?.initData;
+  if (!initData) {
     console.warn(
       LOG,
-      "нет initDataUnsafe.user.id — данные пользователя не переданы WebApp, уведомление не отправится",
+      "нет initData — уведомление в бот по HTTP не отправить (откройте из Telegram)",
     );
-    return false;
+    return;
+  }
+
+  const url = resolveNotifyUrl();
+  if (!url) {
+    console.warn(LOG, "не удалось определить URL уведомления");
+    return;
   }
 
   const orderId = crypto.randomUUID();
   const orderNumber = `#${Date.now().toString(36).toUpperCase().slice(-6)}`;
-  const payload: VirtOrderSuccessSendDataPayload = {
-    v: 1,
-    t: "virt_order_success",
-    orderId,
-    orderNumber,
-  };
-  const str = JSON.stringify(payload);
-  if (str.length > 4096) {
-    console.error(LOG, "payload слишком длинный для sendData");
-    return false;
-  }
-  console.info(LOG, "sendData → бот", {
-    telegramUserId: userId,
-    orderId,
-    orderNumber,
-  });
+
   try {
-    webApp.sendData(str);
+    const r = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ initData, orderId, orderNumber }),
+    });
+    const text = await r.text().catch(() => "");
+    if (!r.ok) {
+      console.error(LOG, "HTTP notify ошибка", r.status, text);
+    } else {
+      console.info(LOG, "HTTP notify ok", r.status, text);
+    }
   } catch (e) {
-    console.error(LOG, "sendData выбросил ошибку", e);
-    return false;
+    console.error(LOG, "HTTP notify fetch", e);
   }
-  return true;
 }

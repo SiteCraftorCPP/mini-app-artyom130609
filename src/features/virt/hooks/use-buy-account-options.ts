@@ -6,7 +6,7 @@ import {
   VIRT_FORM_TEXT,
 } from "@/shared/constants/text";
 import { showErrorMessage, showSuccessMessage } from "@/shared/lib/notify";
-import { trySendVirtOrderSuccessToBot } from "@/shared/lib/telegram-virt-order-notify";
+import { notifyVirtOrderSuccessFromMiniApp } from "@/shared/lib/telegram-virt-order-notify";
 
 import SortLevelIcon from "@/assets/icon/sort-level.svg";
 import SortVirtIcon from "@/assets/icon/sort-virt.svg";
@@ -98,10 +98,8 @@ export const useBuyAccountOptions = ({
         server,
       });
 
-      const sentToBot = trySendVirtOrderSuccessToBot(webApp);
-      if (!sentToBot) {
-        showSuccessMessage(VIRT_FORM_TEXT.paymentSuccess);
-      }
+      showSuccessMessage(VIRT_FORM_TEXT.paymentSuccess);
+      void notifyVirtOrderSuccessFromMiniApp(webApp);
     } catch {
       showErrorMessage(VIRT_FORM_TEXT.paymentError);
     }

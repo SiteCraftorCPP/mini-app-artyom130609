@@ -7,6 +7,8 @@ import type { Bot } from "grammy";
 import { InputFile } from "grammy";
 import { InlineKeyboard } from "grammy";
 
+import { getTelegramUserIdFromWebAppInitData } from "./telegram-webapp-init-data.js";
+
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export type VirtOrderSuccessPayload = {
@@ -92,14 +94,20 @@ type NotifyBody = {
   telegramUserId: number;
 };
 
-function readJsonBody(req: import("node:http").IncomingMessage): Promise<NotifyBody> {
+type WebAppNotifyBody = {
+  initData: string;
+  orderId: string;
+  orderNumber: string;
+};
+
+function readJsonBody<T>(req: import("node:http").IncomingMessage): Promise<T> {
   return new Promise((resolvePromise, reject) => {
     const chunks: Buffer[] = [];
     req.on("data", (c) => chunks.push(c));
     req.on("end", () => {
       try {
         const raw = Buffer.concat(chunks).toString("utf8");
-        const data = JSON.parse(raw) as NotifyBody;
+        const data = JSON.parse(raw) as T;
         resolvePromise(data);
       } catch (e) {
         reject(e);
@@ -109,10 +117,16 @@ function readJsonBody(req: import("node:http").IncomingMessage): Promise<NotifyB
   });
 }
 
+const corsNotifyHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type",
+};
+
 /**
- * POST /notify/virt-order-success
- * Authorization: Bearer <ORDER_NOTIFY_SECRET>
- * Body: { "telegramUserId": number, "orderNumber": string, "orderId": string }
+ * HTTP-сервер уведомлений:
+ * - POST /notify/virt-order-webapp — тело { initData, orderId, orderNumber }; подпись initData проверяется по TELEGRAM_BOT_TOKEN (для мини-аппа с inline-кнопки; sendData там часто недоступен).
+ * - POST /notify/virt-order-success — Authorization: Bearer ORDER_NOTIFY_SECRET (бэкенд на том же хосте).
  */
 export function startOrderNotifyHttpServer(
   bot: Bot,
@@ -120,50 +134,125 @@ export function startOrderNotifyHttpServer(
 ): void {
   const secret = process.env.ORDER_NOTIFY_SECRET?.trim();
   const port = Number(process.env.ORDER_NOTIFY_HTTP_PORT || "8788");
+  const bind = process.env.ORDER_NOTIFY_HTTP_BIND?.trim() || "127.0.0.1";
+  const botToken = process.env.TELEGRAM_BOT_TOKEN?.trim();
+
+  if (!botToken) {
+    console.warn(
+      "TELEGRAM_BOT_TOKEN не задан — /notify/virt-order-webapp недоступен.",
+    );
+  }
 
   if (!secret) {
     console.warn(
-      "ORDER_NOTIFY_SECRET не задан — HTTP-уведомления о заказах отключены (задайте секрет в .env).",
+      "ORDER_NOTIFY_SECRET не задан — POST /notify/virt-order-success (Bearer) отключён.",
     );
-    return;
   }
 
   const server = createServer(async (req, res) => {
-    if (req.method !== "POST" || req.url !== "/notify/virt-order-success") {
-      res.writeHead(404).end();
+    const url = req.url?.split("?")[0] ?? "";
+
+    if (
+      req.method === "OPTIONS" &&
+      (url === "/notify/virt-order-webapp" ||
+        url === "/notify/virt-order-success")
+    ) {
+      res.writeHead(204, corsNotifyHeaders).end();
       return;
     }
 
-    const auth = req.headers.authorization;
-    if (auth !== `Bearer ${secret}`) {
-      res.writeHead(401).end("unauthorized");
+    if (req.method === "POST" && url === "/notify/virt-order-webapp") {
+      if (!botToken) {
+        res.writeHead(503, corsNotifyHeaders).end("no bot token");
+        return;
+      }
+      try {
+        const body = await readJsonBody<WebAppNotifyBody>(req);
+        if (
+          typeof body.initData !== "string" ||
+          typeof body.orderId !== "string" ||
+          typeof body.orderNumber !== "string"
+        ) {
+          res.writeHead(400, corsNotifyHeaders).end("bad body");
+          return;
+        }
+        const telegramUserId = getTelegramUserIdFromWebAppInitData(
+          body.initData,
+          botToken,
+        );
+        if (telegramUserId === null) {
+          console.warn("[virt-order] /notify/virt-order-webapp: initData невалиден");
+          res.writeHead(401, corsNotifyHeaders).end("bad initData");
+          return;
+        }
+        console.info("[virt-order] HTTP /notify/virt-order-webapp", {
+          telegramUserId,
+          orderNumber: body.orderNumber,
+          orderId: body.orderId,
+        });
+        await sendVirtOrderSuccess(bot, miniAppUrl, {
+          telegramUserId,
+          orderId: body.orderId,
+          orderNumber: body.orderNumber,
+        });
+        res.writeHead(200, {
+          "Content-Type": "application/json",
+          ...corsNotifyHeaders,
+        });
+        res.end(JSON.stringify({ ok: true }));
+      } catch (e) {
+        console.error("[virt-order] /notify/virt-order-webapp:", e);
+        res.writeHead(500, corsNotifyHeaders).end("error");
+      }
       return;
     }
 
-    try {
-      const body = await readJsonBody(req);
-      if (
-        typeof body.telegramUserId !== "number" ||
-        typeof body.orderNumber !== "string" ||
-        typeof body.orderId !== "string"
-      ) {
-        res.writeHead(400).end("bad body");
+    if (req.method === "POST" && url === "/notify/virt-order-success") {
+      if (!secret) {
+        res.writeHead(503).end("bearer disabled");
+        return;
+      }
+      const auth = req.headers.authorization;
+      if (auth !== `Bearer ${secret}`) {
+        res.writeHead(401).end("unauthorized");
         return;
       }
 
-      console.info("[virt-order] HTTP notify /notify/virt-order-success", body);
-      await sendVirtOrderSuccess(bot, miniAppUrl, body);
-      res.writeHead(200, { "Content-Type": "application/json" });
-      res.end(JSON.stringify({ ok: true }));
-    } catch (e) {
-      console.error("notify/virt-order-success:", e);
-      res.writeHead(500).end("error");
+      try {
+        const body = await readJsonBody<NotifyBody>(req);
+        if (
+          typeof body.telegramUserId !== "number" ||
+          typeof body.orderNumber !== "string" ||
+          typeof body.orderId !== "string"
+        ) {
+          res.writeHead(400).end("bad body");
+          return;
+        }
+
+        console.info("[virt-order] HTTP /notify/virt-order-success", body);
+        await sendVirtOrderSuccess(bot, miniAppUrl, body);
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ ok: true }));
+      } catch (e) {
+        console.error("notify/virt-order-success:", e);
+        res.writeHead(500).end("error");
+      }
+      return;
     }
+
+    res.writeHead(404).end();
   });
 
-  server.listen(port, "127.0.0.1", () => {
-    console.log(
-      `HTTP уведомления о заказах: POST http://127.0.0.1:${port}/notify/virt-order-success`,
-    );
+  server.listen(port, bind, () => {
+    if (botToken) {
+      console.log(
+        `HTTP мини-апп → заказ: POST http://${bind}:${port}/notify/virt-order-webapp (initData + nginx → сюда)`,
+      );
+    }
+    if (secret) {
+      console.log(
+        `HTTP бэкенд → заказ: POST http://${bind}:${port}/notify/virt-order-success (Bearer)`,
+      );
+    }
   });
 }
