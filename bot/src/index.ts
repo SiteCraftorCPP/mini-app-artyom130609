@@ -49,6 +49,36 @@ if (!token) {
 
 const bot = new Bot(token);
 
+type WelcomePhoto =
+  | { type: "url"; url: string }
+  | { type: "file"; path: string };
+
+function resolveWelcomePhoto(): WelcomePhoto | null {
+  const url = process.env.WELCOME_PHOTO_URL?.trim();
+  if (url && /^https?:\/\//i.test(url)) {
+    return { type: "url", url };
+  }
+  const fromEnv = process.env.WELCOME_PHOTO_PATH?.trim();
+  const botRoot = resolve(__dirname, "..");
+  const repoRoot = resolve(__dirname, "../..");
+  /**
+   * Только /start. Уведомление о заказе — отдельно (order-notify: photo_2, order-success…).
+   * Fallback photo_2026… — старый баннер, если нет welcome.jpg/png.
+   */
+  const candidates = [
+    fromEnv && resolve(botRoot, fromEnv),
+    resolve(botRoot, "images", "welcome.jpg"),
+    resolve(botRoot, "images", "welcome.png"),
+    resolve(botRoot, "images", "photo_2026-04-07_20-21-06.jpg"),
+    resolve(repoRoot, "images", "photo_2026-04-07_20-21-06.jpg"),
+  ].filter((p): p is string => Boolean(p));
+
+  for (const p of candidates) {
+    if (existsSync(p)) return { type: "file", path: p };
+  }
+  return null;
+}
+
 function resolveInstructionVideoPath(): string | null {
   const fromEnv = process.env.INSTRUCTION_VIDEO_PATH?.trim();
   const base = resolve(__dirname, "..");
@@ -83,8 +113,26 @@ async function sendWelcome(ctx: Context) {
   await clearReplyKeyboard(ctx);
 
   const markup = mainMenuInlineKeyboard(miniAppUrl);
-  /** /start — только текст; фото «заказ оформлен» отправляется из order-notify. */
-  await ctx.reply(WELCOME, { reply_markup: markup });
+  const photo = resolveWelcomePhoto();
+
+  if (!photo) {
+    console.warn(
+      "Баннер не найден: задайте WELCOME_PHOTO_URL или положите файл (см. WELCOME_PHOTO_PATH / bot/images/welcome.jpg).",
+    );
+    await ctx.reply(WELCOME, { reply_markup: markup });
+    return;
+  }
+
+  const extra = {
+    caption: WELCOME,
+    reply_markup: markup,
+  };
+
+  if (photo.type === "url") {
+    await ctx.replyWithPhoto(photo.url, extra);
+  } else {
+    await ctx.replyWithPhoto(new InputFile(photo.path), extra);
+  }
 }
 
 bot.command("start", async (ctx) => {
