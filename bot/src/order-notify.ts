@@ -21,8 +21,7 @@ export type VirtOrderSuccessPayload = {
 };
 
 /**
- * Как resolveWelcomePhoto в index.ts: сначала файлы на диске (надёжно, как /start),
- * потом URL — иначе ORDER_SUCCESS_PHOTO_URL с 404 ломал всю отправку.
+ * Только картинка для «заказ оформлен» — без welcome и без баннера /start.
  */
 type OrderSuccessPhoto =
   | { type: "url"; url: string }
@@ -34,14 +33,14 @@ function resolveOrderSuccessPhoto(): OrderSuccessPhoto | null {
   const fromEnv = process.env.ORDER_SUCCESS_IMAGE_PATH?.trim();
   const fileCandidates = [
     fromEnv && resolve(botRoot, fromEnv),
+    resolve(botRoot, "images", "order-success.jpg"),
+    resolve(botRoot, "images", "order-success.png"),
     resolve(botRoot, "images", "photo_2026-04-07_20-21-21.jpg"),
     resolve(botRoot, "images", "photo_2026-04-07_20-21-21.png"),
+    resolve(repoRoot, "images", "order-success.jpg"),
+    resolve(repoRoot, "images", "order-success.png"),
     resolve(repoRoot, "images", "photo_2026-04-07_20-21-21.jpg"),
     resolve(repoRoot, "images", "photo_2026-04-07_20-21-21.png"),
-    resolve(botRoot, "images", "welcome.jpg"),
-    resolve(botRoot, "images", "welcome.png"),
-    resolve(botRoot, "images", "photo_2026-04-07_20-21-06.jpg"),
-    resolve(repoRoot, "images", "photo_2026-04-07_20-21-06.jpg"),
   ].filter((p): p is string => Boolean(p));
 
   for (const p of fileCandidates) {
@@ -53,11 +52,6 @@ function resolveOrderSuccessPhoto(): OrderSuccessPhoto | null {
   const orderUrl = process.env.ORDER_SUCCESS_PHOTO_URL?.trim();
   if (orderUrl && /^https?:\/\//i.test(orderUrl)) {
     return { type: "url", url: orderUrl };
-  }
-
-  const welcomeUrl = process.env.WELCOME_PHOTO_URL?.trim();
-  if (welcomeUrl && /^https?:\/\//i.test(welcomeUrl)) {
-    return { type: "url", url: welcomeUrl };
   }
 
   return null;
