@@ -22,35 +22,63 @@ export type VirtOrderSuccessPayload = {
 
 /**
  * Только картинка для «заказ оформлен» — без welcome и без баннера /start.
+ * __dirname у собранного бота = …/bot/dist → файлы ищем в …/bot/images/ (не в src/).
  */
 type OrderSuccessPhoto =
   | { type: "url"; url: string }
   | { type: "file"; path: string };
 
+function resolvePathFromEnv(raw: string | undefined, botRoot: string): string | null {
+  const t = raw?.trim();
+  if (!t) return null;
+  if (t.startsWith("/")) {
+    return t;
+  }
+  return resolve(botRoot, t);
+}
+
 function resolveOrderSuccessPhoto(): OrderSuccessPhoto | null {
   const botRoot = resolve(__dirname, "..");
   const repoRoot = resolve(__dirname, "../..");
-  const fromEnv = process.env.ORDER_SUCCESS_IMAGE_PATH?.trim();
-  const fileCandidates = [
-    fromEnv && resolve(botRoot, fromEnv),
-    resolve(botRoot, "images", "order-success.jpg"),
-    resolve(botRoot, "images", "order-success.png"),
-    resolve(botRoot, "images", "photo_2026-04-07_20-21-21.jpg"),
-    resolve(botRoot, "images", "photo_2026-04-07_20-21-21.png"),
-    resolve(repoRoot, "images", "order-success.jpg"),
-    resolve(repoRoot, "images", "order-success.png"),
-    resolve(repoRoot, "images", "photo_2026-04-07_20-21-21.jpg"),
-    resolve(repoRoot, "images", "photo_2026-04-07_20-21-21.png"),
-  ].filter((p): p is string => Boolean(p));
+
+  const names = [
+    "order-success.jpg",
+    "order-success.png",
+    "photo_2026-04-07_20-21-21.jpg",
+    "photo_2026-04-07_20-21-21.png",
+    "order.jpg",
+    "order.png",
+  ];
+
+  const fileCandidates: string[] = [];
+  const push = (p: string | null) => {
+    if (p && !fileCandidates.includes(p)) {
+      fileCandidates.push(p);
+    }
+  };
+
+  push(resolvePathFromEnv(process.env.ORDER_SUCCESS_IMAGE_PATH, botRoot));
+
+  for (const name of names) {
+    push(resolve(botRoot, "images", name));
+    push(resolve(repoRoot, "images", name));
+  }
 
   for (const p of fileCandidates) {
     if (existsSync(p)) {
+      console.info("[virt-order] фото заказа (файл):", p);
       return { type: "file", path: p };
     }
   }
 
+  console.warn(
+    "[virt-order] фото заказа на диске не найдено. Проверьте путь (Linux: папка images с маленькой буквы). Кандидаты:",
+    fileCandidates,
+  );
+
   const orderUrl = process.env.ORDER_SUCCESS_PHOTO_URL?.trim();
   if (orderUrl && /^https?:\/\//i.test(orderUrl)) {
+    console.info("[virt-order] фото заказа (URL):", orderUrl.slice(0, 80));
     return { type: "url", url: orderUrl };
   }
 
