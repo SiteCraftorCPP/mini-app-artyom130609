@@ -37,7 +37,22 @@ function resolvePathFromEnv(raw: string | undefined, botRoot: string): string | 
   return resolve(botRoot, t);
 }
 
-/** Корни, где ищем bot/images/ (на сервере cwd systemd часто = папка bot, а __dirname = …/bot/dist). */
+/** Имена файлов в images/ — только эти строки (ASCII), без других вариантов. */
+export const ORDER_SUCCESS_FILE_NAMES = [
+  "order-success.jpg",
+  "order-success.png",
+  "photo_2.jpg",
+  "photo_2.png",
+  "photo_2026-04-07_20-21-21.jpg",
+  "photo_2026-04-07_20-21-21.png",
+  /** как в экспорте с телефона (секунды в имени могут отличаться) */
+  "photo_2026-04-07_20-21-06.jpg",
+  "photo_2026-04-07_20-21-06.png",
+  "order.jpg",
+  "order.png",
+] as const;
+
+/** Корни, где ищем images/ (на сервере cwd systemd часто = папка bot, а __dirname = …/bot/dist). */
 function orderPhotoInstallRoots(): string[] {
   const seen = new Set<string>();
   const add = (p: string) => {
@@ -55,19 +70,26 @@ function orderPhotoInstallRoots(): string[] {
   return [...seen];
 }
 
-function resolveOrderSuccessPhoto(): OrderSuccessPhoto | null {
+export type OrderSuccessPhotoDiag = {
+  runtimeDirname: string;
+  botRoot: string;
+  repoRoot: string;
+  cwd: string;
+  installRoots: string[];
+  env_ORDER_SUCCESS_IMAGE_PATH: string | undefined;
+  env_ORDER_SUCCESS_PHOTO_URL: string | undefined;
+  env_BOT_INSTALL_ROOT: string | undefined;
+  candidates: string[];
+  firstExistingPath: string | null;
+  urlFallback: string | null;
+};
+
+/** Для отладки на сервере: те же пути, что при отправке заказа. */
+export function diagnoseOrderSuccessPhoto(): OrderSuccessPhotoDiag {
+  const runtimeDirname = __dirname;
   const botRoot = resolve(__dirname, "..");
   const repoRoot = resolve(__dirname, "../..");
   const installRoots = orderPhotoInstallRoots();
-
-  const names = [
-    "order-success.jpg",
-    "order-success.png",
-    "photo_2026-04-07_20-21-21.jpg",
-    "photo_2026-04-07_20-21-21.png",
-    "order.jpg",
-    "order.png",
-  ];
 
   const fileCandidates: string[] = [];
   const push = (p: string | null) => {
@@ -79,35 +101,59 @@ function resolveOrderSuccessPhoto(): OrderSuccessPhoto | null {
   push(resolvePathFromEnv(process.env.ORDER_SUCCESS_IMAGE_PATH, botRoot));
 
   for (const root of installRoots) {
-    for (const name of names) {
+    for (const name of ORDER_SUCCESS_FILE_NAMES) {
       push(resolve(root, "images", name));
     }
   }
 
-  for (const name of names) {
+  for (const name of ORDER_SUCCESS_FILE_NAMES) {
     push(resolve(repoRoot, "images", name));
   }
 
-  for (const p of fileCandidates) {
-    if (existsSync(p)) {
-      console.info("[virt-order] фото заказа (файл):", p);
-      return { type: "file", path: p };
-    }
+  const firstExistingPath =
+    fileCandidates.find((p) => existsSync(p)) ?? null;
+
+  const orderUrl = process.env.ORDER_SUCCESS_PHOTO_URL?.trim();
+  const urlFallback =
+    orderUrl && /^https?:\/\//i.test(orderUrl) ? orderUrl : null;
+
+  return {
+    runtimeDirname,
+    botRoot,
+    repoRoot,
+    cwd: process.cwd(),
+    installRoots,
+    env_ORDER_SUCCESS_IMAGE_PATH: process.env.ORDER_SUCCESS_IMAGE_PATH,
+    env_ORDER_SUCCESS_PHOTO_URL: process.env.ORDER_SUCCESS_PHOTO_URL,
+    env_BOT_INSTALL_ROOT: process.env.BOT_INSTALL_ROOT,
+    candidates: fileCandidates,
+    firstExistingPath,
+    urlFallback,
+  };
+}
+
+function resolveOrderSuccessPhoto(): OrderSuccessPhoto | null {
+  const diag = diagnoseOrderSuccessPhoto();
+
+  if (diag.firstExistingPath) {
+    console.info("[virt-order] фото заказа (файл):", diag.firstExistingPath);
+    return { type: "file", path: diag.firstExistingPath };
   }
 
   console.warn(
-    "[virt-order] фото заказа на диске не найдено. __dirname→botRoot=",
-    botRoot,
+    "[virt-order] фото заказа на диске не найдено. runtimeDirname=",
+    diag.runtimeDirname,
+    "botRoot=",
+    diag.botRoot,
     "cwd=",
-    process.cwd(),
+    diag.cwd,
     "кандидаты:",
-    fileCandidates,
+    diag.candidates,
   );
 
-  const orderUrl = process.env.ORDER_SUCCESS_PHOTO_URL?.trim();
-  if (orderUrl && /^https?:\/\//i.test(orderUrl)) {
-    console.info("[virt-order] фото заказа (URL):", orderUrl.slice(0, 80));
-    return { type: "url", url: orderUrl };
+  if (diag.urlFallback) {
+    console.info("[virt-order] фото заказа (URL):", diag.urlFallback.slice(0, 80));
+    return { type: "url", url: diag.urlFallback };
   }
 
   return null;
@@ -170,7 +216,7 @@ export async function sendVirtOrderSuccess(
         reply_markup,
       });
     } else {
-      console.info("[virt-order] sendPhoto с диска (как /start)", photo.path);
+      console.info("[virt-order] sendPhoto заказа с диска", photo.path);
       await bot.api.sendPhoto(payload.telegramUserId, new InputFile(photo.path), {
         caption,
         reply_markup,

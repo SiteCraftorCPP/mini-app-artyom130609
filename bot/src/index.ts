@@ -60,13 +60,11 @@ function resolveWelcomePhoto(): WelcomePhoto | null {
   }
   const fromEnv = process.env.WELCOME_PHOTO_PATH?.trim();
   const botRoot = resolve(__dirname, "..");
-  const repoRoot = resolve(__dirname, "../..");
+  /** Только welcome.* или путь из env — не смешивать с фото «заказ оформлен» (order-notify). */
   const candidates = [
     fromEnv && resolve(botRoot, fromEnv),
     resolve(botRoot, "images", "welcome.jpg"),
     resolve(botRoot, "images", "welcome.png"),
-    resolve(botRoot, "images", "photo_2026-04-07_20-21-06.jpg"),
-    resolve(repoRoot, "images", "photo_2026-04-07_20-21-06.jpg"),
   ].filter((p): p is string => Boolean(p));
 
   for (const p of candidates) {
