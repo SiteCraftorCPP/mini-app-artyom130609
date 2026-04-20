@@ -58,9 +58,10 @@ export const HomeActionDialog = ({
   const isBuyVirtsAction = actionId === "buy-virtual-currency";
   const isSellVirtsAction = actionId === "sell-virtual-currency";
   const isBuyAccountAction = actionId === "buy-account";
+  /** Показываем «назад», как только выбран пункт (даже пока грузится virt по id). */
   const shouldShowBackButton =
     (isBuyVirtsAction || isSellVirtsAction || isBuyAccountAction) &&
-    Boolean(virtPopupFlow.selectedVirt);
+    Boolean(virtPopupFlow.selectedVirtId);
 
   let content: ReactNode;
   if (isBuyVirtsAction) {

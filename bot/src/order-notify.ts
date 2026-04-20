@@ -38,6 +38,15 @@ function resolveOrderSuccessImagePath(): string | null {
   return null;
 }
 
+/** Публичный URL картинки (Telegram скачает сам); если задан — не нужен файл на диске у бота. */
+function resolveOrderSuccessPhotoUrl(): string | null {
+  const u = process.env.ORDER_SUCCESS_PHOTO_URL?.trim();
+  if (u && /^https?:\/\//i.test(u)) {
+    return u;
+  }
+  return null;
+}
+
 function buildVirtOrderSuccessCaption(orderNumber: string): string {
   return [
     `✅ Заказ #${orderNumber} успешно оформлен!`,
@@ -71,16 +80,23 @@ export async function sendVirtOrderSuccess(
   });
   const caption = buildVirtOrderSuccessCaption(payload.orderNumber);
   const reply_markup = buildOrderDetailsKeyboard(miniAppUrl, payload.orderId);
+  const photoUrl = resolveOrderSuccessPhotoUrl();
   const imagePath = resolveOrderSuccessImagePath();
 
-  if (imagePath) {
+  if (photoUrl) {
+    console.info("[virt-order] sendPhoto по URL (ORDER_SUCCESS_PHOTO_URL)");
+    await bot.api.sendPhoto(payload.telegramUserId, photoUrl, {
+      caption,
+      reply_markup,
+    });
+  } else if (imagePath) {
     await bot.api.sendPhoto(payload.telegramUserId, new InputFile(imagePath), {
       caption,
       reply_markup,
     });
   } else {
     console.warn(
-      "ORDER_SUCCESS: фото не найдено (ORDER_SUCCESS_IMAGE_PATH или images/photo_2026-04-07_20-21-21.jpg/png) — отправляю только текст.",
+      "ORDER_SUCCESS: нет фото — задайте ORDER_SUCCESS_PHOTO_URL (https://...) или положите файл в bot/images/ или ORDER_SUCCESS_IMAGE_PATH — отправляю только текст.",
     );
     await bot.api.sendMessage(payload.telegramUserId, caption, {
       reply_markup,
