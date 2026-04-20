@@ -15,19 +15,26 @@ import { HomeActionDialog } from "@/widgets/popup-app";
 
 export const HomePage = () => {
   return (
-    <div>
+    <div className="flex min-h-0 flex-1 flex-col">
       <h1 className="sr-only">{HOME_SCREEN_TEXT.hero.sectionTitle}</h1>
 
-      <section aria-labelledby="home-hero-title">
+      <section
+        aria-labelledby="home-hero-title"
+        className="flex min-h-0 flex-1 flex-col"
+      >
         <h2 id="home-hero-title" className="sr-only">
           {HOME_SCREEN_TEXT.hero.title}
         </h2>
-        <Card className="p-4" bordered={true} classNameWrapper="rounded-2xl">
-          <div className="mb-2 flex flex-col items-center">
+        <Card
+          className="flex min-h-0 flex-1 flex-col p-4"
+          bordered={true}
+          classNameWrapper="rounded-2xl flex min-h-0 flex-1 flex-col"
+        >
+          <div className="mb-2 flex shrink-0 flex-col items-center">
             <Logo />
           </div>
 
-          <ul className="flex flex-col gap-3">
+          <ul className="flex shrink-0 flex-col gap-3">
             {HOME_SCREEN_MOCK.actions.map((action) => {
               return (
                 <li key={action.id}>
@@ -60,6 +67,9 @@ export const HomePage = () => {
               );
             })}
           </ul>
+
+          {/* Тянет фон карточки вниз; кнопки и gap между ними не трогаем */}
+          <div className="min-h-0 flex-1" aria-hidden />
         </Card>
       </section>
     </div>
