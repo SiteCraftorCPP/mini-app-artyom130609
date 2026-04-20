@@ -6,7 +6,10 @@ import { config } from "dotenv";
 import { Bot, InputFile, type Context } from "grammy";
 
 import { aboutBackKeyboard, mainMenuInlineKeyboard } from "./keyboards.js";
-import { startOrderNotifyHttpServer } from "./order-notify.js";
+import {
+  sendVirtOrderSuccess,
+  startOrderNotifyHttpServer,
+} from "./order-notify.js";
 import {
   ABOUT_SHOP,
   VIDEO_CAPTION,
@@ -164,6 +167,42 @@ bot.callbackQuery("about:back", async (ctx) => {
     /* сообщение уже удалено или недоступно */
   }
   await ctx.answerCallbackQuery();
+});
+
+/** Мини-апп после «успешной» заявки вызывает WebApp.sendData — без отдельного бэкенда. */
+bot.on("message", async (ctx, next) => {
+  const raw = ctx.message?.web_app_data?.data;
+  if (raw === undefined) {
+    return next();
+  }
+  try {
+    const parsed = JSON.parse(raw) as {
+      v?: unknown;
+      t?: unknown;
+      orderId?: unknown;
+      orderNumber?: unknown;
+    };
+    if (
+      parsed.v !== 1 ||
+      parsed.t !== "virt_order_success" ||
+      typeof parsed.orderId !== "string" ||
+      typeof parsed.orderNumber !== "string"
+    ) {
+      return next();
+    }
+    const uid = ctx.from?.id;
+    if (uid === undefined) {
+      return next();
+    }
+    await sendVirtOrderSuccess(bot, miniAppUrl, {
+      telegramUserId: uid,
+      orderId: parsed.orderId,
+      orderNumber: parsed.orderNumber,
+    });
+  } catch (e) {
+    console.error("web_app_data / virt_order_success:", e);
+    await next();
+  }
 });
 
 bot.catch((err) => {

@@ -1,3 +1,4 @@
+import { useWebApp } from "@vkruglikov/react-telegram-web-app";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { type FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -5,6 +6,7 @@ import { useForm } from "react-hook-form";
 import { DEFAULT } from "@/shared/constants/default";
 import { VIRT_FORM_TEXT } from "@/shared/constants/text";
 import { showErrorMessage, showSuccessMessage } from "@/shared/lib/notify";
+import { trySendVirtOrderSuccessToBot } from "@/shared/lib/telegram-virt-order-notify";
 
 import {
   type VirtRequestFormValues,
@@ -48,6 +50,7 @@ type UseVirtRequestFormParams = {
 type AmountFieldName = "amountRub" | "amountVirts";
 
 export const useVirtRequestForm = ({ virt }: UseVirtRequestFormParams) => {
+  const webApp = useWebApp();
   const form = useForm<VirtRequestFormValues>({
     resolver: zodResolver(createVirtRequestSchema(virt.minAmountRub)),
     defaultValues: getDefaultValues(virt),
@@ -108,7 +111,10 @@ export const useVirtRequestForm = ({ virt }: UseVirtRequestFormParams) => {
         server: values.server,
       });
 
-      showSuccessMessage(VIRT_FORM_TEXT.paymentSuccess);
+      const sentToBot = trySendVirtOrderSuccessToBot(webApp);
+      if (!sentToBot) {
+        showSuccessMessage(VIRT_FORM_TEXT.paymentSuccess);
+      }
     } catch {
       showErrorMessage(VIRT_FORM_TEXT.paymentError);
     }

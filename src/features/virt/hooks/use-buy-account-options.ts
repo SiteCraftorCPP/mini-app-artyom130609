@@ -1,3 +1,4 @@
+import { useWebApp } from "@vkruglikov/react-telegram-web-app";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import {
@@ -5,6 +6,7 @@ import {
   VIRT_FORM_TEXT,
 } from "@/shared/constants/text";
 import { showErrorMessage, showSuccessMessage } from "@/shared/lib/notify";
+import { trySendVirtOrderSuccessToBot } from "@/shared/lib/telegram-virt-order-notify";
 
 import SortLevelIcon from "@/assets/icon/sort-level.svg";
 import SortVirtIcon from "@/assets/icon/sort-virt.svg";
@@ -32,6 +34,7 @@ export const useBuyAccountOptions = ({
   onBackStateChange,
   virt,
 }: UseBuyAccountOptionsParams) => {
+  const webApp = useWebApp();
   const submitBuyAccountRequest = useSubmitBuyAccountRequest();
   const [selectedMode, setSelectedMode] = useState<BuyAccountModeConfig | null>(
     null,
@@ -95,11 +98,22 @@ export const useBuyAccountOptions = ({
         server,
       });
 
-      showSuccessMessage(VIRT_FORM_TEXT.paymentSuccess);
+      const sentToBot = trySendVirtOrderSuccessToBot(webApp);
+      if (!sentToBot) {
+        showSuccessMessage(VIRT_FORM_TEXT.paymentSuccess);
+      }
     } catch {
       showErrorMessage(VIRT_FORM_TEXT.paymentError);
     }
-  }, [amountRub, selectedMode, selectedOption, server, submitBuyAccountRequest, virt.id]);
+  }, [
+    amountRub,
+    selectedMode,
+    selectedOption,
+    server,
+    submitBuyAccountRequest,
+    virt.id,
+    webApp,
+  ]);
 
   return {
     server,
