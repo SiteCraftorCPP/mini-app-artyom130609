@@ -1,0 +1,41 @@
+Фото для уведомления «заказ оформлен» — только эта папка на сервере:
+/srv/artshopvirts/mini-app-artyom130609/bot/images/
+
+Бот ищет файлы ТОЛЬКО там (или путь из ORDER_SUCCESS_IMAGE_PATH в bot/.env).
+
+Шаги на сервере (подставьте своё имя файла, если не используете стандартное):
+
+1) Положите JPG/PNG в каталог:
+   /srv/artshopvirts/mini-app-artyom130609/bot/images/
+
+2) Имя файла — один из вариантов (иначе добавьте строку в .env, шаг 4):
+   order-success.jpg
+   order-success.png
+   order.jpg
+   order.png
+   photo_2026-04-07_20-21-21.jpg
+   photo_2026-04-07_20-21-21.png
+
+3) Проверка:
+   ls -la /srv/artshopvirts/mini-app-artyom130609/bot/images/
+
+4) Если имя своё, например moe-zakaz.jpg — откройте:
+   sudo nano /srv/artshopvirts/mini-app-artyom130609/bot/.env
+   Добавьте строку (путь от папки bot/):
+   ORDER_SUCCESS_IMAGE_PATH=images/moe-zakaz.jpg
+   Или абсолютный путь:
+   ORDER_SUCCESS_IMAGE_PATH=/srv/artshopvirts/mini-app-artyom130609/bot/images/moe-zakaz.jpg
+
+5) Пересборка и перезапуск бота:
+   cd /srv/artshopvirts/mini-app-artyom130609
+   git pull
+   cd bot
+   sudo -u artshopvirts npm ci --omit=dev
+   sudo -u artshopvirts npm run build
+   sudo systemctl restart artshopvirts-bot
+
+6) Лог, если фото не подхватилось:
+   sudo journalctl -u artshopvirts-bot -n 80 --no-pager | grep virt-order
+
+В репозитории на ПК положите тот же файл сюда и закоммитьте, чтобы не забыть:
+   mini-app-artyom130609/bot/images/order-success.jpg
