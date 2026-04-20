@@ -47,7 +47,7 @@ export const PopupApp = ({
         lockBodyScroll={resolvedOpen}
         className={cn("overflow-hidden", contentClassName)}
       >
-        <DialogHeader className="gap-3 pr-4">
+        <DialogHeader className="gap-3 pr-0">
           {slot}
           <DialogTitle className={cn({ hidden: !title })}>
             <AppText className="font-bold" variant="popupBody" size="popupBody">

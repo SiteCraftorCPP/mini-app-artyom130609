@@ -13,7 +13,7 @@ type PopupAppHeaderProps = {
 
 export const PopupAppHeader = ({ onBack, title }: PopupAppHeaderProps) => {
   return (
-    <div className="flex items-center gap-2 px-3 pb-1 sm:px-4">
+    <div className="flex w-full items-center gap-2 pb-1 pl-3 sm:pl-4 pr-[max(0.25rem,env(safe-area-inset-right,0px))]">
       <div className="min-w-0 flex-1">
         <div className="tw-bg-gradient-badge-background flex h-8 w-fit max-w-full items-center justify-center rounded-[6px] border border-white/50 px-3">
           <AppText variant="primaryStrong" size="popupBadge">
@@ -21,7 +21,7 @@ export const PopupAppHeader = ({ onBack, title }: PopupAppHeaderProps) => {
           </AppText>
         </div>
       </div>
-      <div className="flex shrink-0 items-center gap-2">
+      <div className="ml-auto flex shrink-0 items-center gap-2">
         {onBack ? (
           <Button
             type="button"

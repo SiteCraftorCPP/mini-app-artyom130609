@@ -15,13 +15,24 @@ type WebAppWithSendData = {
   initDataUnsafe?: { user?: { id: number } };
 };
 
+const LOG = "[virt-order]";
+
 export function trySendVirtOrderSuccessToBot(
   webApp: WebAppWithSendData | null | undefined,
 ): boolean {
   if (!webApp?.sendData) {
+    console.warn(
+      LOG,
+      "sendData недоступен — уведомление в бот не уйдёт (откройте мини-апп из Telegram, не из браузера)",
+    );
     return false;
   }
-  if (!webApp.initDataUnsafe?.user?.id) {
+  const userId = webApp.initDataUnsafe?.user?.id;
+  if (!userId) {
+    console.warn(
+      LOG,
+      "нет initDataUnsafe.user.id — данные пользователя не переданы WebApp, уведомление не отправится",
+    );
     return false;
   }
 
@@ -35,8 +46,19 @@ export function trySendVirtOrderSuccessToBot(
   };
   const str = JSON.stringify(payload);
   if (str.length > 4096) {
+    console.error(LOG, "payload слишком длинный для sendData");
     return false;
   }
-  webApp.sendData(str);
+  console.info(LOG, "sendData → бот", {
+    telegramUserId: userId,
+    orderId,
+    orderNumber,
+  });
+  try {
+    webApp.sendData(str);
+  } catch (e) {
+    console.error(LOG, "sendData выбросил ошибку", e);
+    return false;
+  }
   return true;
 }

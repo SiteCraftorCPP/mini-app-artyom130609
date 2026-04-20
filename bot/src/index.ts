@@ -169,12 +169,22 @@ bot.callbackQuery("about:back", async (ctx) => {
   await ctx.answerCallbackQuery();
 });
 
+const VIRT_ORDER_LOG = "[virt-order]";
+
 /** Мини-апп после «успешной» заявки вызывает WebApp.sendData — без отдельного бэкенда. */
 bot.on("message", async (ctx, next) => {
   const raw = ctx.message?.web_app_data?.data;
   if (raw === undefined) {
     return next();
   }
+  console.info(
+    VIRT_ORDER_LOG,
+    "web_app_data получен",
+    "from=",
+    ctx.from?.id,
+    "len=",
+    raw.length,
+  );
   try {
     const parsed = JSON.parse(raw) as {
       v?: unknown;
@@ -188,19 +198,36 @@ bot.on("message", async (ctx, next) => {
       typeof parsed.orderId !== "string" ||
       typeof parsed.orderNumber !== "string"
     ) {
+      console.warn(
+        VIRT_ORDER_LOG,
+        "пропуск: неверный JSON или не virt_order_success",
+        parsed,
+      );
       return next();
     }
     const uid = ctx.from?.id;
     if (uid === undefined) {
+      console.warn(VIRT_ORDER_LOG, "пропуск: нет ctx.from.id");
       return next();
     }
+    console.info(
+      VIRT_ORDER_LOG,
+      "отправка sendVirtOrderSuccess",
+      "telegramUserId=",
+      uid,
+      "orderNumber=",
+      parsed.orderNumber,
+      "orderId=",
+      parsed.orderId,
+    );
     await sendVirtOrderSuccess(bot, miniAppUrl, {
       telegramUserId: uid,
       orderId: parsed.orderId,
       orderNumber: parsed.orderNumber,
     });
+    console.info(VIRT_ORDER_LOG, "сообщение пользователю отправлено ok", uid);
   } catch (e) {
-    console.error("web_app_data / virt_order_success:", e);
+    console.error(VIRT_ORDER_LOG, "ошибка обработки web_app_data:", e);
     await next();
   }
 });

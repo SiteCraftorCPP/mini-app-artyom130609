@@ -62,6 +62,11 @@ export async function sendVirtOrderSuccess(
   miniAppUrl: string,
   payload: VirtOrderSuccessPayload,
 ): Promise<void> {
+  console.info("[virt-order] sendVirtOrderSuccess", {
+    telegramUserId: payload.telegramUserId,
+    orderNumber: payload.orderNumber,
+    orderId: payload.orderId,
+  });
   const caption = buildVirtOrderSuccessCaption(payload.orderNumber);
   const reply_markup = buildOrderDetailsKeyboard(miniAppUrl, payload.orderId);
   const imagePath = resolveOrderSuccessImagePath();
@@ -146,6 +151,7 @@ export function startOrderNotifyHttpServer(
         return;
       }
 
+      console.info("[virt-order] HTTP notify /notify/virt-order-success", body);
       await sendVirtOrderSuccess(bot, miniAppUrl, body);
       res.writeHead(200, { "Content-Type": "application/json" });
       res.end(JSON.stringify({ ok: true }));
