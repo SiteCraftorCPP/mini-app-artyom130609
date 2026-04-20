@@ -19,7 +19,7 @@ export const Faq = ({ items }: FaqProps) => {
   return (
     <Card className="space-y-5 p-4" bordered={true} glow="none">
       <section aria-labelledby="faq-title" className="space-y-3 pb-3">
-        <ul className="mb-8 flex flex-col gap-4">
+        <ul className="mb-8 flex flex-col gap-12">
           {items.map((item) => (
             <li key={item.id}>
               <PopupApp

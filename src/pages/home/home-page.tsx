@@ -27,7 +27,7 @@ export const HomePage = () => {
             <Logo />
           </div>
 
-          <ul className="flex flex-col gap-3">
+          <ul className="flex flex-col gap-9">
             {HOME_SCREEN_MOCK.actions.map((action) => {
               return (
                 <li key={action.id}>
