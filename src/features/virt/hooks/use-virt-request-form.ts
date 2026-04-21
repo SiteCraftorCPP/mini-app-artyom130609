@@ -102,7 +102,7 @@ export const useVirtRequestForm = ({ virt }: UseVirtRequestFormParams) => {
 
   const submitVirtRequestForm = async (values: VirtRequestFormValues) => {
     try {
-      await submitVirtRequest.mutateAsync({
+      const result = await submitVirtRequest.mutateAsync({
         accountNumber: values.accountNumber,
         amountRub: Number(values.amountRub),
         amountVirts: Number(values.amountVirts),
@@ -112,7 +112,11 @@ export const useVirtRequestForm = ({ virt }: UseVirtRequestFormParams) => {
       });
 
       showSuccessMessage(VIRT_FORM_TEXT.paymentSuccess);
-      void notifyVirtOrderSuccessFromMiniApp(webApp, { orderKind: "virt" });
+      void notifyVirtOrderSuccessFromMiniApp(webApp, {
+        orderKind: "virt",
+        orderId: result.orderId,
+        orderNumber: result.orderNumber,
+      });
     } catch {
       showErrorMessage(VIRT_FORM_TEXT.paymentError);
     }

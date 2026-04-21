@@ -16,10 +16,13 @@ import { ACCOUNT_POPUP_MENU_ITEMS, type AccountPopupMenuItem } from "./model";
 type AccountMenuProps = {
   /** Ссылка из Telegram: открыть «Актуальные заказы» */
   openCurrentOrdersFromLink?: boolean;
+  /** Параметр orderId из ссылки бота (WebApp) */
+  orderIdFromLink?: string | null;
 };
 
 export const AccountMenu = ({
   openCurrentOrdersFromLink = false,
+  orderIdFromLink = null,
 }: AccountMenuProps) => {
   return (
     <section aria-label={ACCOUNT_PAGE_TEXT.pageTitle}>
@@ -29,6 +32,9 @@ export const AccountMenu = ({
             key={item.actionId}
             defaultOpen={
               openCurrentOrdersFromLink && item.actionId === "currentOrders"
+            }
+            initialOrderIdFromLink={
+              item.actionId === "currentOrders" ? orderIdFromLink : null
             }
             item={item}
           />
@@ -63,13 +69,19 @@ export const AccountMenu = ({
 const AccountMenuPopupItem = ({
   item,
   defaultOpen = false,
+  initialOrderIdFromLink = null,
 }: {
   item: AccountPopupMenuItem;
   defaultOpen?: boolean;
+  initialOrderIdFromLink?: string | null;
 }) => {
   return (
     <li>
-      <AccountActionsDialog actionId={item.actionId} defaultOpen={defaultOpen}>
+      <AccountActionsDialog
+        actionId={item.actionId}
+        defaultOpen={defaultOpen}
+        initialOrderIdFromLink={initialOrderIdFromLink}
+      >
         <Button
           type="button"
           variant="accountMenu"

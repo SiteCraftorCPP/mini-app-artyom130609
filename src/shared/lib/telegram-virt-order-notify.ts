@@ -40,7 +40,11 @@ export type VirtOrderNotifyKind = "virt" | "account";
 
 export async function notifyVirtOrderSuccessFromMiniApp(
   webApp: WebAppLike | null | undefined,
-  options?: { orderKind?: VirtOrderNotifyKind },
+  options?: {
+    orderId: string;
+    orderKind?: VirtOrderNotifyKind;
+    orderNumber: string;
+  },
 ): Promise<void> {
   const initData = resolveInitData(webApp);
   if (!initData) {
@@ -57,9 +61,17 @@ export async function notifyVirtOrderSuccessFromMiniApp(
     return;
   }
 
-  const orderId = crypto.randomUUID();
-  const orderNumber = `#${Date.now().toString(36).toUpperCase().slice(-6)}`;
-  const orderKind = options?.orderKind ?? "virt";
+  if (!options?.orderId?.trim() || !options?.orderNumber?.trim()) {
+    console.warn(
+      LOG,
+      "нет orderId/orderNumber — уведомление не отправляем (нужны после успешной заявки)",
+    );
+    return;
+  }
+
+  const orderId = options.orderId.trim();
+  const orderNumber = options.orderNumber.trim();
+  const orderKind = options.orderKind ?? "virt";
 
   try {
     const r = await fetch(url, {

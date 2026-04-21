@@ -4,6 +4,7 @@ export const QUERY_KEYS = {
     ME: "me",
   },
   ORDERS: {
+    BY_ID: "orderById",
     CURRENT: "orders",
     HISTORY: "historyOrders",
     HISTORY_DETAIL: "historyOrderDetail",

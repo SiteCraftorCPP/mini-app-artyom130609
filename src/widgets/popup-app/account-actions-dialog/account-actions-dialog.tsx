@@ -18,17 +18,30 @@ type AccountActionsDialogProps = {
   children: ReactNode;
   /** Открыть диалог сразу (deep link из бота: /profile?open=currentOrders) */
   defaultOpen?: boolean;
+  /** Deep link: /profile?...&orderId=… — показать карточку этого заказа */
+  initialOrderIdFromLink?: string | null;
 };
 
 export const AccountActionsDialog = ({
   actionId,
   children,
   defaultOpen = false,
+  initialOrderIdFromLink = null,
 }: AccountActionsDialogProps) => {
   const action = ACCOUNT_ACTION_DIALOG_TEXT[actionId];
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [open, setOpen] = useState(defaultOpen);
+  const [focusedCurrentOrderId, setFocusedCurrentOrderId] = useState<
+    string | null
+  >(() =>
+    actionId === "currentOrders" && initialOrderIdFromLink
+      ? initialOrderIdFromLink
+      : null,
+  );
+
   const isHistoryDetail = actionId === "orderHistory" && selectedOrderId;
+  const isCurrentDetail =
+    actionId === "currentOrders" && Boolean(focusedCurrentOrderId);
 
   return (
     <PopupApp
@@ -38,12 +51,19 @@ export const AccountActionsDialog = ({
       slot={
         <PopupAppHeader
           title={action.title}
-          onBack={isHistoryDetail ? () => setSelectedOrderId(null) : undefined}
+          onBack={
+            isHistoryDetail
+              ? () => setSelectedOrderId(null)
+              : isCurrentDetail
+                ? () => setFocusedCurrentOrderId(null)
+                : undefined
+          }
         />
       }
       content={renderAccountActionContent({
         actionId,
         content: action.content,
+        focusedCurrentOrderId,
         selectedOrderId,
         setSelectedOrderId,
       })}
@@ -56,15 +76,20 @@ export const AccountActionsDialog = ({
 const renderAccountActionContent = ({
   actionId,
   content,
+  focusedCurrentOrderId,
   selectedOrderId,
   setSelectedOrderId,
 }: {
   actionId: AccountActionId;
   content: string;
+  focusedCurrentOrderId: string | null;
   selectedOrderId: string | null;
   setSelectedOrderId: (orderId: string) => void;
 }) => {
   if (actionId === "currentOrders") {
+    if (focusedCurrentOrderId) {
+      return <AccountOrderDetail orderId={focusedCurrentOrderId} />;
+    }
     return <AccountCurrentOrders />;
   }
 

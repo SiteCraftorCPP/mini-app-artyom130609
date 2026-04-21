@@ -14,12 +14,21 @@ export type SubmitBuyAccountRequestPayload = {
   server: string;
 };
 
+export type SubmitBuyAccountRequestResult = SubmitBuyAccountRequestPayload & {
+  orderId: string;
+  orderNumber: string;
+};
+
 export const useSubmitBuyAccountRequest = () => {
   return useMutation({
     mutationFn: async (payload: SubmitBuyAccountRequestPayload) => {
-      return await new Promise<SubmitBuyAccountRequestPayload>((resolve) => {
+      return await new Promise<SubmitBuyAccountRequestResult>((resolve) => {
         setTimeout(() => {
-          resolve(payload);
+          resolve({
+            ...payload,
+            orderId: "current-1",
+            orderNumber: `#${Date.now().toString(36).toUpperCase().slice(-6)}`,
+          });
         }, TIMING.submitDelayMs);
       });
     },

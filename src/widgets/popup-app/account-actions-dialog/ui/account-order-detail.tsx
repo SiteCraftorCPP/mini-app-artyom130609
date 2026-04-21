@@ -6,7 +6,7 @@ import { TEXT } from "@/shared/constants/text";
 import {
   AccountOrderCard,
   AccountOrderInfoPanel,
-  useGetHistoryOrderById,
+  useGetOrderById,
 } from "@/entities/order";
 
 type AccountOrderDetailProps = {
@@ -14,7 +14,7 @@ type AccountOrderDetailProps = {
 };
 
 export const AccountOrderDetail = ({ orderId }: AccountOrderDetailProps) => {
-  const { data: order, isLoading } = useGetHistoryOrderById({ id: orderId });
+  const { data: order, isLoading } = useGetOrderById({ id: orderId });
 
   if (isLoading) {
     return (

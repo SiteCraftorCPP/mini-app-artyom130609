@@ -8,11 +8,21 @@ import { ContactInfo } from "@/widgets/contact-info";
 import { LogoCard } from "@/widgets/logo-card";
 import { UserInfo } from "@/widgets/user-info";
 
+function readProfileDeepLink() {
+  if (typeof window === "undefined") {
+    return { open: false, orderId: null as string | null };
+  }
+  const p = new URLSearchParams(window.location.search);
+  return {
+    open: p.get("open") === "currentOrders",
+    orderId: p.get("orderId"),
+  };
+}
+
 export const AccountPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [openCurrentOrdersFromLink] = useState(
-    () => searchParams.get("open") === "currentOrders",
-  );
+  const [{ open: openCurrentOrdersFromLink, orderId: orderIdFromLink }] =
+    useState(readProfileDeepLink);
 
   useEffect(() => {
     if (!searchParams.has("open") && !searchParams.has("orderId")) return;
@@ -33,7 +43,10 @@ export const AccountPage = () => {
 
       <LogoCard />
       <UserInfo />
-      <AccountMenu openCurrentOrdersFromLink={openCurrentOrdersFromLink} />
+      <AccountMenu
+        openCurrentOrdersFromLink={openCurrentOrdersFromLink}
+        orderIdFromLink={orderIdFromLink}
+      />
       <ContactInfo />
     </div>
   );

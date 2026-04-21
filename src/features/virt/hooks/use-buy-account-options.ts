@@ -90,7 +90,7 @@ export const useBuyAccountOptions = ({
     }
 
     try {
-      await submitBuyAccountRequest.mutateAsync({
+      const result = await submitBuyAccountRequest.mutateAsync({
         amountRub,
         id: virt.id,
         mode: selectedMode.mode,
@@ -99,7 +99,11 @@ export const useBuyAccountOptions = ({
       });
 
       showSuccessMessage(VIRT_FORM_TEXT.paymentSuccess);
-      void notifyVirtOrderSuccessFromMiniApp(webApp, { orderKind: "account" });
+      void notifyVirtOrderSuccessFromMiniApp(webApp, {
+        orderKind: "account",
+        orderId: result.orderId,
+        orderNumber: result.orderNumber,
+      });
     } catch {
       showErrorMessage(VIRT_FORM_TEXT.paymentError);
     }

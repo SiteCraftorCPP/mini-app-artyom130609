@@ -1,5 +1,6 @@
 export { useGetHistoryOrderById } from "./hooks/use-get-history-order-by-id";
 export { useGetHistoryOrders } from "./hooks/use-get-history-orders";
+export { useGetOrderById } from "./hooks/use-get-order-by-id";
 export { useGetOrders } from "./hooks/use-get-orders";
 export { AccountOrderCard } from "./ui";
 export { AccountOrderInfoPanel } from "./ui";
