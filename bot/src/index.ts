@@ -20,20 +20,23 @@ import {
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
+/**
+ * Подгружаем все существующие .env по очереди (нижележащие переопределяют верхние).
+ * Раньше брался только первый файл — если был bot/.env без ORDER_SUCCESS, корневой .env игнорировался.
+ * Порядок: BOT_ENV_FILE → корень репо → bot/.env (типичные секреты бота перекрывают общий файл).
+ */
 function loadEnv() {
   const explicit = process.env.BOT_ENV_FILE?.trim();
   const candidates = [
     explicit,
-    resolve(__dirname, "../.env"),
     resolve(__dirname, "../../.env"),
+    resolve(__dirname, "../.env"),
   ].filter((p): p is string => Boolean(p));
   for (const p of candidates) {
     if (existsSync(p)) {
-      config({ path: p });
-      return;
+      config({ path: p, override: true });
     }
   }
-  config();
 }
 
 loadEnv();
