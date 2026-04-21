@@ -1,7 +1,9 @@
+import type { MouseEvent } from "react";
+
 import { AppText } from "@/ui/app-text";
 import { Button } from "@/ui/button";
 
-import { CHANEL_BUY } from "@/shared/constants/common";
+import { resolveSellVirtTelegramLink } from "@/shared/constants/common";
 import { TEXT, VIRT_SELL_TEXT } from "@/shared/constants/text";
 
 import { type Virt, VirtCard } from "@/entities/virt";
@@ -11,12 +13,34 @@ type VirtSellProps = {
 };
 
 export const VirtSell = ({ virt }: VirtSellProps) => {
+  const sellLink = resolveSellVirtTelegramLink();
+
+  const handleSellClick = (e: MouseEvent<HTMLAnchorElement>) => {
+    if (!sellLink) {
+      return;
+    }
+    const tg = (
+      window as unknown as {
+        Telegram?: { WebApp?: { openTelegramLink?: (url: string) => void } };
+      }
+    ).Telegram?.WebApp;
+    if (tg?.openTelegramLink) {
+      e.preventDefault();
+      tg.openTelegramLink(sellLink);
+    }
+  };
+
   return (
     <div className="flex flex-col items-center justify-center gap-4 px-4 pb-6">
       <VirtCard virt={virt} interactive={false} className="shadow-none" />
       <div className="flex flex-col items-center justify-center gap-4 px-4">
         <Button asChild variant={"link"} className="border-white" size={"link"}>
-          <a href={`${CHANEL_BUY}`} target="_blanck">
+          <a
+            href={sellLink || "#"}
+            onClick={handleSellClick}
+            rel="noreferrer"
+            target="_blank"
+          >
             <AppText variant={"primaryStrong"} size={"popupBody"}>
               {TEXT.buttons.sell}
             </AppText>

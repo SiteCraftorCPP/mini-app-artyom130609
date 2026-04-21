@@ -2,6 +2,22 @@ export const BASE_API_URL = import.meta.env.VITE_API_URL;
 export const LINK_SHARED = `https://t.me/${import.meta.env.VITE_BOT_ADDRESS}?start=`;
 export const DEV_MODE = import.meta.env.DEV;
 export const CHANEL_BUY = import.meta.env.VITE_CHANEL_BUY || "";
+
+/**
+ * Ссылка для «Продать»: не ставь URL мини-аппа (откроется сайт, а не чат).
+ * Если VITE_CHANEL_BUY пусто — deep link в бота: /start sell → бот шлёт фото+текст.
+ */
+export function resolveSellVirtTelegramLink(): string {
+  const custom = import.meta.env.VITE_CHANEL_BUY?.trim();
+  if (custom) {
+    return custom;
+  }
+  const bot = import.meta.env.VITE_BOT_ADDRESS?.replace(/^@/, "").trim();
+  if (bot) {
+    return `https://t.me/${bot}?start=sell`;
+  }
+  return "";
+}
 export const SUPPORT_CHAT_URL = import.meta.env.VITE_SUPPORT_CHAT_URL || "";
 export const EXTERNAL_LINKS = {
   channel: import.meta.env.VITE_CHANNEL_URL || "",
