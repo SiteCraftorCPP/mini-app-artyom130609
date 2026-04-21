@@ -140,12 +140,17 @@ async function sendWelcome(ctx: Context) {
   }
 }
 
-/** Параметр после /start (deep link t.me/bot?start=sell). */
+/** Параметр после /start (t.me/bot?start=sell → в чате часто «/start sell»). */
 function getStartPayload(ctx: Context): string {
-  const t = ctx.message?.text;
-  if (!t?.startsWith("/start")) return "";
-  const m = t.match(/^\/start(?:@[\w]+)?(?:\s+(.+))?$/);
-  return m?.[1]?.trim() ?? "";
+  const t = ctx.message?.text?.trim();
+  if (!t?.startsWith("/start")) {
+    return "";
+  }
+  const parts = t.split(/\s+/).filter(Boolean);
+  if (parts.length < 2) {
+    return "";
+  }
+  return parts.slice(1).join(" ").trim();
 }
 
 /** Кнопка «Продать» в мини-аппе → чат с ботом /start sell — то же фото, что ORDER_SUCCESS_*. */

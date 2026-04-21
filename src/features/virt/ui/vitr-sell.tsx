@@ -17,6 +17,7 @@ export const VirtSell = ({ virt }: VirtSellProps) => {
 
   const handleSellClick = (e: MouseEvent<HTMLAnchorElement>) => {
     if (!sellLink) {
+      e.preventDefault();
       return;
     }
     const tg = (
@@ -27,7 +28,9 @@ export const VirtSell = ({ virt }: VirtSellProps) => {
     if (tg?.openTelegramLink) {
       e.preventDefault();
       tg.openTelegramLink(sellLink);
+      return;
     }
+    /* Вне Telegram — обычный переход по t.me */
   };
 
   return (
@@ -36,10 +39,9 @@ export const VirtSell = ({ virt }: VirtSellProps) => {
       <div className="flex flex-col items-center justify-center gap-4 px-4">
         <Button asChild variant={"link"} className="border-white" size={"link"}>
           <a
-            href={sellLink || "#"}
+            href={sellLink || undefined}
             onClick={handleSellClick}
             rel="noreferrer"
-            target="_blank"
           >
             <AppText variant={"primaryStrong"} size={"popupBody"}>
               {TEXT.buttons.sell}
