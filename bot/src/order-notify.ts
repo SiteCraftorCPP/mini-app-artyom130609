@@ -185,7 +185,7 @@ function buildVirtOrderCaption(orderNumber: string): string {
   ].join("\n");
 }
 
-/** Покупка аккаунта — срок + детали в мини-апп (то же фото, что и у виртов). */
+/** Покупка аккаунта — срок + WebApp «Узнать детали» (то же фото ORDER_SUCCESS_*). */
 function buildAccountAppOrderCaption(orderNumber: string): string {
   const n = formatOrderNumberForCaption(orderNumber);
   return [
@@ -194,7 +194,7 @@ function buildAccountAppOrderCaption(orderNumber: string): string {
     "🕔 Срок выдачи: от 5 минут до 24 часов",
     "(среднее время — ~20 минут)",
     "",
-    "Данные аккаунта будут отправлены в этот чат.",
+    "Информация по заказу будет отправлена в этот чат.",
     "",
     "Чтобы узнать детали заказа, нажмите кнопку ниже 👇",
   ].join("\n");
@@ -211,6 +211,10 @@ function buildAccountManagerOrderCaption(orderNumber: string): string {
   ].join("\n");
 }
 
+/**
+ * Кнопка только типа web_app — иначе Telegram показывает обычную ссылку, а не открытие мини-аппа.
+ * URL должен совпадать с доменом Mini App в @BotFather.
+ */
 function buildOrderDetailsKeyboard(miniAppUrl: string, orderId: string) {
   const base = miniAppUrl.replace(/\/$/, "");
   const url = `${base}/profile?open=currentOrders&orderId=${encodeURIComponent(orderId)}`;
@@ -240,18 +244,18 @@ function resolveVirtOrderCaptionAndKeyboard(
     };
   }
 
+  /** По умолчанию — WebApp «Узнать детали». Режим manager — только если явно ACCOUNT_ORDER_TEMPLATE=manager. */
   const mode = process.env.ACCOUNT_ORDER_TEMPLATE?.trim().toLowerCase();
-  const useApp = mode === "app";
-  if (useApp) {
+  if (mode === "manager") {
     return {
-      caption: buildAccountAppOrderCaption(payload.orderNumber),
-      reply_markup: buildOrderDetailsKeyboard(miniAppUrl, payload.orderId),
+      caption: buildAccountManagerOrderCaption(payload.orderNumber),
+      reply_markup: buildManagerOrderKeyboard(),
     };
   }
 
   return {
-    caption: buildAccountManagerOrderCaption(payload.orderNumber),
-    reply_markup: buildManagerOrderKeyboard(),
+    caption: buildAccountAppOrderCaption(payload.orderNumber),
+    reply_markup: buildOrderDetailsKeyboard(miniAppUrl, payload.orderId),
   };
 }
 
