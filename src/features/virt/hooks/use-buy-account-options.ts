@@ -99,7 +99,7 @@ export const useBuyAccountOptions = ({
       });
 
       showSuccessMessage(VIRT_FORM_TEXT.paymentSuccess);
-      void notifyVirtOrderSuccessFromMiniApp(webApp);
+      void notifyVirtOrderSuccessFromMiniApp(webApp, { orderKind: "account" });
     } catch {
       showErrorMessage(VIRT_FORM_TEXT.paymentError);
     }

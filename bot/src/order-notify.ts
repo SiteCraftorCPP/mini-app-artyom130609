@@ -11,13 +11,19 @@ import { getTelegramUserIdFromWebAppInitData } from "./telegram-webapp-init-data
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
+export type OrderNotifyKind = "virt" | "account";
+
 export type VirtOrderSuccessPayload = {
-  /** Номер заказа для текста (#JDHDH) */
+  /** Номер заказа для текста (#JDHDH или JDHDH) */
   orderNumber: string;
   /** Внутренний id заказа для deep link в мини-апп */
   orderId: string;
   /** chat_id = telegram user id (личка с ботом) */
   telegramUserId: number;
+  /**
+   * По умолчанию `virt`. Для покупки аккаунта — `account` (шаблон см. ACCOUNT_ORDER_TEMPLATE).
+   */
+  orderKind?: OrderNotifyKind;
 };
 
 /**
@@ -159,16 +165,49 @@ function resolveOrderSuccessPhoto(): OrderSuccessPhoto | null {
   return null;
 }
 
-/** Уведомление после покупки (вирты / аккаунт — один и тот же шаблон; фото через ORDER_SUCCESS_IMAGE_PATH). */
-function buildVirtOrderSuccessCaption(orderNumber: string): string {
+function formatOrderNumberForCaption(orderNumber: string): string {
+  const t = orderNumber.trim();
+  return t.startsWith("#") ? t : `#${t}`;
+}
+
+/** Покупка виртов — кнопка «Узнать детали» в мини-апп. */
+function buildVirtOrderCaption(orderNumber: string): string {
+  const n = formatOrderNumberForCaption(orderNumber);
   return [
-    `✅ Заказ #${orderNumber} успешно оформлен!`,
+    `✅ Заказ ${n} успешно оформлен!`,
     "",
-    "🕔 Время выдачи данных от аккаунта: от 5 минут до 24 часов. (Среднее время выдачи ~20 минут)",
+    "🕔 Срок выдачи: от 5 минут до 24 часов",
+    "(среднее время — ~20 минут)",
     "",
-    "💬 Данные придут прямо сюда в чат.",
+    "После зачисления виртов на ваш счёт вы получите уведомление в этом чате.",
     "",
     "Чтобы узнать детали заказа, нажмите кнопку ниже 👇",
+  ].join("\n");
+}
+
+/** Покупка аккаунта — срок + детали в мини-апп (то же фото, что и у виртов). */
+function buildAccountAppOrderCaption(orderNumber: string): string {
+  const n = formatOrderNumberForCaption(orderNumber);
+  return [
+    `✅ Заказ ${n} успешно оформлен!`,
+    "",
+    "🕔 Срок выдачи: от 5 минут до 24 часов",
+    "(среднее время — ~20 минут)",
+    "",
+    "Данные аккаунта будут отправлены в этот чат.",
+    "",
+    "Чтобы узнать детали заказа, нажмите кнопку ниже 👇",
+  ].join("\n");
+}
+
+/** Покупка аккаунта — связь с менеджером (без webApp-кнопки заказа). */
+function buildAccountManagerOrderCaption(orderNumber: string): string {
+  const n = formatOrderNumberForCaption(orderNumber);
+  return [
+    `✅ Заказ ${n} успешно оформлен!`,
+    "",
+    "💬 Следующие действия:",
+    "Скопируйте номер заказ и отпишите нашему менеджеру, нажав на кнопку ниже 🔽",
   ].join("\n");
 }
 
@@ -176,6 +215,44 @@ function buildOrderDetailsKeyboard(miniAppUrl: string, orderId: string) {
   const base = miniAppUrl.replace(/\/$/, "");
   const url = `${base}/profile?open=currentOrders&orderId=${encodeURIComponent(orderId)}`;
   return new InlineKeyboard().webApp("🟢 Узнать детали", url);
+}
+
+function buildManagerOrderKeyboard(): InlineKeyboard {
+  const url =
+    process.env.MANAGER_TELEGRAM_URL?.trim() || "https://t.me/artshopvirts_man";
+  return new InlineKeyboard().url(
+    "🟢 Написать менеджеру (@artshopvirts_man)",
+    url,
+  );
+}
+
+type CaptionAndKeyboard = { caption: string; reply_markup: InlineKeyboard };
+
+function resolveVirtOrderCaptionAndKeyboard(
+  payload: VirtOrderSuccessPayload,
+  miniAppUrl: string,
+): CaptionAndKeyboard {
+  const kind = payload.orderKind ?? "virt";
+  if (kind === "virt") {
+    return {
+      caption: buildVirtOrderCaption(payload.orderNumber),
+      reply_markup: buildOrderDetailsKeyboard(miniAppUrl, payload.orderId),
+    };
+  }
+
+  const mode = process.env.ACCOUNT_ORDER_TEMPLATE?.trim().toLowerCase();
+  const useApp = mode === "app";
+  if (useApp) {
+    return {
+      caption: buildAccountAppOrderCaption(payload.orderNumber),
+      reply_markup: buildOrderDetailsKeyboard(miniAppUrl, payload.orderId),
+    };
+  }
+
+  return {
+    caption: buildAccountManagerOrderCaption(payload.orderNumber),
+    reply_markup: buildManagerOrderKeyboard(),
+  };
 }
 
 /**
@@ -190,9 +267,12 @@ export async function sendVirtOrderSuccess(
     telegramUserId: payload.telegramUserId,
     orderNumber: payload.orderNumber,
     orderId: payload.orderId,
+    orderKind: payload.orderKind ?? "virt",
   });
-  const caption = buildVirtOrderSuccessCaption(payload.orderNumber);
-  const reply_markup = buildOrderDetailsKeyboard(miniAppUrl, payload.orderId);
+  const { caption, reply_markup } = resolveVirtOrderCaptionAndKeyboard(
+    payload,
+    miniAppUrl,
+  );
   const photo = resolveOrderSuccessPhoto();
 
   const sendTextOnly = async () => {
@@ -233,13 +313,22 @@ type NotifyBody = {
   orderId: string;
   orderNumber: string;
   telegramUserId: number;
+  orderKind?: OrderNotifyKind;
 };
 
 type WebAppNotifyBody = {
   initData: string;
   orderId: string;
   orderNumber: string;
+  orderKind?: OrderNotifyKind;
 };
+
+function parseOrderKind(raw: unknown): OrderNotifyKind | undefined {
+  if (raw === "virt" || raw === "account") {
+    return raw;
+  }
+  return undefined;
+}
 
 function readJsonBody<T>(req: import("node:http").IncomingMessage): Promise<T> {
   return new Promise((resolvePromise, reject) => {
@@ -266,7 +355,7 @@ const corsNotifyHeaders = {
 
 /**
  * HTTP-сервер уведомлений:
- * - POST /notify/virt-order-webapp — тело { initData, orderId, orderNumber }; подпись initData проверяется по TELEGRAM_BOT_TOKEN (для мини-аппа с inline-кнопки; sendData там часто недоступен).
+ * - POST /notify/virt-order-webapp — тело { initData, orderId, orderNumber, orderKind?: "virt"|"account" }; подпись initData по TELEGRAM_BOT_TOKEN.
  * - POST /notify/virt-order-success — Authorization: Bearer ORDER_NOTIFY_SECRET (бэкенд на том же хосте).
  */
 export function startOrderNotifyHttpServer(
@@ -317,6 +406,7 @@ export function startOrderNotifyHttpServer(
           res.writeHead(400, corsNotifyHeaders).end("bad body");
           return;
         }
+        const orderKind = parseOrderKind(body.orderKind);
         const telegramUserId = getTelegramUserIdFromWebAppInitData(
           body.initData,
           botToken,
@@ -335,6 +425,7 @@ export function startOrderNotifyHttpServer(
           telegramUserId,
           orderId: body.orderId,
           orderNumber: body.orderNumber,
+          ...(orderKind ? { orderKind } : {}),
         });
         res.writeHead(200, {
           "Content-Type": "application/json",
@@ -370,8 +461,16 @@ export function startOrderNotifyHttpServer(
           return;
         }
 
-        console.info("[virt-order] HTTP /notify/virt-order-success", body);
-        await sendVirtOrderSuccess(bot, miniAppUrl, body);
+        const orderKind = parseOrderKind(body.orderKind);
+        const payload: VirtOrderSuccessPayload = {
+          telegramUserId: body.telegramUserId,
+          orderNumber: body.orderNumber,
+          orderId: body.orderId,
+          ...(orderKind ? { orderKind } : {}),
+        };
+
+        console.info("[virt-order] HTTP /notify/virt-order-success", payload);
+        await sendVirtOrderSuccess(bot, miniAppUrl, payload);
         res.writeHead(200, { "Content-Type": "application/json" });
         res.end(JSON.stringify({ ok: true }));
       } catch (e) {

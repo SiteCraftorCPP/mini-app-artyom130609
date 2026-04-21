@@ -112,7 +112,7 @@ export const useVirtRequestForm = ({ virt }: UseVirtRequestFormParams) => {
       });
 
       showSuccessMessage(VIRT_FORM_TEXT.paymentSuccess);
-      void notifyVirtOrderSuccessFromMiniApp(webApp);
+      void notifyVirtOrderSuccessFromMiniApp(webApp, { orderKind: "virt" });
     } catch {
       showErrorMessage(VIRT_FORM_TEXT.paymentError);
     }

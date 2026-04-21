@@ -195,6 +195,7 @@ bot.on("message", async (ctx, next) => {
       t?: unknown;
       orderId?: unknown;
       orderNumber?: unknown;
+      orderKind?: unknown;
     };
     if (
       parsed.v !== 1 ||
@@ -224,10 +225,15 @@ bot.on("message", async (ctx, next) => {
       "orderId=",
       parsed.orderId,
     );
+    const orderKind =
+      parsed.orderKind === "account" || parsed.orderKind === "virt"
+        ? parsed.orderKind
+        : undefined;
     await sendVirtOrderSuccess(bot, miniAppUrl, {
       telegramUserId: uid,
       orderId: parsed.orderId,
       orderNumber: parsed.orderNumber,
+      ...(orderKind ? { orderKind } : {}),
     });
     console.info(VIRT_ORDER_LOG, "сообщение пользователю отправлено ok", uid);
   } catch (e) {

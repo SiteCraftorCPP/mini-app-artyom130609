@@ -36,8 +36,11 @@ function resolveInitData(webApp: WebAppLike | null | undefined): string {
   return "";
 }
 
+export type VirtOrderNotifyKind = "virt" | "account";
+
 export async function notifyVirtOrderSuccessFromMiniApp(
   webApp: WebAppLike | null | undefined,
+  options?: { orderKind?: VirtOrderNotifyKind },
 ): Promise<void> {
   const initData = resolveInitData(webApp);
   if (!initData) {
@@ -56,12 +59,13 @@ export async function notifyVirtOrderSuccessFromMiniApp(
 
   const orderId = crypto.randomUUID();
   const orderNumber = `#${Date.now().toString(36).toUpperCase().slice(-6)}`;
+  const orderKind = options?.orderKind ?? "virt";
 
   try {
     const r = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ initData, orderId, orderNumber }),
+      body: JSON.stringify({ initData, orderId, orderNumber, orderKind }),
     });
     const text = await r.text().catch(() => "");
     if (!r.ok) {
