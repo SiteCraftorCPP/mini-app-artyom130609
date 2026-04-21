@@ -23,6 +23,9 @@ const dialogContentVariants = cva(
           "top-1/2 max-w-sm -translate-y-1/2 rounded-[16px] p-6 text-text-primary shadow-[0_24px_60px_var(--app-shadow)]",
         popup:
           "top-[max(0.25rem,min(6.5vh,3.25rem))] bottom-[max(0.25rem,var(--popup-viewport-offset))] max-w-md translate-y-0 overflow-hidden rounded-[16px] shadow-[0_24px_60px_var(--app-shadow)]",
+        /** Узкий блок по центру экрана (FAQ и т.п.), без растягивания на всю высоту */
+        popupCentered:
+          "top-1/2 max-h-[min(85vh,560px)] w-[min(100vw-2rem,22rem)] max-w-[22rem] -translate-y-1/2 overflow-hidden rounded-[16px] shadow-[0_24px_60px_var(--app-shadow)]",
       },
     },
     defaultVariants: {
@@ -82,6 +85,8 @@ export const DialogContent = ({
   useLockBodyScroll(lockBodyScroll);
 
   const resolvedVariant = variant ?? "popup";
+  const isPopupSurface =
+    resolvedVariant === "popup" || resolvedVariant === "popupCentered";
 
   return (
     <DialogPortal>
@@ -89,11 +94,18 @@ export const DialogContent = ({
       <DialogPrimitive.Content
         className={cn(dialogContentVariants({ variant }), className)}
         {...props}
-        data-tg-dialog-popup={resolvedVariant === "popup" ? "true" : undefined}
+        data-tg-dialog-popup={isPopupSurface ? "true" : undefined}
       >
-        {resolvedVariant === "popup" ? (
+        {isPopupSurface ? (
           <div className="tw-bg-gradient-card-border relative flex max-h-full min-h-0 flex-1 rounded-[16px] p-px">
-            <div className="tw-bg-gradient-popup-surface text-text-primary relative flex max-h-full min-h-0 flex-1 flex-col rounded-[15px] pt-[max(var(--app-telegram-popup-top-clearance,52px),var(--tg-content-top,0px),var(--tg-safe-top,0px),env(safe-area-inset-top,0px))] backdrop-blur-[2px]">
+            <div
+              className={cn(
+                "tw-bg-gradient-popup-surface text-text-primary relative flex max-h-full min-h-0 flex-1 flex-col rounded-[15px] backdrop-blur-[2px]",
+                resolvedVariant === "popupCentered"
+                  ? "pt-[max(0.75rem,env(safe-area-inset-top,0px))] pb-3"
+                  : "pt-[max(var(--app-telegram-popup-top-clearance,52px),var(--tg-content-top,0px),var(--tg-safe-top,0px),env(safe-area-inset-top,0px))]",
+              )}
+            >
               {children}
             </div>
           </div>

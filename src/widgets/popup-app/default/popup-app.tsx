@@ -11,10 +11,15 @@ import {
 
 import { cn } from "@/shared/utils";
 
+/** `popup` — на весь экран по вертикали; `popupCentered` — компактное окно по центру (FAQ). */
+export type PopupAppDialogVariant = "popup" | "popupCentered";
+
 type PopupAppProps = {
   children: ReactNode;
   content: ReactNode;
   contentClassName?: string;
+  /** Вариант `DialogContent`: по умолчанию `popup`. */
+  dialogVariant?: PopupAppDialogVariant;
   open?: boolean;
   setOpen?: Dispatch<SetStateAction<boolean>>;
   slot?: ReactNode;
@@ -25,6 +30,7 @@ export const PopupApp = ({
   children,
   content,
   contentClassName,
+  dialogVariant = "popup",
   open,
   setOpen,
   slot,
@@ -43,7 +49,7 @@ export const PopupApp = ({
     <Dialog open={resolvedOpen} onOpenChange={resolvedSetOpen}>
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent
-        variant="popup"
+        variant={dialogVariant}
         lockBodyScroll={resolvedOpen}
         className={cn("overflow-hidden", contentClassName)}
       >

@@ -8,7 +8,7 @@ import { cn } from "@/shared/utils";
 const infoBadgeCardVariants = cva("border-none bg-transparent", {
   variants: {
     variant: {
-      header: "h-10 flex-1 rounded-2xl",
+      header: "h-10 w-fit max-w-full shrink-0 rounded-2xl",
       profile: "h-10 w-full rounded-2xl",
     },
   },
@@ -17,11 +17,11 @@ const infoBadgeCardVariants = cva("border-none bg-transparent", {
   },
 });
 
-const contentVariants = cva("grid h-full grid-cols-[auto_1fr] ", {
+const contentVariants = cva("grid h-full", {
   variants: {
     variant: {
-      header: "ml-1 rounded-md bg-surface-base",
-      profile: "ml-1 rounded-md bg-app-highlight",
+      header: "ml-1 grid-cols-[auto_auto] rounded-md bg-surface-base",
+      profile: "ml-1 grid-cols-[auto_1fr] rounded-md bg-app-highlight",
     },
   },
   defaultVariants: {

@@ -23,6 +23,7 @@ export const Faq = ({ items }: FaqProps) => {
           {items.map((item) => (
             <li key={item.id}>
               <PopupApp
+                dialogVariant="popupCentered"
                 slot={<PopupAppHeader title={INFO_PAGE_TEXT.supportButton} />}
                 content={<FaqAnswer item={item} />}
               >
