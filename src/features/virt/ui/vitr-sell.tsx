@@ -1,10 +1,12 @@
-import type { MouseEvent } from "react";
+import { useWebApp } from "@vkruglikov/react-telegram-web-app";
+import { useState } from "react";
 
 import { AppText } from "@/ui/app-text";
 import { Button } from "@/ui/button";
 
-import { resolveSellVirtTelegramLink } from "@/shared/constants/common";
 import { TEXT, VIRT_SELL_TEXT } from "@/shared/constants/text";
+import { showErrorMessage, showSuccessMessage } from "@/shared/lib/notify";
+import { notifySellVirtFromMiniApp } from "@/shared/lib/telegram-sell-notify";
 
 import { type Virt, VirtCard } from "@/entities/virt";
 
@@ -13,40 +15,38 @@ type VirtSellProps = {
 };
 
 export const VirtSell = ({ virt }: VirtSellProps) => {
-  const sellLink = resolveSellVirtTelegramLink();
+  const webApp = useWebApp();
+  const [pending, setPending] = useState(false);
 
-  const handleSellClick = (e: MouseEvent<HTMLAnchorElement>) => {
-    if (!sellLink) {
-      e.preventDefault();
-      return;
-    }
-    const tg = (
-      window as unknown as {
-        Telegram?: { WebApp?: { openTelegramLink?: (url: string) => void } };
+  const handleSellClick = async () => {
+    setPending(true);
+    try {
+      const ok = await notifySellVirtFromMiniApp(webApp);
+      if (ok) {
+        showSuccessMessage(VIRT_SELL_TEXT.notifySuccess);
+      } else {
+        showErrorMessage(VIRT_SELL_TEXT.notifyError);
       }
-    ).Telegram?.WebApp;
-    if (tg?.openTelegramLink) {
-      e.preventDefault();
-      tg.openTelegramLink(sellLink);
-      return;
+    } finally {
+      setPending(false);
     }
-    /* Вне Telegram — обычный переход по t.me */
   };
 
   return (
     <div className="flex flex-col items-center justify-center gap-4 px-4 pb-6">
       <VirtCard virt={virt} interactive={false} className="shadow-none" />
       <div className="flex flex-col items-center justify-center gap-4 px-4">
-        <Button asChild variant={"link"} className="border-white" size={"link"}>
-          <a
-            href={sellLink || undefined}
-            onClick={handleSellClick}
-            rel="noreferrer"
-          >
-            <AppText variant={"primaryStrong"} size={"popupBody"}>
-              {TEXT.buttons.sell}
-            </AppText>
-          </a>
+        <Button
+          type="button"
+          variant="link"
+          className="border-white"
+          size="link"
+          disabled={pending}
+          onClick={handleSellClick}
+        >
+          <AppText variant={"primaryStrong"} size={"popupBody"}>
+            {pending ? VIRT_SELL_TEXT.notifyPending : TEXT.buttons.sell}
+          </AppText>
         </Button>
         <AppText
           className="text-center"

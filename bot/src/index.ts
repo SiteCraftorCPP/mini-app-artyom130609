@@ -3,20 +3,15 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { config } from "dotenv";
-import { Bot, InlineKeyboard, InputFile, type Context } from "grammy";
+import { Bot, InputFile, type Context } from "grammy";
 
 import { aboutBackKeyboard, mainMenuInlineKeyboard } from "./keyboards.js";
 import {
-  diagnoseOrderSuccessPhoto,
+  sendSellVirtMessage,
   sendVirtOrderSuccess,
   startOrderNotifyHttpServer,
 } from "./order-notify.js";
-import {
-  ABOUT_SHOP,
-  SELL_VIRT_CAPTION,
-  VIDEO_CAPTION,
-  WELCOME,
-} from "./texts.js";
+import { ABOUT_SHOP, VIDEO_CAPTION, WELCOME } from "./texts.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -153,42 +148,17 @@ function getStartPayload(ctx: Context): string {
   return parts.slice(1).join(" ").trim();
 }
 
-/** Кнопка «Продать» в мини-аппе → чат с ботом /start sell — то же фото, что ORDER_SUCCESS_*. */
+/** Deep link /start sell — тот же контент, что и при нажатии «Продать» в мини-аппе (HTTP). */
 async function sendSellVirtGuidance(ctx: Context) {
   if (ctx.chat?.type !== "private") {
     return;
   }
-  await clearReplyKeyboard(ctx);
-
-  const diag = diagnoseOrderSuccessPhoto();
-  const managerUrl =
-    process.env.MANAGER_TELEGRAM_URL?.trim() || "https://t.me/artshopvirts_man";
-  const reply_markup = new InlineKeyboard().url(
-    "🟢 Написать менеджеру",
-    managerUrl,
-  );
-
-  const sendTextOnly = async () => {
-    await ctx.reply(SELL_VIRT_CAPTION, { reply_markup });
-  };
-
-  if (diag.firstExistingPath) {
-    console.info("[sell] фото как у заказа:", diag.firstExistingPath);
-    await ctx.replyWithPhoto(new InputFile(diag.firstExistingPath), {
-      caption: SELL_VIRT_CAPTION,
-      reply_markup,
-    });
-  } else if (diag.urlFallback) {
-    await ctx.replyWithPhoto(diag.urlFallback, {
-      caption: SELL_VIRT_CAPTION,
-      reply_markup,
-    });
-  } else {
-    console.warn(
-      "[sell] нет ORDER_SUCCESS фото — только текст (ORDER_SUCCESS_IMAGE_PATH / ORDER_SUCCESS_PHOTO_URL).",
-    );
-    await sendTextOnly();
+  const uid = ctx.from?.id;
+  if (uid === undefined) {
+    return;
   }
+  await clearReplyKeyboard(ctx);
+  await sendSellVirtMessage(bot, uid);
 }
 
 bot.command("start", async (ctx) => {

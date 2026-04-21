@@ -8,6 +8,7 @@ import { InputFile } from "grammy";
 import { InlineKeyboard } from "grammy";
 
 import { getTelegramUserIdFromWebAppInitData } from "./telegram-webapp-init-data.js";
+import { SELL_VIRT_CAPTION } from "./texts.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -163,6 +164,59 @@ function resolveOrderSuccessPhoto(): OrderSuccessPhoto | null {
   }
 
   return null;
+}
+
+/**
+ * «Продать вирты» — фото + текст в личку (HTTP из мини-аппа, без переходов по t.me).
+ */
+export async function sendSellVirtMessage(
+  bot: Bot,
+  telegramUserId: number,
+): Promise<void> {
+  const diag = diagnoseOrderSuccessPhoto();
+  const managerUrl =
+    process.env.MANAGER_TELEGRAM_URL?.trim() || "https://t.me/artshopvirts_man";
+  const reply_markup = new InlineKeyboard().url(
+    "🟢 Написать менеджеру",
+    managerUrl,
+  );
+
+  const sendTextOnly = async () => {
+    await bot.api.sendMessage(telegramUserId, SELL_VIRT_CAPTION, {
+      reply_markup,
+    });
+  };
+
+  try {
+    if (diag.firstExistingPath) {
+      console.info("[sell] sendPhoto", diag.firstExistingPath);
+      await bot.api.sendPhoto(
+        telegramUserId,
+        new InputFile(diag.firstExistingPath),
+        {
+          caption: SELL_VIRT_CAPTION,
+          reply_markup,
+        },
+      );
+    } else if (diag.urlFallback) {
+      await bot.api.sendPhoto(telegramUserId, diag.urlFallback, {
+        caption: SELL_VIRT_CAPTION,
+        reply_markup,
+      });
+    } else {
+      console.warn(
+        "[sell] нет ORDER_SUCCESS фото — только текст (ORDER_SUCCESS_IMAGE_PATH / ORDER_SUCCESS_PHOTO_URL).",
+      );
+      await sendTextOnly();
+    }
+  } catch (e) {
+    console.error("[sell] sendSellVirtMessage", e);
+    try {
+      await sendTextOnly();
+    } catch {
+      /* ignore */
+    }
+  }
 }
 
 function formatOrderNumberForCaption(orderNumber: string): string {
@@ -360,6 +414,7 @@ const corsNotifyHeaders = {
 /**
  * HTTP-сервер уведомлений:
  * - POST /notify/virt-order-webapp — тело { initData, orderId, orderNumber, orderKind?: "virt"|"account" }; подпись initData по TELEGRAM_BOT_TOKEN.
+ * - POST /notify/sell-virt-webapp — тело { initData }; кнопка «Продать» в мини-аппе → сообщение в личку бота без переходов.
  * - POST /notify/virt-order-success — Authorization: Bearer ORDER_NOTIFY_SECRET (бэкенд на том же хосте).
  */
 export function startOrderNotifyHttpServer(
@@ -389,6 +444,7 @@ export function startOrderNotifyHttpServer(
     if (
       req.method === "OPTIONS" &&
       (url === "/notify/virt-order-webapp" ||
+        url === "/notify/sell-virt-webapp" ||
         url === "/notify/virt-order-success")
     ) {
       res.writeHead(204, corsNotifyHeaders).end();
@@ -443,6 +499,40 @@ export function startOrderNotifyHttpServer(
       return;
     }
 
+    if (req.method === "POST" && url === "/notify/sell-virt-webapp") {
+      if (!botToken) {
+        res.writeHead(503, corsNotifyHeaders).end("no bot token");
+        return;
+      }
+      try {
+        const body = await readJsonBody<{ initData: string }>(req);
+        if (typeof body.initData !== "string") {
+          res.writeHead(400, corsNotifyHeaders).end("bad body");
+          return;
+        }
+        const telegramUserId = getTelegramUserIdFromWebAppInitData(
+          body.initData,
+          botToken,
+        );
+        if (telegramUserId === null) {
+          console.warn("[sell] /notify/sell-virt-webapp: initData невалиден");
+          res.writeHead(401, corsNotifyHeaders).end("bad initData");
+          return;
+        }
+        console.info("[sell] HTTP /notify/sell-virt-webapp", { telegramUserId });
+        await sendSellVirtMessage(bot, telegramUserId);
+        res.writeHead(200, {
+          "Content-Type": "application/json",
+          ...corsNotifyHeaders,
+        });
+        res.end(JSON.stringify({ ok: true }));
+      } catch (e) {
+        console.error("[sell] /notify/sell-virt-webapp:", e);
+        res.writeHead(500, corsNotifyHeaders).end("error");
+      }
+      return;
+    }
+
     if (req.method === "POST" && url === "/notify/virt-order-success") {
       if (!secret) {
         res.writeHead(503).end("bearer disabled");
@@ -491,6 +581,9 @@ export function startOrderNotifyHttpServer(
     if (botToken) {
       console.log(
         `HTTP мини-апп → заказ: POST http://${bind}:${port}/notify/virt-order-webapp (initData + nginx → сюда)`,
+      );
+      console.log(
+        `HTTP мини-апп → продать: POST http://${bind}:${port}/notify/sell-virt-webapp { initData }`,
       );
     }
     if (secret) {
