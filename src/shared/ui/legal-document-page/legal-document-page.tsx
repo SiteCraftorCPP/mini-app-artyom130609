@@ -16,7 +16,7 @@ export const LegalDocumentPage = ({ title, body }: LegalDocumentPageProps) => {
         paddingBottom: `max(7.5rem, calc(6rem + env(safe-area-inset-bottom, 0px)))`,
       }}
     >
-      <div className="mx-auto flex w-full max-w-md flex-col gap-3 py-2">
+      <div className="mx-auto flex w-full max-w-md flex-col gap-4 py-2">
         <h1 className="sr-only">{title}</h1>
         <AppText
           tag={TAG.div}
@@ -30,7 +30,7 @@ export const LegalDocumentPage = ({ title, body }: LegalDocumentPageProps) => {
           tag={TAG.div}
           variant="popupBody"
           size="medium"
-          className="w-full text-left font-sans text-[14px] leading-normal sm:text-[15px] break-words whitespace-pre-wrap"
+          className="w-full text-center font-sans text-[14px] leading-normal sm:text-[15px] break-words whitespace-pre-wrap mt-1"
         >
           {body}
         </AppText>

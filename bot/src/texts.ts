@@ -28,6 +28,7 @@ export const BTN_OPEN_SHOP = "🟢 Открыть магазин";
 export const BTN_HOW_TO_ORDER = "🔴 Как оформить заказ";
 export const BTN_ABOUT = "🔵 О магазине";
 export const BTN_BACK = "Назад";
+export const BTN_ADMIN_PANEL = "В админ-панель";
 
 export const VIDEO_CAPTION = "Ознакомление: как оформить заказ";
 

@@ -5,7 +5,11 @@ import { fileURLToPath } from "node:url";
 import { config } from "dotenv";
 import { Bot, InputFile, type Context } from "grammy";
 
-import { aboutBackKeyboard, mainMenuInlineKeyboard } from "./keyboards.js";
+import {
+  aboutBackKeyboard,
+  adminPanelKeyboard,
+  mainMenuInlineKeyboard,
+} from "./keyboards.js";
 import {
   sendSellVirtMessage,
   sendVirtOrderSuccess,
@@ -48,6 +52,25 @@ if (!token) {
 }
 
 const bot = new Bot(token);
+
+function resolveBotAdminIdSet(): Set<number> {
+  const ids = new Set<number>();
+  const single = process.env.TELEGRAM_ADMIN_ID?.trim();
+  if (single && /^\d+$/.test(single)) {
+    ids.add(Number(single));
+  }
+  const list = process.env.TELEGRAM_ADMIN_IDS?.trim();
+  if (list) {
+    for (const part of list.split(/[\s,;]+/).map((s) => s.trim())) {
+      if (/^\d+$/.test(part)) {
+        ids.add(Number(part));
+      }
+    }
+  }
+  return ids;
+}
+
+const BOT_ADMIN_IDS = resolveBotAdminIdSet();
 
 type WelcomePhoto =
   | { type: "url"; url: string }
@@ -167,6 +190,24 @@ bot.command("start", async (ctx) => {
     return;
   }
   await sendWelcome(ctx);
+});
+
+bot.command("admin", async (ctx) => {
+  if (ctx.chat?.type !== "private") {
+    return;
+  }
+  const uid = ctx.from?.id;
+  if (uid == null) {
+    return;
+  }
+  if (!BOT_ADMIN_IDS.has(uid)) {
+    await ctx.reply("Нет доступа.");
+    return;
+  }
+  await clearReplyKeyboard(ctx);
+  await ctx.reply("Админ панель:", {
+    reply_markup: adminPanelKeyboard(miniAppUrl),
+  });
 });
 
 async function sendHowToVideo(ctx: Context) {
