@@ -66,6 +66,7 @@ export const AccountActionsDialog = ({
         focusedCurrentOrderId,
         selectedOrderId,
         setSelectedOrderId,
+        setFocusedCurrentOrderId,
       })}
     >
       {children}
@@ -79,18 +80,20 @@ const renderAccountActionContent = ({
   focusedCurrentOrderId,
   selectedOrderId,
   setSelectedOrderId,
+  setFocusedCurrentOrderId,
 }: {
   actionId: AccountActionId;
   content: string;
   focusedCurrentOrderId: string | null;
   selectedOrderId: string | null;
   setSelectedOrderId: (orderId: string) => void;
+  setFocusedCurrentOrderId: (orderId: string) => void;
 }) => {
   if (actionId === "currentOrders") {
     if (focusedCurrentOrderId) {
       return <AccountOrderDetail orderId={focusedCurrentOrderId} />;
     }
-    return <AccountCurrentOrders />;
+    return <AccountCurrentOrders onSelectOrder={setFocusedCurrentOrderId} />;
   }
 
   if (actionId === "orderHistory") {

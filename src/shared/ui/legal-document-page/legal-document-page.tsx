@@ -6,26 +6,31 @@ type LegalDocumentPageProps = {
 };
 
 /**
- * Пользовательское соглашение / политика: узкая колонка по центру ширины экрана.
+ * Пользовательское соглашение / политика: прокрутка, отступ снизу под нижнюю навигацию, компактный текст.
  */
 export const LegalDocumentPage = ({ title, body }: LegalDocumentPageProps) => {
   return (
-    <div className="box-border flex min-h-0 w-full flex-1 flex-col justify-center self-stretch px-4 py-6 pb-8">
-      <div className="mx-auto flex w-full max-w-md flex-col gap-4">
+    <div
+      className="box-border w-full min-w-0 max-w-full flex-1 self-stretch px-2 pt-3"
+      style={{
+        paddingBottom: `max(7.5rem, calc(6rem + env(safe-area-inset-bottom, 0px)))`,
+      }}
+    >
+      <div className="mx-auto flex w-full max-w-md flex-col gap-3 py-2">
         <h1 className="sr-only">{title}</h1>
         <AppText
           tag={TAG.div}
           variant="primaryStrong"
-          size="xxxl"
-          className="w-full text-center text-balance"
+          size="headerInfo"
+          className="w-full text-center text-balance text-[17px] leading-tight sm:text-lg"
         >
           {title}
         </AppText>
         <AppText
           tag={TAG.div}
-          variant="darkStrong"
-          size="popupBody"
-          className="text-text-primary w-full text-left font-sans leading-[1.5] break-words whitespace-pre-wrap"
+          variant="popupBody"
+          size="medium"
+          className="w-full text-left font-sans text-[14px] leading-normal sm:text-[15px] break-words whitespace-pre-wrap"
         >
           {body}
         </AppText>

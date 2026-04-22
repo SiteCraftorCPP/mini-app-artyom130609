@@ -6,10 +6,14 @@ export const CHANEL_BUY = import.meta.env.VITE_CHANEL_BUY || "";
 export const SUPPORT_CHAT_URL =
   import.meta.env.VITE_SUPPORT_CHAT_URL || "https://t.me/artshopvirts_man";
 export const EXTERNAL_LINKS = {
-  channel: import.meta.env.VITE_CHANNEL_URL || "",
-  contacts: import.meta.env.VITE_CONTACTS_URL || "",
+  channel:
+    import.meta.env.VITE_CHANNEL_URL || "https://t.me/artshopvirts_channel",
+  contacts:
+    import.meta.env.VITE_CONTACTS_URL || "https://t.me/artshopvirts_man",
   privacyPolicy: import.meta.env.VITE_PRIVACY_POLICY_URL || "",
-  reviews: import.meta.env.VITE_REVIEWS_URL || "",
+  reviews:
+    import.meta.env.VITE_REVIEWS_URL ||
+    "https://t.me/artshopvirts_channel/85",
   support: SUPPORT_CHAT_URL,
   terms: import.meta.env.VITE_TERMS_URL || "",
 } as const;

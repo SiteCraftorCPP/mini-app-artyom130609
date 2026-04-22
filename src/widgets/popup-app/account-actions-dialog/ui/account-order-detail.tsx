@@ -1,19 +1,28 @@
 import { AppText } from "@/ui/app-text";
 import { Spinner } from "@/ui/spinner";
 
-import { TEXT } from "@/shared/constants/text";
-
 import {
   AccountOrderCard,
   AccountOrderInfoPanel,
   useGetOrderById,
 } from "@/entities/order";
+import { TEXT } from "@/shared/constants/text";
+import { useIsTelegramAdmin } from "@/shared/hooks/use-is-telegram-admin";
+
+import { AccountAdminOrderDetail } from "./account-order-admin-detail";
 
 type AccountOrderDetailProps = {
   orderId: string;
 };
 
+const isAdminDetailModel = (order: {
+  categoryLabel?: string;
+  openedAtLine?: string;
+  telegramUserId?: string;
+}) => Boolean(order.openedAtLine && order.categoryLabel && order.telegramUserId);
+
 export const AccountOrderDetail = ({ orderId }: AccountOrderDetailProps) => {
+  const isAdmin = useIsTelegramAdmin();
   const { data: order, isLoading } = useGetOrderById({ id: orderId });
 
   if (isLoading) {
@@ -26,10 +35,16 @@ export const AccountOrderDetail = ({ orderId }: AccountOrderDetailProps) => {
 
   if (!order) {
     return (
-      <AppText variant="popupBody" size="popupBody">
-        {TEXT.base.empty}
-      </AppText>
+      <div className="px-4 pb-4">
+        <AppText variant="popupBody" size="popupBody">
+          {TEXT.base.empty}
+        </AppText>
+      </div>
     );
+  }
+
+  if (isAdmin && isAdminDetailModel(order)) {
+    return <AccountAdminOrderDetail order={order} />;
   }
 
   return (
