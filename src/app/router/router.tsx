@@ -17,6 +17,11 @@ const AccountPage = lazy(() =>
     default: module.AccountPage,
   })),
 );
+const UserAgreementPage = lazy(() =>
+  import("@/pages/user-agreement").then((module) => ({
+    default: module.UserAgreementPage,
+  })),
+);
 
 const withSuspense = (component: React.ReactNode) => {
   return (
@@ -34,6 +39,10 @@ const routes = [
       { path: ROUTERS.MAIN, element: withSuspense(<HomePage />) },
       { path: ROUTERS.INFO, element: withSuspense(<InfoPage />) },
       { path: ROUTERS.PROFILE, element: withSuspense(<AccountPage />) },
+      {
+        path: ROUTERS.USER_AGREEMENT,
+        element: withSuspense(<UserAgreementPage />),
+      },
     ],
   },
 ];

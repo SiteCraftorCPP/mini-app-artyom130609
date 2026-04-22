@@ -3,7 +3,8 @@ export const LINK_SHARED = `https://t.me/${import.meta.env.VITE_BOT_ADDRESS?.rep
 export const DEV_MODE = import.meta.env.DEV;
 export const CHANEL_BUY = import.meta.env.VITE_CHANEL_BUY || "";
 
-export const SUPPORT_CHAT_URL = import.meta.env.VITE_SUPPORT_CHAT_URL || "";
+export const SUPPORT_CHAT_URL =
+  import.meta.env.VITE_SUPPORT_CHAT_URL || "https://t.me/artshopvirts_man";
 export const EXTERNAL_LINKS = {
   channel: import.meta.env.VITE_CHANNEL_URL || "",
   contacts: import.meta.env.VITE_CONTACTS_URL || "",

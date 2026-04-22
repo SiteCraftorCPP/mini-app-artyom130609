@@ -1,4 +1,5 @@
 import { EXTERNAL_LINKS } from "@/shared/constants/common";
+import { ROUTERS } from "@/shared/constants/routers";
 import { ACCOUNT_PAGE_TEXT } from "@/shared/constants/text";
 
 import Reviews from "@/assets/icon/account/reviews.svg";
@@ -10,7 +11,7 @@ export const CONTACT_LEGAL_LINKS = [
     label: ACCOUNT_PAGE_TEXT.contact.privacyPolicy,
   },
   {
-    href: EXTERNAL_LINKS.terms,
+    href: ROUTERS.USER_AGREEMENT,
     label: ACCOUNT_PAGE_TEXT.contact.terms,
   },
   {

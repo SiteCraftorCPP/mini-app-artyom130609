@@ -81,6 +81,7 @@ export const ACCOUNT_PAGE_TEXT = {
     referral: "Реферальная система",
     support: "Поддержка",
   },
+  changeProfilePhoto: "Сменить фото",
   pageTitle: "Аккаунт",
   popup: {
     currentOrders:
