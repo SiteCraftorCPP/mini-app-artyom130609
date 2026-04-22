@@ -31,13 +31,23 @@ export const BTN_BACK = "Назад";
 export const BTN_ADMIN_MAIN = "Админ панель";
 /** Главная кнопка: актуальные оплаченные заказы. */
 export const BTN_ADMIN_CURRENT_ORDERS = "📦 Актуальные заказы";
+/** Вторая кнопка главного меню админки. */
+export const BTN_ADMIN_STATS = "💰 Статистика актуальных заказов";
 export const BTN_BACK_TO_ADMIN = "🔙 В админ-панель";
 export const BTN_BACK_TO_ORDER_LIST = "🔙 К списку заказов";
+export const BTN_STATS_VIEW_ORDERS = "📦 Просмотреть заказы";
+export const BTN_STATS_BACK = "🔙 Назад";
 export const BTN_CONFIRM_VIRT = "✅ Подтвердить выдачу виртов";
 export const BTN_COPY_ORDER_DATA = "📋 Скопировать данные";
 export const PENDING_ORDERS_HEADER = "📦 Заказы, ожидающие выполнения:";
-/** Сообщение при подтверждении (пока без бэка). */
-export const MSG_CONFIRM_TODO = "Отметка «выдано» пока в разработке.";
+export const STATS_HEADER = "💰 Статистика актуальных заказов на выдачу:";
+export const msgProfitPrompt = (orderId: string) =>
+  `Введите чистую прибыль за заказ #${orderId} в RUB:`;
+export const MSG_PROFIT_INVALID =
+  "Введите число в рублях (например 1500 или 1500,50). Только цифры и разделитель.";
+export const msgProfitSaved = (orderId: string, amount: string) =>
+  `Чистая прибыль ${amount} RUB за заказ #${orderId} учтена.`;
+export const MSG_PROFIT_CANCELLED = "Ввод прибыли отменён.";
 
 export const VIDEO_CAPTION = "Ознакомление: как оформить заказ";
 
