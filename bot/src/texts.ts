@@ -31,9 +31,22 @@ export const BTN_BACK = "Назад";
 
 export const VIDEO_CAPTION = "Ознакомление: как оформить заказ";
 
-/** Сообщение после /start sell (кнопка «Продать» в мини-апп → чат с ботом). */
-export const SELL_VIRT_CAPTION = [
-  "Для того чтобы продать вирты, напишите нашему менеджеру.",
-  "",
-  "Для экономии вашего и нашего времени пишите сразу одним сообщением, какое количество и на каком сервере хотите продать вирты.",
-].join("\n");
+/** Кнопка к менеджеру (как у buildManagerOrderKeyboard в order-notify). */
+export const BTN_WRITE_MANAGER = "🟢 Написать менеджеру (@artshopvirts_man)";
+
+/**
+ * Сообщение о продаже виртов — в том же стиле, что «заказ оформлен» + кнопка к менеджеру.
+ * @param orderRef — короткий номер (как JDHDH), с # или без
+ */
+export function buildSellVirtCaption(orderRef: string): string {
+  const t = orderRef.trim();
+  const n = t.startsWith("#") ? t : `#${t}`;
+  return [
+    `✅  Заказ ${n} успешно оформлен!`,
+    "",
+    "Что нужно сделать:",
+    "Скопируйте номер заказа и напишите менеджеру через кнопку ниже 👇",
+    "",
+    "——-",
+  ].join("\n");
+}

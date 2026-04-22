@@ -1,4 +1,5 @@
 import { createServer } from "node:http";
+import { randomInt } from "node:crypto";
 import { existsSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -8,7 +9,7 @@ import { InputFile } from "grammy";
 import { InlineKeyboard } from "grammy";
 
 import { getTelegramUserIdFromWebAppInitData } from "./telegram-webapp-init-data.js";
-import { SELL_VIRT_CAPTION } from "./texts.js";
+import { BTN_WRITE_MANAGER, buildSellVirtCaption } from "./texts.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -166,6 +167,16 @@ function resolveOrderSuccessPhoto(): OrderSuccessPhoto | null {
   return null;
 }
 
+const SELL_ORDER_REF_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+
+function randomSellOrderRef(): string {
+  let s = "";
+  for (let i = 0; i < 5; i++) {
+    s += SELL_ORDER_REF_CHARS[randomInt(SELL_ORDER_REF_CHARS.length)];
+  }
+  return s;
+}
+
 /**
  * «Продать вирты» — фото + текст в личку (HTTP из мини-аппа, без переходов по t.me).
  */
@@ -173,34 +184,33 @@ export async function sendSellVirtMessage(
   bot: Bot,
   telegramUserId: number,
 ): Promise<void> {
+  const orderRef = randomSellOrderRef();
+  const caption = buildSellVirtCaption(orderRef);
   const diag = diagnoseOrderSuccessPhoto();
   const managerUrl =
     process.env.MANAGER_TELEGRAM_URL?.trim() || "https://t.me/artshopvirts_man";
-  const reply_markup = new InlineKeyboard().url(
-    "🟢 Написать менеджеру",
-    managerUrl,
-  );
+  const reply_markup = new InlineKeyboard().url(BTN_WRITE_MANAGER, managerUrl);
 
   const sendTextOnly = async () => {
-    await bot.api.sendMessage(telegramUserId, SELL_VIRT_CAPTION, {
+    await bot.api.sendMessage(telegramUserId, caption, {
       reply_markup,
     });
   };
 
   try {
     if (diag.firstExistingPath) {
-      console.info("[sell] sendPhoto", diag.firstExistingPath);
+      console.info("[sell] sendPhoto", diag.firstExistingPath, "ref=", orderRef);
       await bot.api.sendPhoto(
         telegramUserId,
         new InputFile(diag.firstExistingPath),
         {
-          caption: SELL_VIRT_CAPTION,
+          caption,
           reply_markup,
         },
       );
     } else if (diag.urlFallback) {
       await bot.api.sendPhoto(telegramUserId, diag.urlFallback, {
-        caption: SELL_VIRT_CAPTION,
+        caption,
         reply_markup,
       });
     } else {
@@ -278,10 +288,7 @@ function buildOrderDetailsKeyboard(miniAppUrl: string, orderId: string) {
 function buildManagerOrderKeyboard(): InlineKeyboard {
   const url =
     process.env.MANAGER_TELEGRAM_URL?.trim() || "https://t.me/artshopvirts_man";
-  return new InlineKeyboard().url(
-    "🟢 Написать менеджеру (@artshopvirts_man)",
-    url,
-  );
+  return new InlineKeyboard().url(BTN_WRITE_MANAGER, url);
 }
 
 type CaptionAndKeyboard = { caption: string; reply_markup: InlineKeyboard };
