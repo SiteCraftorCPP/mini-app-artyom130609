@@ -47,7 +47,7 @@ export const AccountActionsDialog = ({
     <PopupApp
       open={open}
       setOpen={setOpen}
-      contentClassName="h-[var(--buy-account-popup-height)] !max-h-[var(--buy-account-popup-height)]"
+      contentClassName="!min-h-0"
       slot={
         <PopupAppHeader
           title={action.title}

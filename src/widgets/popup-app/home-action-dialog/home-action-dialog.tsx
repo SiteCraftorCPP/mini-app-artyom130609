@@ -3,8 +3,6 @@ import { type ReactNode, useState } from "react";
 import { AppText } from "@/ui/app-text";
 import { TAG } from "@/ui/app-text/model";
 
-import { cn } from "@/shared/utils";
-
 import { PopupApp } from "../default/popup-app";
 import { PopupAppHeader } from "../default/popup-app-header";
 
@@ -79,13 +77,7 @@ export const HomeActionDialog = ({
 
   return (
     <PopupApp
-      contentClassName={
-        isFormCenteredFlow
-          ? "h-[var(--buy-account-popup-height)] !max-h-[var(--buy-account-popup-height)]"
-          : cn(
-              "h-[var(--buy-account-popup-height)] !max-h-[var(--buy-account-popup-height)]",
-            )
-      }
+      contentClassName="!min-h-0"
       contentBodyClassName={
         isFormCenteredFlow ? "flex flex-1 flex-col justify-center" : undefined
       }

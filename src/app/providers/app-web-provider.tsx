@@ -6,6 +6,7 @@ import {
 import { type FC, type PropsWithChildren, useEffect } from "react";
 
 import { isMobileDevice } from "@/shared/lib/is-mobile-device";
+import { useStableViewportHeightCss } from "@/shared/hooks/use-stable-viewport-height-css";
 
 import { TelegramSafeAreaBridge } from "./telegram-safe-area-bridge";
 
@@ -14,6 +15,7 @@ export const AppWebProvider: FC<PropsWithChildren> = ({ children }) => {
   const [_isExpanded, expand] = useExpand();
   const WebApp = useWebApp();
   const isMobile = isMobileDevice();
+  useStableViewportHeightCss();
 
   useEffect(() => {
     expand();

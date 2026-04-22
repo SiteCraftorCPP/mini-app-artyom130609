@@ -151,7 +151,8 @@
   --maxWidthForm: 270px;
   --radius: 0.625rem;
   --popup-viewport-offset: 8px;
-  --buy-account-popup-height: 90dvh;
+  /* Резерв: «стабильная» высота выставляется в AppWebProvider; без неё — fallback. */
+  --buy-account-popup-height: min(90dvh, calc(0.9 * var(--app-stable-vh-px, 100dvh)));
   --bottom-nav-height: 80px;
   --bottom-nav-offset: 16px;
   --app-content-bottom-space: calc(
