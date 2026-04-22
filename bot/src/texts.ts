@@ -28,7 +28,16 @@ export const BTN_OPEN_SHOP = "🟢 Открыть магазин";
 export const BTN_HOW_TO_ORDER = "🔴 Как оформить заказ";
 export const BTN_ABOUT = "🔵 О магазине";
 export const BTN_BACK = "Назад";
-export const BTN_ADMIN_PANEL = "В админ-панель";
+export const BTN_ADMIN_MAIN = "Админ панель";
+/** Главная кнопка: актуальные оплаченные заказы. */
+export const BTN_ADMIN_CURRENT_ORDERS = "📦 Актуальные заказы";
+export const BTN_BACK_TO_ADMIN = "🔙 В админ-панель";
+export const BTN_BACK_TO_ORDER_LIST = "🔙 К списку заказов";
+export const BTN_CONFIRM_VIRT = "✅ Подтвердить выдачу виртов";
+export const BTN_COPY_ORDER_DATA = "📋 Скопировать данные";
+export const PENDING_ORDERS_HEADER = "📦 Заказы, ожидающие выполнения:";
+/** Сообщение при подтверждении (пока без бэка). */
+export const MSG_CONFIRM_TODO = "Отметка «выдано» пока в разработке.";
 
 export const VIDEO_CAPTION = "Ознакомление: как оформить заказ";
 

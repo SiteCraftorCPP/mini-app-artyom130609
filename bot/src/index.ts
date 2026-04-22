@@ -5,11 +5,8 @@ import { fileURLToPath } from "node:url";
 import { config } from "dotenv";
 import { Bot, InputFile, type Context } from "grammy";
 
-import {
-  aboutBackKeyboard,
-  adminPanelKeyboard,
-  mainMenuInlineKeyboard,
-} from "./keyboards.js";
+import { aboutBackKeyboard, mainMenuInlineKeyboard } from "./keyboards.js";
+import { installAdminModule } from "./admin.js";
 import {
   sendSellVirtMessage,
   sendVirtOrderSuccess,
@@ -71,6 +68,8 @@ function resolveBotAdminIdSet(): Set<number> {
 }
 
 const BOT_ADMIN_IDS = resolveBotAdminIdSet();
+
+installAdminModule(bot, BOT_ADMIN_IDS);
 
 type WelcomePhoto =
   | { type: "url"; url: string }
@@ -190,24 +189,6 @@ bot.command("start", async (ctx) => {
     return;
   }
   await sendWelcome(ctx);
-});
-
-bot.command("admin", async (ctx) => {
-  if (ctx.chat?.type !== "private") {
-    return;
-  }
-  const uid = ctx.from?.id;
-  if (uid == null) {
-    return;
-  }
-  if (!BOT_ADMIN_IDS.has(uid)) {
-    await ctx.reply("Нет доступа.");
-    return;
-  }
-  await clearReplyKeyboard(ctx);
-  await ctx.reply("Админ панель:", {
-    reply_markup: adminPanelKeyboard(miniAppUrl),
-  });
 });
 
 async function sendHowToVideo(ctx: Context) {
