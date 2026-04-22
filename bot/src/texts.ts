@@ -31,8 +31,10 @@ export const BTN_BACK = "Назад";
 
 export const VIDEO_CAPTION = "Ознакомление: как оформить заказ";
 
-/** Кнопка к менеджеру (как у buildManagerOrderKeyboard в order-notify). */
-export const BTN_WRITE_MANAGER = "🟢 Написать менеджеру (@artshopvirts_man)";
+/**
+ * Подпись инлайн-кнопки (без @никнейма — он только в URL: MANAGER_TELEGRAM_URL / t.me/artshopvirts_man).
+ */
+export const BTN_WRITE_MANAGER = "🟢 Написать менеджеру";
 
 /**
  * Сообщение о продаже виртов — в том же стиле, что «заказ оформлен» + кнопка к менеджеру.
@@ -46,7 +48,5 @@ export function buildSellVirtCaption(orderRef: string): string {
     "",
     "Что нужно сделать:",
     "Скопируйте номер заказа и напишите менеджеру через кнопку ниже 👇",
-    "",
-    "——-",
   ].join("\n");
 }
