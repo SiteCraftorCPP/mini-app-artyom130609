@@ -13,6 +13,10 @@ export type InputProps = Omit<
   value?: string;
   defaultValue?: string;
   variant?: "default" | "form";
+  /**
+   * Отключает auto-scroll на фокус (в Telegram WebView может дёргать попап вверх при появлении клавиатуры).
+   */
+  disableAutoScrollOnFocus?: boolean;
 };
 
 const inputVariants = {
@@ -41,6 +45,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
       type,
       onChange,
       onFocus,
+      disableAutoScrollOnFocus = false,
       defaultValue,
       value,
       variant = "default",
@@ -82,7 +87,9 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
     const handleFocus = (
       event: React.FocusEvent<HTMLInputElement, Element>,
     ) => {
-      scrollToInput(wrapperRef);
+      if (!disableAutoScrollOnFocus) {
+        scrollToInput(wrapperRef);
+      }
       if (onFocus) onFocus(event);
     };
 

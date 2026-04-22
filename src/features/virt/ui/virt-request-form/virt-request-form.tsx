@@ -117,6 +117,7 @@ export const VirtRequestForm = ({ virt }: VirtRequestFormProps) => {
                       inputMode="numeric"
                       autoComplete="off"
                       enterKeyHint="next"
+                      disableAutoScrollOnFocus
                       placeholder={getAccountNumberPlaceholder(virt.name)}
                     />
                   </FormControl>

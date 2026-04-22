@@ -81,13 +81,15 @@ export const HomeActionDialog = ({
     <PopupApp
       contentClassName={
         isFormCenteredFlow
-          ? "max-h-[min(90dvh,720px)]"
+          ? "h-[var(--buy-account-popup-height)] !max-h-[var(--buy-account-popup-height)]"
           : cn(
               "h-[var(--buy-account-popup-height)] !max-h-[var(--buy-account-popup-height)]",
             )
       }
-      contentBodyClassName={isFormCenteredFlow ? "flex flex-1 flex-col justify-center" : undefined}
-      dialogVariant={isFormCenteredFlow ? "popupFormCentered" : "popup"}
+      contentBodyClassName={
+        isFormCenteredFlow ? "flex flex-1 flex-col justify-center" : undefined
+      }
+      dialogVariant="popup"
       open={open}
       setOpen={setOpen}
       slot={

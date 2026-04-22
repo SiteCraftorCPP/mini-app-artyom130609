@@ -98,6 +98,7 @@ export const VirtAmountFields = memo(
                   type="text"
                   inputMode="decimal"
                   enterKeyHint="next"
+                  disableAutoScrollOnFocus
                   value={amountRubValue}
                   onChange={handleAmountRubChange}
                   debounceMs={TIMING.inputDebounceMs}
@@ -138,6 +139,7 @@ export const VirtAmountFields = memo(
                   type="text"
                   inputMode="numeric"
                   enterKeyHint="done"
+                  disableAutoScrollOnFocus
                   value={amountVirtValue}
                   onChange={handleAmountVirtChange}
                   debounceMs={TIMING.inputDebounceMs}
