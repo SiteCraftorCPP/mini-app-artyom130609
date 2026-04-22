@@ -1,4 +1,5 @@
 import { useRef } from "react";
+import { useInitData } from "@vkruglikov/react-telegram-web-app";
 
 import { AppText, TAG } from "@/ui/app-text";
 import { InfoBadgeCard } from "@/ui/info-badge-card";
@@ -23,6 +24,7 @@ const getInitials = (name: string) => {
 
 export const UserInfo = () => {
   const { data: user } = useAuthMe();
+  const [initDataUnsafe] = useInitData();
   const { dataUrl: localAvatarUrl, setFromFile } = useLocalProfileAvatar();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const displayPhotoUrl = localAvatarUrl ?? user?.photoUrl;
@@ -31,10 +33,15 @@ export const UserInfo = () => {
     return null;
   }
 
+  const telegramIdDisplay =
+    initDataUnsafe?.user?.id != null
+      ? String(initDataUnsafe.user.id)
+      : user.telegramId;
+
   return (
     <section aria-label={ACCOUNT_PAGE_TEXT.pageTitle}>
       <div className="flex items-center gap-4">
-        <div className="flex flex-col items-center gap-1">
+        <div>
           <input
             ref={fileInputRef}
             type="file"
@@ -66,19 +73,6 @@ export const UserInfo = () => {
               </AppText>
             )}
           </button>
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            className="max-w-35 w-full"
-          >
-            <AppText
-              variant="darkStrong"
-              size="small"
-              className="text-primary hover:underline"
-            >
-              {ACCOUNT_PAGE_TEXT.changeProfilePhoto}
-            </AppText>
-          </button>
         </div>
 
         <div className="flex-1 space-y-2">
@@ -90,7 +84,7 @@ export const UserInfo = () => {
             icon={<Id className="size-8" />}
             info={
               <AppText variant="primaryStrong" size="xxxl">
-                {user.telegramId}
+                {telegramIdDisplay}
               </AppText>
             }
           />

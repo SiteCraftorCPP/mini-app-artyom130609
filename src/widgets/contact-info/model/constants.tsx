@@ -7,7 +7,7 @@ import Telegram from "@/assets/icon/account/telegram.svg";
 
 export const CONTACT_LEGAL_LINKS = [
   {
-    href: EXTERNAL_LINKS.privacyPolicy,
+    href: ROUTERS.PRIVACY_POLICY,
     label: ACCOUNT_PAGE_TEXT.contact.privacyPolicy,
   },
   {

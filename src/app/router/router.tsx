@@ -22,6 +22,11 @@ const UserAgreementPage = lazy(() =>
     default: module.UserAgreementPage,
   })),
 );
+const PrivacyPolicyPage = lazy(() =>
+  import("@/pages/privacy-policy").then((module) => ({
+    default: module.PrivacyPolicyPage,
+  })),
+);
 
 const withSuspense = (component: React.ReactNode) => {
   return (
@@ -39,6 +44,10 @@ const routes = [
       { path: ROUTERS.MAIN, element: withSuspense(<HomePage />) },
       { path: ROUTERS.INFO, element: withSuspense(<InfoPage />) },
       { path: ROUTERS.PROFILE, element: withSuspense(<AccountPage />) },
+      {
+        path: ROUTERS.PRIVACY_POLICY,
+        element: withSuspense(<PrivacyPolicyPage />),
+      },
       {
         path: ROUTERS.USER_AGREEMENT,
         element: withSuspense(<UserAgreementPage />),
