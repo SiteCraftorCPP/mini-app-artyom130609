@@ -58,6 +58,7 @@ export const HomeActionDialog = ({
   const isBuyVirtsAction = actionId === "buy-virtual-currency";
   const isSellVirtsAction = actionId === "sell-virtual-currency";
   const isBuyAccountAction = actionId === "buy-account";
+  const isFormCenteredFlow = isBuyVirtsAction || isBuyAccountAction;
   /** Показываем «назад», как только выбран пункт (даже пока грузится virt по id). */
   const shouldShowBackButton =
     (isBuyVirtsAction || isSellVirtsAction || isBuyAccountAction) &&
@@ -78,9 +79,15 @@ export const HomeActionDialog = ({
 
   return (
     <PopupApp
-      contentClassName={cn(
-        "h-[var(--buy-account-popup-height)] !max-h-[var(--buy-account-popup-height)]",
-      )}
+      contentClassName={
+        isFormCenteredFlow
+          ? "max-h-[min(90dvh,720px)]"
+          : cn(
+              "h-[var(--buy-account-popup-height)] !max-h-[var(--buy-account-popup-height)]",
+            )
+      }
+      contentBodyClassName={isFormCenteredFlow ? "flex flex-1 flex-col justify-center" : undefined}
+      dialogVariant={isFormCenteredFlow ? "popupFormCentered" : "popup"}
       open={open}
       setOpen={setOpen}
       slot={

@@ -95,9 +95,9 @@ export const VirtAmountFields = memo(
               <FormControl>
                 <Input
                   variant="form"
-                  type="number"
-                  inputMode="numeric"
-                  step="any"
+                  type="text"
+                  inputMode="decimal"
+                  enterKeyHint="next"
                   value={amountRubValue}
                   onChange={handleAmountRubChange}
                   debounceMs={TIMING.inputDebounceMs}
@@ -136,7 +136,8 @@ export const VirtAmountFields = memo(
                 <Input
                   variant="form"
                   type="text"
-                  inputMode="text"
+                  inputMode="numeric"
+                  enterKeyHint="done"
                   value={amountVirtValue}
                   onChange={handleAmountVirtChange}
                   debounceMs={TIMING.inputDebounceMs}

@@ -11,13 +11,18 @@ import {
 
 import { cn } from "@/shared/utils";
 
-/** `popup` — на весь экран по вертикали; `popupCentered` — компактное окно по центру (FAQ). */
-export type PopupAppDialogVariant = "popup" | "popupCentered";
+/** `popup` — на весь экран по вертикали; `popupCentered` / `popupFormCentered` — по центру (FAQ, формы «купить»). */
+export type PopupAppDialogVariant =
+  | "popup"
+  | "popupCentered"
+  | "popupFormCentered";
 
 type PopupAppProps = {
   children: ReactNode;
   content: ReactNode;
   contentClassName?: string;
+  /** Классы для прокручиваемой области под шапкой (напр. `justify-center`). */
+  contentBodyClassName?: string;
   /** Вариант `DialogContent`: по умолчанию `popup`. */
   dialogVariant?: PopupAppDialogVariant;
   open?: boolean;
@@ -30,6 +35,7 @@ export const PopupApp = ({
   children,
   content,
   contentClassName,
+  contentBodyClassName,
   dialogVariant = "popup",
   open,
   setOpen,
@@ -61,7 +67,12 @@ export const PopupApp = ({
             </AppText>
           </DialogTitle>
         </DialogHeader>
-        <div className="hide-scrollbar mt-3 flex min-h-0 flex-1 flex-col touch-pan-y overflow-y-auto overscroll-contain">
+        <div
+          className={cn(
+            "hide-scrollbar mt-3 flex min-h-0 flex-1 flex-col touch-pan-y overflow-y-auto overscroll-contain",
+            contentBodyClassName,
+          )}
+        >
           {content}
         </div>
       </DialogContent>

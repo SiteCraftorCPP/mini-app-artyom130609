@@ -113,6 +113,10 @@ export const VirtRequestForm = ({ virt }: VirtRequestFormProps) => {
                     <Input
                       {...field}
                       variant="form"
+                      type="text"
+                      inputMode="numeric"
+                      autoComplete="off"
+                      enterKeyHint="next"
                       placeholder={getAccountNumberPlaceholder(virt.name)}
                     />
                   </FormControl>

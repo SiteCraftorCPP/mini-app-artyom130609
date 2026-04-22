@@ -26,6 +26,9 @@ const dialogContentVariants = cva(
         /** Узкий блок по центру экрана (FAQ и т.п.), без растягивания на всю высоту */
         popupCentered:
           "top-1/2 max-h-[min(85vh,560px)] w-[min(100vw-2rem,22rem)] max-w-[22rem] -translate-y-1/2 overflow-hidden rounded-[16px] shadow-[0_24px_60px_var(--app-shadow)]",
+        /** «Купить вирты» / «Купить аккаунт»: по центру экрана, ширина как у полноэкранного popup */
+        popupFormCentered:
+          "top-1/2 max-h-[min(90dvh,720px)] w-[min(100vw-(var(--popup-viewport-offset)*2),28rem)] max-w-md -translate-y-1/2 overflow-hidden rounded-[16px] shadow-[0_24px_60px_var(--app-shadow)]",
       },
     },
     defaultVariants: {
@@ -86,7 +89,9 @@ export const DialogContent = ({
 
   const resolvedVariant = variant ?? "popup";
   const isPopupSurface =
-    resolvedVariant === "popup" || resolvedVariant === "popupCentered";
+    resolvedVariant === "popup" ||
+    resolvedVariant === "popupCentered" ||
+    resolvedVariant === "popupFormCentered";
 
   return (
     <DialogPortal>
@@ -101,7 +106,8 @@ export const DialogContent = ({
             <div
               className={cn(
                 "tw-bg-gradient-popup-surface text-text-primary relative flex max-h-full min-h-0 flex-1 flex-col rounded-[15px] backdrop-blur-[2px]",
-                resolvedVariant === "popupCentered"
+                resolvedVariant === "popupCentered" ||
+                resolvedVariant === "popupFormCentered"
                   ? "pt-[max(0.75rem,env(safe-area-inset-top,0px))] pb-3"
                   : "pt-[max(var(--app-telegram-popup-top-clearance,52px),var(--tg-content-top,0px),var(--tg-safe-top,0px),env(safe-area-inset-top,0px))]",
               )}
