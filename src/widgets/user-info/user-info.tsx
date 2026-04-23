@@ -3,6 +3,7 @@ import { useInitData } from "@vkruglikov/react-telegram-web-app";
 
 import { AppText, TAG } from "@/ui/app-text";
 import { InfoBadgeCard } from "@/ui/info-badge-card";
+import { CardInfoHeader } from "@/widgets/app-header/ui/card-info-header";
 
 import { ACCOUNT_PAGE_TEXT } from "@/shared/constants/text";
 import { useLocalProfileAvatar } from "@/shared/hooks/use-local-profile-avatar";
@@ -88,11 +89,11 @@ export const UserInfo = () => {
               </AppText>
             }
           />
-          <InfoBadgeCard
-            variant="profileWallet"
-            icon={<Wallet className="size-8" />}
+          <CardInfoHeader
+            className="w-full min-w-0 max-w-full"
+            icon={<Wallet />}
             info={
-              <AppText tag={TAG.span} variant="darkStrong" size="xxxl">
+              <AppText variant="darkStrong" size="headerInfo">
                 {`${user.balance} ${user.currency.name}`}
               </AppText>
             }
