@@ -45,6 +45,15 @@ export const BTN_ADMIN_USER_STATS = "👥 Статистика пользова�
 export const BTN_ADMIN_BROADCASTS = "📣 Рассылка";
 export const BTN_BROADCAST_BUY_VIRTS = "🟢 Купить вирты";
 export const BTN_BROADCAST_BACK = "🔙 Назад";
+/** Восьмая: поставки. */
+export const BTN_ADMIN_SUPPLIES = "📦 Поставки";
+export const BTN_SUPPLIES_NEW = "➕ Новая поставка";
+export const BTN_SUPPLIES_ACTIVE = "🔥 Актуальная поставка";
+export const BTN_SUPPLIES_HISTORY = "📜 История поставок";
+export const BTN_SUPPLIES_STATS = "📊 Статистика поставок";
+export const BTN_SUPPLIES_FINISH = "✅ Завершить поставку";
+export const BTN_SUPPLIES_BACK = "🔙 Назад";
+export const BTN_SUPPLIES_CANCEL_INPUT = "❌ Отмена";
 export const BTN_BACK_TO_ADMIN = "🔙 В админ-панель";
 export const BTN_BACK_TO_HISTORY_50 = "🔙 К списку (50)";
 export const BTN_STAT_PERIOD_CHOOSE = "◀ К выбору периода";

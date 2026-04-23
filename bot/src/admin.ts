@@ -23,6 +23,14 @@ import {
   BTN_ADMIN_BROADCASTS,
   BTN_BROADCAST_BACK,
   BTN_BROADCAST_BUY_VIRTS,
+  BTN_ADMIN_SUPPLIES,
+  BTN_SUPPLIES_ACTIVE,
+  BTN_SUPPLIES_BACK,
+  BTN_SUPPLIES_CANCEL_INPUT,
+  BTN_SUPPLIES_FINISH,
+  BTN_SUPPLIES_HISTORY,
+  BTN_SUPPLIES_NEW,
+  BTN_SUPPLIES_STATS,
   BTN_STAT_PERIOD_CHOOSE,
   BTN_STATS_BACK,
   BTN_STATS_VIEW_ORDERS,
@@ -39,6 +47,14 @@ import {
   msgProfitSaved,
 } from "./texts.js";
 import { getAllUserIds, getUniqueUserCount } from "./user-usage-store.js";
+import {
+  closeSupply,
+  createSupply,
+  getSupplyById,
+  listActiveSupplies,
+  listClosedSupplies,
+  type SupplyRow,
+} from "./supplies-store.js";
 
 const CB = {
   list: "admin:lst",
@@ -47,6 +63,7 @@ const CB = {
   find: "admin:find",
   userStats: "admin:ust",
   broadcasts: "admin:bc",
+  supplies: "admin:sup",
 } as const;
 
 const cbView = (id: string) => `admin:v:${id}`;
@@ -54,6 +71,7 @@ const cbCopy = (id: string) => `admin:c:${id}`;
 const cbOk = (id: string) => `admin:ok:${id}`;
 /** Отмена ввода чистой прибыли (инлайн, без /cancel). */
 const CB_PROFIT_Q = "a:qpf";
+const CB_SUPPLY_CANCEL = "sup:cancel";
 
 const MAX_DATA = 64;
 function assertCbData(s: string) {
@@ -168,7 +186,228 @@ function adminMenuKeyboard() {
     .row()
     .text(BTN_ADMIN_USER_STATS, CB.userStats)
     .row()
-    .text(BTN_ADMIN_BROADCASTS, CB.broadcasts);
+    .text(BTN_ADMIN_BROADCASTS, CB.broadcasts)
+    .row()
+    .text(BTN_ADMIN_SUPPLIES, CB.supplies);
+}
+
+function formatDateTime(ms: number): string {
+  const d = new Date(ms);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function supplyLabelShort(s: SupplyRow): string {
+  const n = s.seq ? `#${s.seq}` : "#?";
+  const p = s.project.trim();
+  const srv = s.server.trim();
+  return `${n} ${p} / ${srv}`;
+}
+
+function buildSuppliesMenuText(): string {
+  return ["📦 Поставки", "", "Выберите действие:"].join("\n");
+}
+
+function buildSuppliesMenuKeyboard() {
+  assertCbData("sup:new");
+  assertCbData("sup:act");
+  assertCbData("sup:his");
+  assertCbData("sup:st");
+  assertCbData(CB.menu);
+  return new InlineKeyboard()
+    .text(BTN_SUPPLIES_NEW, "sup:new")
+    .row()
+    .text(BTN_SUPPLIES_ACTIVE, "sup:act")
+    .row()
+    .text(BTN_SUPPLIES_HISTORY, "sup:his")
+    .row()
+    .text(BTN_SUPPLIES_STATS, "sup:st")
+    .row()
+    .text(BTN_BACK_TO_ADMIN, CB.menu);
+}
+
+function buildSuppliesActiveText(active: SupplyRow[]): string {
+  if (active.length === 0) {
+    return ["🔥 Актуальные поставки", "", "Пока пусто."].join("\n");
+  }
+  return [
+    "🔥 Актуальные поставки",
+    "",
+    "Нажмите поставку, чтобы открыть.",
+  ].join("\n");
+}
+
+function buildSuppliesActiveKeyboard(active: SupplyRow[]) {
+  const kb = new InlineKeyboard();
+  for (const s of active) {
+    const d = `sup:v:${s.id}`;
+    assertCbData(d);
+    kb.text(supplyLabelShort(s), d).row();
+  }
+  assertCbData(CB.supplies);
+  kb.text(BTN_SUPPLIES_BACK, CB.supplies).row();
+  kb.text(BTN_BACK_TO_ADMIN, CB.menu);
+  return kb;
+}
+
+function buildSupplyDetailText(s: SupplyRow, seq: number | null): string {
+  const n = seq ? `#${seq}` : "Поставка";
+  const lines = [
+    `📦 Поставка ${n}`,
+    "",
+    `Проект: ${s.project}`,
+    `Сервер: ${s.server}`,
+    `Вирты: ${s.virtAmount}`,
+    "",
+    `🕒 Открыта: ${formatDateTime(s.openedAtMs)}`,
+  ];
+  if (s.closedAtMs) {
+    lines.push(`🕐 Закрыта: ${formatDateTime(s.closedAtMs)}`);
+    if (typeof s.turnoverRub === "number") {
+      lines.push(`💵 Оборот: ${s.turnoverRub.toFixed(2)} RUB`);
+    }
+    if (typeof s.profitRub === "number") {
+      lines.push(`💰 Чистая прибыль: ${s.profitRub.toFixed(2)} RUB`);
+    }
+  }
+  return lines.join("\n");
+}
+
+function buildSupplyDetailKeyboard(s: SupplyRow) {
+  const kb = new InlineKeyboard();
+  if (!s.closedAtMs) {
+    const d = `sup:fin:${s.id}`;
+    assertCbData(d);
+    kb.text(BTN_SUPPLIES_FINISH, d).row();
+  }
+  assertCbData("sup:act");
+  kb.text(BTN_SUPPLIES_BACK, "sup:act").row();
+  kb.text(BTN_BACK_TO_ADMIN, CB.menu);
+  return kb;
+}
+
+function buildSuppliesHistoryText(closed: SupplyRow[]): string {
+  if (closed.length === 0) {
+    return ["📜 История поставок", "", "Пока пусто."].join("\n");
+  }
+  return [
+    "📜 История поставок",
+    "",
+    "Нажмите поставку, чтобы открыть.",
+  ].join("\n");
+}
+
+function buildSuppliesHistoryKeyboard(closed: SupplyRow[]) {
+  const kb = new InlineKeyboard();
+  const shown = closed
+    .slice()
+    .sort((a, b) => (b.closedAtMs ?? 0) - (a.closedAtMs ?? 0))
+    .slice(0, 50);
+  for (const s of shown) {
+    const d = `sup:h:${s.id}`;
+    assertCbData(d);
+    kb.text(`Поставка • ${formatDateTime(s.openedAtMs)}`, d).row();
+  }
+  assertCbData(CB.supplies);
+  kb.text(BTN_SUPPLIES_BACK, CB.supplies).row();
+  kb.text(BTN_BACK_TO_ADMIN, CB.menu);
+  return kb;
+}
+
+function buildSuppliesStatsMenuText(): string {
+  return ["📊 Статистика поставок", "", "Выберите период:"].join("\n");
+}
+
+function buildSuppliesStatsMenuKeyboard() {
+  const kb = new InlineKeyboard();
+  for (let i = 0; i < STAT_PERIOD_TITLES.length; i += 1) {
+    const t = STAT_PERIOD_TITLES[i]!;
+    const d = `sup:s${i}` as const;
+    assertCbData(d);
+    kb.text(t, d).row();
+  }
+  assertCbData(CB.supplies);
+  kb.text(BTN_SUPPLIES_BACK, CB.supplies).row();
+  kb.text(BTN_BACK_TO_ADMIN, CB.menu);
+  return kb;
+}
+
+function startOfDay(d: Date) {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0);
+}
+function startOfMonth(d: Date) {
+  return new Date(d.getFullYear(), d.getMonth(), 1, 0, 0, 0, 0);
+}
+function startOfYear(d: Date) {
+  return new Date(d.getFullYear(), 0, 1, 0, 0, 0, 0);
+}
+
+function computeSupplyStatsForRange(fromMs: number, toMs: number) {
+  const closed = listClosedSupplies().filter((s) => {
+    const t = s.closedAtMs ?? 0;
+    return t >= fromMs && t <= toMs;
+  });
+  const turnoverSum = closed.reduce((acc, s) => acc + (s.turnoverRub ?? 0), 0);
+  const profitSum = closed.reduce((acc, s) => acc + (s.profitRub ?? 0), 0);
+  const mostExpensive =
+    closed
+      .filter((s) => typeof s.turnoverRub === "number")
+      .sort((a, b) => (b.turnoverRub ?? 0) - (a.turnoverRub ?? 0))[0] ?? null;
+  return { turnoverSum, profitSum, mostExpensive, count: closed.length };
+}
+
+function buildSuppliesStatsResultMessage(periodIndex: number): string {
+  const label =
+    periodIndex >= 0 && periodIndex < STAT_PERIOD_TITLES.length
+      ? STAT_PERIOD_TITLES[periodIndex]
+      : "Период";
+  const now = new Date();
+
+  // Для "определённых" периодов без ввода пока даём подсказку.
+  if ([3, 4, 5, 7].includes(periodIndex)) {
+    return [
+      `📊 Поставки • ${label}`,
+      "",
+      "Для этого режима нужен ввод даты/периода в чат.",
+      "Сделаю это следующим шагом (формат: 23.04.2026 или 04.2026 или 2026, период: 01.04.2026-23.04.2026).",
+    ].join("\n");
+  }
+
+  const from =
+    periodIndex === 0
+      ? startOfDay(now)
+      : periodIndex === 1
+        ? startOfMonth(now)
+        : periodIndex === 2
+          ? startOfYear(now)
+          : new Date(0);
+  const to = now;
+  const { turnoverSum, profitSum, mostExpensive, count } =
+    computeSupplyStatsForRange(from.getTime(), to.getTime());
+
+  const lines = [
+    `📊 Поставки • ${label}`,
+    "",
+    `✅ Завершённых поставок: ${count}`,
+    `💵 Оборот: ${turnoverSum.toFixed(2)} RUB`,
+    `💰 Чистая прибыль: ${profitSum.toFixed(2)} RUB`,
+  ];
+  if (mostExpensive && typeof mostExpensive.turnoverRub === "number") {
+    lines.push(
+      `🏆 Самая дорогая поставка: ${mostExpensive.turnoverRub.toFixed(2)} RUB`,
+    );
+  }
+  return lines.join("\n");
+}
+
+function buildSuppliesStatsResultKeyboard() {
+  assertCbData("sup:st");
+  return new InlineKeyboard()
+    .text(BTN_STAT_PERIOD_CHOOSE, "sup:st")
+    .row()
+    .text(BTN_SUPPLIES_BACK, CB.supplies)
+    .row()
+    .text(BTN_BACK_TO_ADMIN, CB.menu);
 }
 
 function buildUserStatsMessage(): string {
@@ -366,6 +605,16 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
   /** Ожидание ввода чистой прибыли после «Подтвердить выдачу». */
   const awaitingProfitByUserId = new Map<number, string>();
   const awaitingOrderLookup = new Set<number>();
+  /** Новый ввод поставки: проект → сервер → вирты. */
+  const awaitingSupplyCreateByUserId = new Map<
+    number,
+    { step: "project" | "server" | "virts"; draft: Partial<Pick<SupplyRow, "project" | "server" | "virtAmount">> }
+  >();
+  /** Завершение поставки: сначала оборот, потом прибыль. */
+  const awaitingSupplyCloseByUserId = new Map<
+    number,
+    { step: "turnover" | "profit"; supplyId: string; turnoverRub?: number }
+  >();
 
   function clearAwaitingProfit(userId: number) {
     awaitingProfitByUserId.delete(userId);
@@ -373,6 +622,14 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
 
   function clearAwaitingOrderLookup(userId: number) {
     awaitingOrderLookup.delete(userId);
+  }
+
+  function clearAwaitingSupplyCreate(userId: number) {
+    awaitingSupplyCreateByUserId.delete(userId);
+  }
+
+  function clearAwaitingSupplyClose(userId: number) {
+    awaitingSupplyCloseByUserId.delete(userId);
   }
 
   async function requireAdmin(
@@ -405,6 +662,8 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
     if (ctx.from) {
       clearAwaitingProfit(ctx.from.id);
       clearAwaitingOrderLookup(ctx.from.id);
+      clearAwaitingSupplyCreate(ctx.from.id);
+      clearAwaitingSupplyClose(ctx.from.id);
     }
     await clearReplyKeyboard(a);
     await a.reply(BTN_ADMIN_MAIN, {
@@ -420,11 +679,185 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
     if (ctx.from) {
       clearAwaitingProfit(ctx.from.id);
       clearAwaitingOrderLookup(ctx.from.id);
+      clearAwaitingSupplyCreate(ctx.from.id);
+      clearAwaitingSupplyClose(ctx.from.id);
     }
     await ctx.answerCallbackQuery();
     await a.editMessageText(BTN_ADMIN_MAIN, {
       reply_markup: adminMenuKeyboard(),
     });
+  });
+
+  bot.callbackQuery(CB.supplies, async (ctx) => {
+    const a = await requireAdmin(ctx);
+    if (a == null) return;
+    if (ctx.from) {
+      clearAwaitingProfit(ctx.from.id);
+      clearAwaitingOrderLookup(ctx.from.id);
+      clearAwaitingSupplyCreate(ctx.from.id);
+      clearAwaitingSupplyClose(ctx.from.id);
+    }
+    await ctx.answerCallbackQuery();
+    const text = buildSuppliesMenuText();
+    const kb = buildSuppliesMenuKeyboard();
+    try {
+      await a.editMessageText(text, { reply_markup: kb });
+    } catch {
+      await a.reply(text, { reply_markup: kb });
+    }
+  });
+
+  bot.callbackQuery("sup:new", async (ctx) => {
+    const a = await requireAdmin(ctx);
+    if (a == null) return;
+    if (ctx.from) {
+      clearAwaitingSupplyClose(ctx.from.id);
+      awaitingSupplyCreateByUserId.set(ctx.from.id, { step: "project", draft: {} });
+    }
+    await ctx.answerCallbackQuery();
+    await a.reply("Введите проект (одним сообщением):", {
+      reply_markup: new InlineKeyboard().text(BTN_SUPPLIES_CANCEL_INPUT, CB_SUPPLY_CANCEL),
+    });
+  });
+
+  bot.callbackQuery(CB_SUPPLY_CANCEL, async (ctx) => {
+    const a = await requireAdmin(ctx);
+    if (a == null) return;
+    if (ctx.from) {
+      clearAwaitingSupplyCreate(ctx.from.id);
+      clearAwaitingSupplyClose(ctx.from.id);
+    }
+    await ctx.answerCallbackQuery();
+    await a.reply("Операция отменена.", { reply_markup: adminMenuKeyboard() });
+  });
+
+  bot.callbackQuery("sup:act", async (ctx) => {
+    const a = await requireAdmin(ctx);
+    if (a == null) return;
+    if (ctx.from) {
+      clearAwaitingSupplyCreate(ctx.from.id);
+      clearAwaitingSupplyClose(ctx.from.id);
+    }
+    await ctx.answerCallbackQuery();
+    const active = listActiveSupplies();
+    const text = buildSuppliesActiveText(active);
+    const kb = buildSuppliesActiveKeyboard(active);
+    try {
+      await a.editMessageText(text, { reply_markup: kb });
+    } catch {
+      await a.reply(text, { reply_markup: kb });
+    }
+  });
+
+  bot.callbackQuery(/^sup:v:([^:\s]+)$/, async (ctx) => {
+    const a = await requireAdmin(ctx);
+    if (a == null) return;
+    if (ctx.from) {
+      clearAwaitingSupplyCreate(ctx.from.id);
+      clearAwaitingSupplyClose(ctx.from.id);
+    }
+    const id = ctx.match[1] ?? "";
+    const supply = getSupplyById(id);
+    if (!supply) {
+      await ctx.answerCallbackQuery({ text: "Поставка не найдена", show_alert: true });
+      return;
+    }
+    const active = listActiveSupplies();
+    const seq = active.find((s) => s.id === id)?.seq ?? null;
+    await ctx.answerCallbackQuery();
+    const text = buildSupplyDetailText(supply, seq);
+    const kb = buildSupplyDetailKeyboard(supply);
+    try {
+      await a.editMessageText(text, { reply_markup: kb });
+    } catch {
+      await a.reply(text, { reply_markup: kb });
+    }
+  });
+
+  bot.callbackQuery(/^sup:fin:([^:\s]+)$/, async (ctx) => {
+    const a = await requireAdmin(ctx);
+    if (a == null) return;
+    const id = ctx.match[1] ?? "";
+    const supply = getSupplyById(id);
+    if (!supply || supply.closedAtMs) {
+      await ctx.answerCallbackQuery({ text: "Поставка уже закрыта или не найдена", show_alert: true });
+      return;
+    }
+    if (ctx.from) {
+      clearAwaitingSupplyCreate(ctx.from.id);
+      awaitingSupplyCloseByUserId.set(ctx.from.id, { step: "turnover", supplyId: id });
+    }
+    await ctx.answerCallbackQuery();
+    await a.reply("Введите оборот по поставке в RUB (числом):", {
+      reply_markup: new InlineKeyboard().text(BTN_SUPPLIES_CANCEL_INPUT, CB_SUPPLY_CANCEL),
+    });
+  });
+
+  bot.callbackQuery("sup:his", async (ctx) => {
+    const a = await requireAdmin(ctx);
+    if (a == null) return;
+    if (ctx.from) {
+      clearAwaitingSupplyCreate(ctx.from.id);
+      clearAwaitingSupplyClose(ctx.from.id);
+    }
+    await ctx.answerCallbackQuery();
+    const closed = listClosedSupplies();
+    const text = buildSuppliesHistoryText(closed);
+    const kb = buildSuppliesHistoryKeyboard(closed);
+    try {
+      await a.editMessageText(text, { reply_markup: kb });
+    } catch {
+      await a.reply(text, { reply_markup: kb });
+    }
+  });
+
+  bot.callbackQuery(/^sup:h:([^:\s]+)$/, async (ctx) => {
+    const a = await requireAdmin(ctx);
+    if (a == null) return;
+    const id = ctx.match[1] ?? "";
+    const supply = getSupplyById(id);
+    if (!supply) {
+      await ctx.answerCallbackQuery({ text: "Поставка не найдена", show_alert: true });
+      return;
+    }
+    await ctx.answerCallbackQuery();
+    const text = buildSupplyDetailText(supply, null);
+    const kb = new InlineKeyboard()
+      .text(BTN_SUPPLIES_BACK, "sup:his")
+      .row()
+      .text(BTN_BACK_TO_ADMIN, CB.menu);
+    try {
+      await a.editMessageText(text, { reply_markup: kb });
+    } catch {
+      await a.reply(text, { reply_markup: kb });
+    }
+  });
+
+  bot.callbackQuery("sup:st", async (ctx) => {
+    const a = await requireAdmin(ctx);
+    if (a == null) return;
+    await ctx.answerCallbackQuery();
+    const text = buildSuppliesStatsMenuText();
+    const kb = buildSuppliesStatsMenuKeyboard();
+    try {
+      await a.editMessageText(text, { reply_markup: kb });
+    } catch {
+      await a.reply(text, { reply_markup: kb });
+    }
+  });
+
+  bot.callbackQuery(/^sup:s([0-7])$/, async (ctx) => {
+    const a = await requireAdmin(ctx);
+    if (a == null) return;
+    const idx = parseInt(ctx.match[1] ?? "0", 10);
+    await ctx.answerCallbackQuery();
+    const text = buildSuppliesStatsResultMessage(idx);
+    const kb = buildSuppliesStatsResultKeyboard();
+    try {
+      await a.editMessageText(text, { reply_markup: kb });
+    } catch {
+      await a.reply(text, { reply_markup: kb });
+    }
   });
 
   bot.callbackQuery(CB.userStats, async (ctx) => {
@@ -761,6 +1194,124 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
     }
     if (!adminIds.has(ctx.from.id)) {
       return next();
+    }
+
+    const supplyCreate = awaitingSupplyCreateByUserId.get(ctx.from.id);
+    if (supplyCreate) {
+      const text = ctx.message?.text;
+      if (!text) {
+        await ctx.reply("Отправьте текстом одним сообщением.", {
+          reply_markup: new InlineKeyboard().text(BTN_SUPPLIES_CANCEL_INPUT, CB_SUPPLY_CANCEL),
+        });
+        return;
+      }
+      const t = text.trim();
+      if (t.startsWith("/")) {
+        await ctx.reply("Введите значение без команд.", {
+          reply_markup: new InlineKeyboard().text(BTN_SUPPLIES_CANCEL_INPUT, CB_SUPPLY_CANCEL),
+        });
+        return;
+      }
+      if (supplyCreate.step === "project") {
+        supplyCreate.draft.project = t;
+        awaitingSupplyCreateByUserId.set(ctx.from.id, {
+          step: "server",
+          draft: supplyCreate.draft,
+        });
+        await ctx.reply("Введите сервер (одним сообщением):", {
+          reply_markup: new InlineKeyboard().text(BTN_SUPPLIES_CANCEL_INPUT, CB_SUPPLY_CANCEL),
+        });
+        return;
+      }
+      if (supplyCreate.step === "server") {
+        supplyCreate.draft.server = t;
+        awaitingSupplyCreateByUserId.set(ctx.from.id, {
+          step: "virts",
+          draft: supplyCreate.draft,
+        });
+        await ctx.reply("Введите количество виртов (числом):", {
+          reply_markup: new InlineKeyboard().text(BTN_SUPPLIES_CANCEL_INPUT, CB_SUPPLY_CANCEL),
+        });
+        return;
+      }
+      // virts
+      const normalized = t.replace(/\s/g, "").replace(",", ".");
+      if (!/^\d+(\.\d+)?$/.test(normalized)) {
+        await ctx.reply("Введите количество виртов числом.", {
+          reply_markup: new InlineKeyboard().text(BTN_SUPPLIES_CANCEL_INPUT, CB_SUPPLY_CANCEL),
+        });
+        return;
+      }
+      const v = Number(normalized);
+      if (!Number.isFinite(v) || v <= 0) {
+        await ctx.reply("Введите положительное число.", {
+          reply_markup: new InlineKeyboard().text(BTN_SUPPLIES_CANCEL_INPUT, CB_SUPPLY_CANCEL),
+        });
+        return;
+      }
+      const project = String(supplyCreate.draft.project ?? "").trim();
+      const server = String(supplyCreate.draft.server ?? "").trim();
+      clearAwaitingSupplyCreate(ctx.from.id);
+      createSupply({ project, server, virtAmount: v });
+      await ctx.reply("✅ Поставка создана и добавлена в актуальные.", {
+        reply_markup: buildSuppliesMenuKeyboard(),
+      });
+      return;
+    }
+
+    const supplyClose = awaitingSupplyCloseByUserId.get(ctx.from.id);
+    if (supplyClose) {
+      const text = ctx.message?.text;
+      if (!text) {
+        await ctx.reply("Отправьте число одним сообщением.", {
+          reply_markup: new InlineKeyboard().text(BTN_SUPPLIES_CANCEL_INPUT, CB_SUPPLY_CANCEL),
+        });
+        return;
+      }
+      const t = text.trim();
+      if (t.startsWith("/")) {
+        await ctx.reply("Введите число без команд.", {
+          reply_markup: new InlineKeyboard().text(BTN_SUPPLIES_CANCEL_INPUT, CB_SUPPLY_CANCEL),
+        });
+        return;
+      }
+      const normalized = t.replace(/\s/g, "").replace(",", ".");
+      if (!/^\d+(\.\d+)?$/.test(normalized)) {
+        await ctx.reply("Введите число (например 1500 или 1500,50).", {
+          reply_markup: new InlineKeyboard().text(BTN_SUPPLIES_CANCEL_INPUT, CB_SUPPLY_CANCEL),
+        });
+        return;
+      }
+      const value = Number(normalized);
+      if (!Number.isFinite(value) || value < 0) {
+        await ctx.reply("Введите неотрицательное число.", {
+          reply_markup: new InlineKeyboard().text(BTN_SUPPLIES_CANCEL_INPUT, CB_SUPPLY_CANCEL),
+        });
+        return;
+      }
+      if (supplyClose.step === "turnover") {
+        awaitingSupplyCloseByUserId.set(ctx.from.id, {
+          step: "profit",
+          supplyId: supplyClose.supplyId,
+          turnoverRub: value,
+        });
+        await ctx.reply("Введите чистую прибыль по поставке в RUB (числом):", {
+          reply_markup: new InlineKeyboard().text(BTN_SUPPLIES_CANCEL_INPUT, CB_SUPPLY_CANCEL),
+        });
+        return;
+      }
+      const turnoverRub = supplyClose.turnoverRub ?? 0;
+      clearAwaitingSupplyClose(ctx.from.id);
+      const closed = closeSupply(supplyClose.supplyId, {
+        turnoverRub,
+        profitRub: value,
+      });
+      if (!closed) {
+        await ctx.reply("Поставка не найдена.", { reply_markup: adminMenuKeyboard() });
+        return;
+      }
+      await ctx.reply("✅ Поставка завершена.", { reply_markup: buildSuppliesMenuKeyboard() });
+      return;
     }
     if (awaitingOrderLookup.has(ctx.from.id)) {
       const text = ctx.message?.text;
