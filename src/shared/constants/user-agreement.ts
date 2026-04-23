@@ -1,6 +1,23 @@
 export const USER_AGREEMENT_PAGE_TITLE = "📄 ПУБЛИЧНАЯ ОФЕРТА";
 
-const PUBLIC_OFFER_BODY = `ARTSHOPVIRTS
+export const USER_AGREEMENT_BODY = `📜 ПОЛЬЗОВАТЕЛЬСКОЕ СОГЛАШЕНИЕ
+
+Пользователь обязуется:
+
+предоставлять корректные данные
+не злоупотреблять сервисом
+
+Запрещено:
+
+мошенничество
+попытки обмана
+
+Сервис оставляет за собой право отказать в обслуживании.
+
+
+📄 ПУБЛИЧНАЯ ОФЕРТА
+
+ARTSHOPVIRTS
 
 1. Общие положения
 
@@ -46,21 +63,3 @@ const PUBLIC_OFFER_BODY = `ARTSHOPVIRTS
 
 Telegram: @artshopvirts_man
 Поддержка: 24/7`;
-
-const USER_AGREEMENT_INTRO = `Пользователь обязуется:
-
-предоставлять корректные данные
-не злоупотреблять сервисом
-
-Запрещено:
-
-мошенничество
-попытки обмана
-
-- Сервис оставляет за собой право отказать в обслуживании.`;
-
-export const USER_AGREEMENT_BODY = `${USER_AGREEMENT_INTRO}
-
-📄 ПУБЛИЧНАЯ ОФЕРТА
-
-${PUBLIC_OFFER_BODY}`;
