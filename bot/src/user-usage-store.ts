@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -48,6 +48,7 @@ function loadStore(): StoreShapeV1 {
 }
 
 function saveStore(store: StoreShapeV1) {
+  mkdirSync(dirname(STORE_PATH), { recursive: true });
   writeFileSync(STORE_PATH, JSON.stringify(store, null, 2), "utf8");
 }
 
