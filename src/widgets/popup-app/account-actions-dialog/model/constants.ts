@@ -10,9 +10,21 @@ export const ACCOUNT_ACTION_DIALOG_TEXT: Record<
     content: ACCOUNT_PAGE_TEXT.popup.currentOrders,
     title: ACCOUNT_PAGE_TEXT.menu.currentOrders,
   },
+  orderStats: {
+    content: "",
+    title: ACCOUNT_PAGE_TEXT.menu.orderStats,
+  },
+  orderLookup: {
+    content: "",
+    title: ACCOUNT_PAGE_TEXT.menu.orderLookup,
+  },
   orderHistory: {
     content: ACCOUNT_PAGE_TEXT.popup.orderHistory,
     title: ACCOUNT_PAGE_TEXT.menu.orderHistory,
+  },
+  orderPeriodStats: {
+    content: "",
+    title: ACCOUNT_PAGE_TEXT.menu.orderPeriodStats,
   },
   referral: {
     content: ACCOUNT_PAGE_TEXT.popup.referral,

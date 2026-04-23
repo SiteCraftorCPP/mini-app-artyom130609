@@ -33,7 +33,15 @@ export const BTN_ADMIN_MAIN = "Админ панель";
 export const BTN_ADMIN_CURRENT_ORDERS = "📦 Актуальные заказы";
 /** Вторая кнопка главного меню админки. */
 export const BTN_ADMIN_STATS = "💰 Статистика актуальных заказов";
+/** Третья кнопка: поиск заказа по номеру (открытый и закрытый). */
+export const BTN_ADMIN_FIND_ORDER = "🔍 Найти заказ";
+/** Четвёртая: последние 50 (открытие с первой страницы). */
+export const BTN_ADMIN_HISTORY_50 = "📋 История заказов";
+/** Пятая: мок-статистика по периодам. */
+export const BTN_ORDER_PERIOD_STATS = "Статистика заказов";
 export const BTN_BACK_TO_ADMIN = "🔙 В админ-панель";
+export const BTN_BACK_TO_HISTORY_50 = "🔙 К списку (50)";
+export const BTN_STAT_PERIOD_CHOOSE = "◀ К выбору периода";
 export const BTN_BACK_TO_ORDER_LIST = "🔙 К списку заказов";
 export const BTN_STATS_VIEW_ORDERS = "📦 Просмотреть заказы";
 export const BTN_STATS_BACK = "🔙 Назад";
@@ -48,6 +56,45 @@ export const MSG_PROFIT_INVALID =
 export const msgProfitSaved = (orderId: string, amount: string) =>
   `Чистая прибыль ${amount} RUB за заказ #${orderId} учтена.`;
 export const MSG_PROFIT_CANCELLED = "Ввод прибыли отменён.";
+
+export const MSG_ORDER_LOOKUP_PROMPT = [
+  "Введите номер заказа (как в уведомлении о заказе, можно с #).",
+  "",
+  "Покажем все данные по заказу. Если он уже выполнен — время закрытия тоже.",
+  "",
+  "Отмена: /cancel",
+].join("\n");
+export const MSG_ORDER_NOT_FOUND = "Заказ с таким номером не найден. Проверьте ввод и попробуйте снова.";
+export const MSG_ORDER_LOOKUP_CANCELLED = "Поиск отменён.";
+
+export const STAT_PERIOD_TITLES = [
+  "Статистика за день",
+  "Статистика за месяц",
+  "Статистика за год",
+  "Статистика за определённый день",
+  "Статистика за определённый месяц",
+  "Статистика за определённый год",
+  "За всё время",
+  "За определённый период",
+] as const;
+
+export function buildOrderPeriodStatsMessage(periodIndex: number): string {
+  const label =
+    periodIndex >= 0 && periodIndex < STAT_PERIOD_TITLES.length
+      ? STAT_PERIOD_TITLES[periodIndex]
+      : "Период";
+  const s = periodIndex + 1;
+  const count = 3 + (s % 18);
+  const totalRub = 12_000 + s * 1_241;
+  return [
+    `📊 ${label}`,
+    "",
+    "Сейчас — демо-цифры; после API здесь будут фактические данные.",
+    "",
+    `📦 Заказов: ${count}`,
+    `💵 Оборот: ${totalRub.toFixed(2)} RUB`,
+  ].join("\n");
+}
 
 export const VIDEO_CAPTION = "Ознакомление: как оформить заказ";
 

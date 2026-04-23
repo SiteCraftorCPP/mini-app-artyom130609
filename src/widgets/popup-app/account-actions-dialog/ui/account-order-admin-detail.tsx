@@ -19,6 +19,13 @@ function buildAdminOrderPlainText(order: Order): string {
   const lines = [
     ORDER_ADMIN_TEXT.title(id),
     `${ORDER_ADMIN_TEXT.opened} ${order.openedAtLine ?? "—"}`,
+  ];
+  if (order.closedAtLine) {
+    lines.push(
+      `${ORDER_ADMIN_TEXT.closedAt} ${order.closedAtLine}`,
+    );
+  }
+  lines.push(
     `${ORDER_ADMIN_TEXT.user} @${un} (${uid})`,
     `${ORDER_ADMIN_TEXT.game} ${order.game}`,
     `${ORDER_INFO_TEXT.server} ${order.server}`,
@@ -28,7 +35,7 @@ function buildAdminOrderPlainText(order: Order): string {
     `${ORDER_ADMIN_TEXT.amountRub} ${
       order.amountRub != null ? `${order.amountRub}` : "—"
     }`,
-  ];
+  );
   return lines.join("\n");
 }
 
@@ -57,6 +64,12 @@ export const AccountAdminOrderDetail = ({ order }: AccountAdminOrderDetailProps)
           k={ORDER_ADMIN_TEXT.opened}
           v={order.openedAtLine ?? "—"}
         />
+        {order.closedAtLine ? (
+          <AdminLine
+            k={ORDER_ADMIN_TEXT.closedAt}
+            v={order.closedAtLine}
+          />
+        ) : null}
         <AdminLine
           k={ORDER_ADMIN_TEXT.user}
           v={ORDER_ADMIN_TEXT.usernameLine(un, uid)}

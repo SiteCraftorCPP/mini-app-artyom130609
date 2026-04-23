@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { Link } from "react-router-dom";
 
 import { AppText } from "@/ui/app-text";
@@ -6,8 +7,12 @@ import { Button } from "@/ui/button";
 import { EXTERNAL_LINKS } from "@/shared/constants/common";
 import { ROUTERS } from "@/shared/constants/routers";
 import { ACCOUNT_PAGE_TEXT } from "@/shared/constants/text";
+import { useIsTelegramAdmin } from "@/shared/hooks/use-is-telegram-admin";
 
+import IdIcon from "@/assets/icon/account/id.svg";
 import Support from "@/assets/icon/account/support.svg";
+import SortLevel from "@/assets/icon/sort-level.svg";
+import Wallet from "@/assets/icon/wallet.svg";
 
 import { AccountActionsDialog } from "../popup-app/account-actions-dialog";
 
@@ -24,10 +29,37 @@ export const AccountMenu = ({
   openCurrentOrdersFromLink = false,
   orderIdFromLink = null,
 }: AccountMenuProps) => {
+  const isAdmin = useIsTelegramAdmin();
+
+  const firstBlockItems = useMemo((): AccountPopupMenuItem[] => {
+    const [current, history] = ACCOUNT_POPUP_MENU_ITEMS;
+    if (!isAdmin) {
+      return [current, history];
+    }
+    const statsItem: AccountPopupMenuItem = {
+      actionId: "orderStats",
+      icon: <Wallet className="text-white" />,
+      label: ACCOUNT_PAGE_TEXT.menu.orderStats,
+    };
+    const lookupItem: AccountPopupMenuItem = {
+      actionId: "orderLookup",
+      icon: <IdIcon className="text-white" />,
+      label: ACCOUNT_PAGE_TEXT.menu.orderLookup,
+    };
+    const periodStatsItem: AccountPopupMenuItem = {
+      actionId: "orderPeriodStats",
+      icon: <SortLevel className="text-white" />,
+      label: ACCOUNT_PAGE_TEXT.menu.orderPeriodStats,
+    };
+    return [current, statsItem, lookupItem, history, periodStatsItem];
+  }, [isAdmin]);
+
+  const referralItem = ACCOUNT_POPUP_MENU_ITEMS[2];
+
   return (
     <section aria-label={ACCOUNT_PAGE_TEXT.pageTitle}>
       <ul className="flex flex-col gap-2">
-        {ACCOUNT_POPUP_MENU_ITEMS.slice(0, 2).map((item) => (
+        {firstBlockItems.map((item) => (
           <AccountMenuPopupItem
             key={item.actionId}
             defaultOpen={
@@ -51,7 +83,7 @@ export const AccountMenu = ({
             </a>
           </Button>
         </li>
-        <AccountMenuPopupItem item={ACCOUNT_POPUP_MENU_ITEMS[2]} />
+        <AccountMenuPopupItem item={referralItem} />
         <li>
           <Button asChild variant="accountMenu" size="accountMenu">
             <Link to={ROUTERS.INFO}>

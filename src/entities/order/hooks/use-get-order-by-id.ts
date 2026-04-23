@@ -5,6 +5,8 @@ import { TIMING } from "@/shared/constants/timing";
 import { useIsTelegramAdmin } from "@/shared/hooks/use-is-telegram-admin";
 import {
   ACCOUNT_ADMIN_CURRENT_ORDERS_MOCK,
+  ACCOUNT_ADMIN_HISTORY_50_MOCK,
+  ACCOUNT_ADMIN_ORDER_ARCHIVE_MOCK,
   ACCOUNT_CURRENT_ORDERS_MOCK,
   ACCOUNT_ORDER_HISTORY_MOCK,
 } from "@/shared/mock/account-orders";
@@ -28,13 +30,28 @@ export const useGetOrderById = ({
       if (!id) {
         return null;
       }
-      const fromAdmin = ACCOUNT_ADMIN_CURRENT_ORDERS_MOCK.find((o) => o.id === id);
+      const normalized = id.trim().replace(/^#+/, "");
+      const fromAdmin = ACCOUNT_ADMIN_CURRENT_ORDERS_MOCK.find(
+        (o) => o.id === normalized,
+      );
       if (fromAdmin) {
         return isAdmin ? fromAdmin : null;
       }
+      const fromAdminArchive = ACCOUNT_ADMIN_ORDER_ARCHIVE_MOCK.find(
+        (o) => o.id === normalized,
+      );
+      if (fromAdminArchive) {
+        return isAdmin ? fromAdminArchive : null;
+      }
+      const fromAdminHistory50 = ACCOUNT_ADMIN_HISTORY_50_MOCK.find(
+        (o) => o.id === normalized,
+      );
+      if (fromAdminHistory50) {
+        return isAdmin ? fromAdminHistory50 : null;
+      }
       return (
-        ACCOUNT_CURRENT_ORDERS_MOCK.find((o) => o.id === id) ??
-        ACCOUNT_ORDER_HISTORY_MOCK.find((o) => o.id === id) ??
+        ACCOUNT_CURRENT_ORDERS_MOCK.find((o) => o.id === normalized) ??
+        ACCOUNT_ORDER_HISTORY_MOCK.find((o) => o.id === normalized) ??
         null
       );
     },

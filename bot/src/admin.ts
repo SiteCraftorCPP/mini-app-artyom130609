@@ -3,21 +3,33 @@ import { InlineKeyboard, type Bot, type Context } from "grammy";
 import {
   ADMIN_ORDERS_MOCK,
   getAdminOrderById,
+  getHistory50PageCount,
+  getHistory50Slice,
   type AdminOrderRow,
 } from "./admin-orders-mock.js";
 import {
   BTN_ADMIN_CURRENT_ORDERS,
+  BTN_ADMIN_FIND_ORDER,
+  BTN_ADMIN_HISTORY_50,
   BTN_ADMIN_MAIN,
   BTN_ADMIN_STATS,
   BTN_BACK_TO_ADMIN,
+  BTN_BACK_TO_HISTORY_50,
   BTN_BACK_TO_ORDER_LIST,
   BTN_CONFIRM_VIRT,
   BTN_COPY_ORDER_DATA,
+  BTN_ORDER_PERIOD_STATS,
+  BTN_STAT_PERIOD_CHOOSE,
   BTN_STATS_BACK,
   BTN_STATS_VIEW_ORDERS,
+  buildOrderPeriodStatsMessage,
+  MSG_ORDER_LOOKUP_CANCELLED,
+  MSG_ORDER_LOOKUP_PROMPT,
+  MSG_ORDER_NOT_FOUND,
   MSG_PROFIT_CANCELLED,
   MSG_PROFIT_INVALID,
   PENDING_ORDERS_HEADER,
+  STAT_PERIOD_TITLES,
   STATS_HEADER,
   msgProfitPrompt,
   msgProfitSaved,
@@ -27,6 +39,7 @@ const CB = {
   list: "admin:lst",
   menu: "admin:menu",
   stats: "admin:st",
+  find: "admin:find",
 } as const;
 
 const cbView = (id: string) => `admin:v:${id}`;
@@ -65,10 +78,16 @@ function buildOrderDetailHtml(o: AdminOrderRow): string {
   const t = escapeHtml(o.transferMethod);
   const bank = escapeHtml(o.bankAccount);
   const idLine = escapeHtml(o.publicOrderId);
-  return [
+  const head = [
     `<b>Детали заказа ${idLine}:</b>`,
     "",
     `🕒 Открыт: ${escapeHtml(o.openedAtLine)}`,
+  ];
+  if (o.closedAtLine) {
+    head.push(`🕐 Закрыт: ${escapeHtml(o.closedAtLine)}`);
+  }
+  return [
+    ...head,
     `Пользователь: <a href="${escapeHtml(userLink)}">@${escapeHtml(un)}</a> (${escapeHtml(o.telegramUserId)})`,
     `Игра/Услуга: <i>${g}</i>`,
     `Сервер: <i>${s}</i>`,
@@ -81,10 +100,16 @@ function buildOrderDetailHtml(o: AdminOrderRow): string {
 
 function buildOrderPlainForCopy(o: AdminOrderRow): string {
   const un = stripAt(o.telegramUsername);
-  return [
+  const head = [
     `Детали заказа ${o.publicOrderId}:`,
     "",
     `🕒 Открыт: ${o.openedAtLine}`,
+  ];
+  if (o.closedAtLine) {
+    head.push(`🕐 Закрыт: ${o.closedAtLine}`);
+  }
+  return [
+    ...head,
     `Пользователь: @${un} (${o.telegramUserId})`,
     `Игра/Услуга: ${o.game}`,
     `Сервер: ${o.server}`,
@@ -119,10 +144,103 @@ function buildStatsKeyboard() {
 }
 
 function adminMenuKeyboard() {
+  assertCbData("ah:0");
+  assertCbData("a:st");
   return new InlineKeyboard()
     .text(BTN_ADMIN_CURRENT_ORDERS, CB.list)
     .row()
-    .text(BTN_ADMIN_STATS, CB.stats);
+    .text(BTN_ADMIN_STATS, CB.stats)
+    .row()
+    .text(BTN_ADMIN_FIND_ORDER, CB.find)
+    .row()
+    .text(BTN_ADMIN_HISTORY_50, "ah:0")
+    .row()
+    .text(BTN_ORDER_PERIOD_STATS, "a:st");
+}
+
+function buildHistory50IntroText(page: number, pageCount: number): string {
+  return [
+    "📋 Последние 50 заказов (полные данные, как в «Найти заказ»).",
+    "",
+    `Стр. ${page + 1} / ${pageCount} — нажмите заказ в кнопках ниже.`,
+  ].join("\n");
+}
+
+function buildHistory50Keyboard(page: number): InlineKeyboard {
+  const pageCount = getHistory50PageCount();
+  const slice = getHistory50Slice(page);
+  const kb = new InlineKeyboard();
+  for (const o of slice) {
+    const d = `hv:${o.id}:${page}`;
+    assertCbData(d);
+    kb.text(formatListButtonLabel(o), d).row();
+  }
+  if (page > 0 || page < pageCount - 1) {
+    if (page > 0) {
+      const p = `ah:${page - 1}`;
+      assertCbData(p);
+      kb.text("⬅️ Пред. стр.", p);
+    }
+    if (page < pageCount - 1) {
+      const p = `ah:${page + 1}`;
+      assertCbData(p);
+      kb.text("➡️ След. стр.", p);
+    }
+    kb.row();
+  }
+  assertCbData(CB.menu);
+  kb.text(BTN_BACK_TO_ADMIN, CB.menu);
+  return kb;
+}
+
+function buildOrderPeriodMenuKeyboard(): InlineKeyboard {
+  const kb = new InlineKeyboard();
+  for (let i = 0; i < STAT_PERIOD_TITLES.length; i += 1) {
+    const t = STAT_PERIOD_TITLES[i]!;
+    const d = `a:s${i}` as const;
+    assertCbData(d);
+    kb.text(t, d).row();
+  }
+  assertCbData(CB.menu);
+  kb.text(BTN_BACK_TO_ADMIN, CB.menu);
+  return kb;
+}
+
+function buildOrderPeriodResultKeyboard(): InlineKeyboard {
+  assertCbData("a:st");
+  return new InlineKeyboard()
+    .text(BTN_STAT_PERIOD_CHOOSE, "a:st")
+    .row()
+    .text(BTN_BACK_TO_ADMIN, CB.menu);
+}
+
+function buildOrderDetailKeyboard(
+  id: string,
+  mode: "list" | "find" | "hist50",
+  histPage = 0,
+) {
+  const order = getAdminOrderById(id);
+  const isClosed = Boolean(order?.closedAtLine);
+  const dCopy = cbCopy(id);
+  assertCbData(dCopy);
+  const kb = new InlineKeyboard().text(BTN_COPY_ORDER_DATA, dCopy).row();
+  if (!isClosed) {
+    const dOk = cbOk(id);
+    assertCbData(dOk);
+    kb.text(BTN_CONFIRM_VIRT, dOk).row();
+  }
+  if (mode === "find") {
+    assertCbData(CB.menu);
+    kb.text(BTN_BACK_TO_ADMIN, CB.menu);
+  } else if (mode === "hist50") {
+    const d = `ah:${histPage}`;
+    assertCbData(d);
+    kb.text(BTN_BACK_TO_HISTORY_50, d);
+  } else {
+    assertCbData(CB.list);
+    kb.text(BTN_BACK_TO_ORDER_LIST, CB.list);
+  }
+  return kb;
 }
 
 function buildOrderListKeyboard() {
@@ -135,19 +253,6 @@ function buildOrderListKeyboard() {
   assertCbData(CB.menu);
   kb.text(BTN_BACK_TO_ADMIN, CB.menu);
   return kb;
-}
-
-function buildOrderDetailKeyboard(id: string) {
-  const dCopy = cbCopy(id);
-  const dOk = cbOk(id);
-  assertCbData(dCopy);
-  assertCbData(dOk);
-  return new InlineKeyboard()
-    .text(BTN_COPY_ORDER_DATA, dCopy)
-    .row()
-    .text(BTN_CONFIRM_VIRT, dOk)
-    .row()
-    .text(BTN_BACK_TO_ORDER_LIST, CB.list);
 }
 
 async function clearReplyKeyboard(ctx: Context) {
@@ -168,9 +273,14 @@ async function clearReplyKeyboard(ctx: Context) {
 export function installAdminModule(bot: Bot, adminIds: Set<number>) {
   /** Ожидание ввода чистой прибыли после «Подтвердить выдачу». */
   const awaitingProfitByUserId = new Map<number, string>();
+  const awaitingOrderLookup = new Set<number>();
 
   function clearAwaitingProfit(userId: number) {
     awaitingProfitByUserId.delete(userId);
+  }
+
+  function clearAwaitingOrderLookup(userId: number) {
+    awaitingOrderLookup.delete(userId);
   }
 
   async function requireAdmin(
@@ -202,6 +312,7 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
     }
     if (ctx.from) {
       clearAwaitingProfit(ctx.from.id);
+      clearAwaitingOrderLookup(ctx.from.id);
     }
     await clearReplyKeyboard(a);
     await a.reply(BTN_ADMIN_MAIN, {
@@ -216,6 +327,7 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
     }
     if (ctx.from) {
       clearAwaitingProfit(ctx.from.id);
+      clearAwaitingOrderLookup(ctx.from.id);
     }
     await ctx.answerCallbackQuery();
     await a.editMessageText(BTN_ADMIN_MAIN, {
@@ -230,6 +342,7 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
     }
     if (ctx.from) {
       clearAwaitingProfit(ctx.from.id);
+      clearAwaitingOrderLookup(ctx.from.id);
     }
     await ctx.answerCallbackQuery();
     const text = buildStatsMessage();
@@ -247,6 +360,7 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
     }
     if (ctx.from) {
       clearAwaitingProfit(ctx.from.id);
+      clearAwaitingOrderLookup(ctx.from.id);
     }
     await ctx.answerCallbackQuery();
     const text = PENDING_ORDERS_HEADER;
@@ -257,10 +371,133 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
     }
   });
 
+  bot.callbackQuery(CB.find, async (ctx) => {
+    const a = await requireAdmin(ctx);
+    if (a == null) {
+      return;
+    }
+    if (ctx.from) {
+      clearAwaitingProfit(ctx.from.id);
+      awaitingOrderLookup.add(ctx.from.id);
+    }
+    await ctx.answerCallbackQuery();
+    const kb = new InlineKeyboard().text(BTN_BACK_TO_ADMIN, CB.menu);
+    const text = MSG_ORDER_LOOKUP_PROMPT;
+    try {
+      await a.editMessageText(text, { reply_markup: kb });
+    } catch (e) {
+      await a.reply(text, { reply_markup: kb });
+    }
+  });
+
+  bot.callbackQuery(/^ah:(\d+)$/, async (ctx) => {
+    const a = await requireAdmin(ctx);
+    if (a == null) {
+      return;
+    }
+    if (ctx.from) {
+      clearAwaitingProfit(ctx.from.id);
+      clearAwaitingOrderLookup(ctx.from.id);
+    }
+    await ctx.answerCallbackQuery();
+    const maxP = getHistory50PageCount();
+    let page = parseInt(ctx.match[1] ?? "0", 10);
+    if (Number.isNaN(page) || page < 0) {
+      page = 0;
+    }
+    if (page > maxP - 1) {
+      page = Math.max(0, maxP - 1);
+    }
+    const text = buildHistory50IntroText(page, maxP);
+    const kb = buildHistory50Keyboard(page);
+    try {
+      await a.editMessageText(text, { reply_markup: kb });
+    } catch (e) {
+      await a.reply(text, { reply_markup: kb });
+    }
+  });
+
+  bot.callbackQuery("a:st", async (ctx) => {
+    const a = await requireAdmin(ctx);
+    if (a == null) {
+      return;
+    }
+    if (ctx.from) {
+      clearAwaitingProfit(ctx.from.id);
+      clearAwaitingOrderLookup(ctx.from.id);
+    }
+    await ctx.answerCallbackQuery();
+    const text = [
+      "📊 Статистика заказов",
+      "",
+      "Выберите период (сейчас — демо, позже — из API):",
+    ].join("\n");
+    const kb = buildOrderPeriodMenuKeyboard();
+    try {
+      await a.editMessageText(text, { reply_markup: kb });
+    } catch (e) {
+      await a.reply(text, { reply_markup: kb });
+    }
+  });
+
+  bot.callbackQuery(/^a:s([0-7])$/, async (ctx) => {
+    const a = await requireAdmin(ctx);
+    if (a == null) {
+      return;
+    }
+    if (ctx.from) {
+      clearAwaitingProfit(ctx.from.id);
+      clearAwaitingOrderLookup(ctx.from.id);
+    }
+    const idx = parseInt(ctx.match[1] ?? "0", 10);
+    await ctx.answerCallbackQuery();
+    const text = buildOrderPeriodStatsMessage(idx);
+    const kb = buildOrderPeriodResultKeyboard();
+    try {
+      await a.editMessageText(text, { reply_markup: kb });
+    } catch (e) {
+      await a.reply(text, { reply_markup: kb });
+    }
+  });
+
+  bot.callbackQuery(/^hv:([^:\s]+):(\d+)$/, async (ctx) => {
+    const a = await requireAdmin(ctx);
+    if (a == null) {
+      return;
+    }
+    if (ctx.from) {
+      clearAwaitingProfit(ctx.from.id);
+      clearAwaitingOrderLookup(ctx.from.id);
+    }
+    const id = ctx.match[1] ?? "";
+    const page = parseInt(ctx.match[2] ?? "0", 10) || 0;
+    const order = getAdminOrderById(id);
+    if (!order) {
+      await ctx.answerCallbackQuery({ text: "Заказ не найден", show_alert: true });
+      return;
+    }
+    await ctx.answerCallbackQuery();
+    const html = buildOrderDetailHtml(order);
+    const editOptions = {
+      parse_mode: "HTML" as const,
+      link_preview_options: { is_disabled: true },
+      reply_markup: buildOrderDetailKeyboard(id, "hist50", page),
+    };
+    try {
+      await a.editMessageText(html, editOptions);
+    } catch (e) {
+      await a.reply(html, editOptions);
+    }
+  });
+
   bot.callbackQuery(/^admin:v:([^:\s]+)$/, async (ctx) => {
     const a = await requireAdmin(ctx);
     if (a == null) {
       return;
+    }
+    if (ctx.from) {
+      clearAwaitingProfit(ctx.from.id);
+      clearAwaitingOrderLookup(ctx.from.id);
     }
     const id = ctx.match[1] ?? "";
     const order = getAdminOrderById(id);
@@ -273,7 +510,7 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
     const editOptions = {
       parse_mode: "HTML" as const,
       link_preview_options: { is_disabled: true },
-      reply_markup: buildOrderDetailKeyboard(id),
+      reply_markup: buildOrderDetailKeyboard(id, "list"),
     };
     try {
       await a.editMessageText(html, editOptions);
@@ -309,9 +546,17 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
       await ctx.answerCallbackQuery({ text: "Заказ не найден", show_alert: true });
       return;
     }
+    if (order.closedAtLine) {
+      await ctx.answerCallbackQuery({
+        text: "Заказ уже закрыт — выдачу не подтвердить.",
+        show_alert: true,
+      });
+      return;
+    }
     await ctx.answerCallbackQuery();
     if (ctx.from) {
       awaitingProfitByUserId.set(ctx.from.id, id);
+      clearAwaitingOrderLookup(ctx.from.id);
     }
     const ref = order.publicOrderId ?? id;
     await a.reply(msgProfitPrompt(ref));
@@ -329,6 +574,42 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
     }
     if (!adminIds.has(ctx.from.id)) {
       return next();
+    }
+    if (awaitingOrderLookup.has(ctx.from.id)) {
+      const text = ctx.message?.text;
+      if (text === undefined) {
+        await ctx.reply("Отправьте номер заказа текстом. /cancel — отмена.");
+        return;
+      }
+      const t = text.trim();
+      if (t.startsWith("/")) {
+        if (/^\/cancel(@\S+)?$/i.test(t)) {
+          clearAwaitingOrderLookup(ctx.from.id);
+          await ctx.reply(MSG_ORDER_LOOKUP_CANCELLED);
+          return;
+        }
+        await ctx.reply(
+          "Сначала введите номер заказа или отправьте /cancel.",
+        );
+        return;
+      }
+      if (t.length < 1) {
+        await ctx.reply(MSG_ORDER_NOT_FOUND);
+        return;
+      }
+      const order = getAdminOrderById(t);
+      if (!order) {
+        await ctx.reply(MSG_ORDER_NOT_FOUND);
+        return;
+      }
+      clearAwaitingOrderLookup(ctx.from.id);
+      const html = buildOrderDetailHtml(order);
+      await ctx.reply(html, {
+        parse_mode: "HTML",
+        link_preview_options: { is_disabled: true },
+        reply_markup: buildOrderDetailKeyboard(order.id, "find"),
+      });
+      return;
     }
     const pendingOrderId = awaitingProfitByUserId.get(ctx.from.id);
     if (pendingOrderId === undefined) {

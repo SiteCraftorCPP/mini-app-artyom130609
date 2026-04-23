@@ -8,10 +8,19 @@ import { ACCOUNT_ACTION_DIALOG_TEXT } from "./model";
 import { AccountCurrentOrders } from "./ui/account-current-orders";
 import { AccountOrderDetail } from "./ui/account-order-detail";
 import { AccountOrderHistory } from "./ui/account-order-history";
+import { AccountOrderLookup } from "./ui/account-order-lookup";
+import { AccountOrderPeriodStats } from "./ui/account-order-period-stats";
+import { AccountOrderStats } from "./ui/account-order-stats";
 import { PopupAppHeader } from "@/widgets/popup-app";
 import { PopupApp } from "@/widgets/popup-app";
 
-export type AccountActionId = "currentOrders" | "orderHistory" | "referral";
+export type AccountActionId =
+  | "currentOrders"
+  | "orderStats"
+  | "orderLookup"
+  | "orderHistory"
+  | "orderPeriodStats"
+  | "referral";
 
 type AccountActionsDialogProps = {
   actionId: AccountActionId;
@@ -94,6 +103,18 @@ const renderAccountActionContent = ({
       return <AccountOrderDetail orderId={focusedCurrentOrderId} />;
     }
     return <AccountCurrentOrders onSelectOrder={setFocusedCurrentOrderId} />;
+  }
+
+  if (actionId === "orderStats") {
+    return <AccountOrderStats />;
+  }
+
+  if (actionId === "orderLookup") {
+    return <AccountOrderLookup />;
+  }
+
+  if (actionId === "orderPeriodStats") {
+    return <AccountOrderPeriodStats />;
   }
 
   if (actionId === "orderHistory") {
