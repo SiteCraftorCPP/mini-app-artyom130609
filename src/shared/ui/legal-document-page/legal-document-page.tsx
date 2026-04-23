@@ -1,3 +1,5 @@
+import { useEffect } from "react";
+
 import { AppText, TAG } from "@/ui/app-text";
 
 type LegalDocumentPageProps = {
@@ -9,6 +11,16 @@ type LegalDocumentPageProps = {
  * Пользовательское соглашение / политика: прокрутка, отступ снизу под нижнюю навигацию, компактный текст.
  */
 export const LegalDocumentPage = ({ title, body }: LegalDocumentPageProps) => {
+  useEffect(() => {
+    const scrollEl = document.querySelector("main");
+    if (scrollEl instanceof HTMLElement) {
+      scrollEl.scrollTo({ top: 0 });
+      return;
+    }
+
+    window.scrollTo({ top: 0 });
+  }, [title]);
+
   return (
     <div
       className="box-border w-full min-w-0 max-w-full flex-1 self-stretch px-2 pt-3"
