@@ -258,14 +258,14 @@ async function buildActiveOrderRow(
   const publicOrderId = formatOrderNumberForCaption(payload.orderNumber);
   const kind = payload.orderKind ?? "virt";
   let telegramUsername = "user";
-  try {
-    const chat = await bot.api.getChat(payload.telegramUserId);
-    if (chat.type === "private" && "username" in chat && chat.username) {
-      telegramUsername = chat.username;
-    }
-  } catch {
-    /* getChat may fail; stub ok */
-  }
+  // try {
+  //   const chat = await bot.api.getChat(payload.telegramUserId);
+  //   if (chat.type === "private" && "username" in chat && chat.username) {
+  //     telegramUsername = chat.username;
+  //   }
+  // } catch {
+  //   /* getChat may fail; stub ok */
+  // }
   return {
     id,
     publicOrderId,
