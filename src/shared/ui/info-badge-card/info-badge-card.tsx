@@ -23,7 +23,7 @@ const contentVariants = cva("grid h-full w-full min-w-0", {
       /* Кошелёк: ровно квадрат h-10, без растяжения; дальше — белое поле. */
       header:
         "ml-1 grid-cols-[2.5rem_minmax(0,1fr)] rounded-md bg-surface-base",
-      profile: "ml-1 grid-cols-[auto_1fr] rounded-md bg-app-highlight",
+      profile: "ml-1 grid-cols-[2.5rem_minmax(0,1fr)] rounded-md bg-app-highlight",
     },
   },
   defaultVariants: {
@@ -39,7 +39,8 @@ const iconVariants = cva(
         /* 2.5rem колонка = h-10; padding 6+6+28=40. SVG фикс 28×24 — preflight max-width:100% не тянет иконку. */
         header:
           "-ml-1 box-border w-full min-w-0 max-w-full px-1.5 tw-bg-gradient-home-action-primary [&>span]:inline-flex [&>span]:items-center [&>span]:justify-center [&>span]:[line-height:0] [&_svg]:!h-6 [&_svg]:!w-7 [&_svg]:!max-w-none [&_svg]:!shrink-0",
-        profile: "-ml-1 px-2 bg-background-card",
+        profile:
+          "-ml-1 box-border w-full min-w-0 max-w-full px-1.5 bg-background-card [&>span]:inline-flex [&>span]:items-center [&>span]:justify-center [&>span]:[line-height:0] [&_svg]:!h-6 [&_svg]:!w-6 [&_svg]:!max-w-none [&_svg]:!shrink-0",
       },
     },
     defaultVariants: {
