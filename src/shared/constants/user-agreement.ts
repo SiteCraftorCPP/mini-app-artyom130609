@@ -1,4 +1,4 @@
-export const USER_AGREEMENT_PAGE_TITLE = "📜 ПОЛЬЗОВАТЕЛЬСКОЕ СОГЛАШЕНИЕ";
+export const USER_AGREEMENT_PAGE_TITLE = "📄 ПУБЛИЧНАЯ ОФЕРТА";
 
 const PUBLIC_OFFER_BODY = `ARTSHOPVIRTS
 
@@ -57,11 +57,9 @@ const USER_AGREEMENT_INTRO = `Пользователь обязуется:
 мошенничество
 попытки обмана
 
-Сервис оставляет за собой право отказать в обслуживании.`;
+- Сервис оставляет за собой право отказать в обслуживании.`;
 
-export const USER_AGREEMENT_BODY = `📜 ПОЛЬЗОВАТЕЛЬСКОЕ СОГЛАШЕНИЕ
-
-${USER_AGREEMENT_INTRO}
+export const USER_AGREEMENT_BODY = `${USER_AGREEMENT_INTRO}
 
 📄 ПУБЛИЧНАЯ ОФЕРТА
 
