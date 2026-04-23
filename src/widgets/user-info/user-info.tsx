@@ -89,10 +89,10 @@ export const UserInfo = () => {
             }
           />
           <InfoBadgeCard
-            variant="profile"
+            variant="profileWallet"
             icon={<Wallet className="size-8" />}
             info={
-              <AppText variant="darkStrong">
+              <AppText tag={TAG.span} variant="darkStrong" size="xxxl">
                 {`${user.balance} ${user.currency.name}`}
               </AppText>
             }
