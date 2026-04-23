@@ -91,7 +91,7 @@ export const UserInfo = () => {
           />
           <CardInfoHeader
             className="w-full min-w-0 max-w-full"
-            icon={<Wallet className="size-8 shrink-0" />}
+            icon={<Wallet />}
             info={
               <AppText variant="darkStrong" size="headerInfo">
                 {`${user.balance} ${user.currency.name}`}
