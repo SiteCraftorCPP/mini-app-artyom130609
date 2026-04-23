@@ -9,7 +9,13 @@ import { InputFile } from "grammy";
 import { InlineKeyboard } from "grammy";
 
 import { getTelegramUserIdFromWebAppInitData } from "./telegram-webapp-init-data.js";
-import { BTN_WRITE_MANAGER, buildSellVirtCaption } from "./texts.js";
+import {
+  BTN_WRITE_MANAGER,
+  BTN_WRITE_REVIEW,
+  REVIEW_POST_URL,
+  buildOrderCompletedBuyerCaption,
+  buildSellVirtCaption,
+} from "./texts.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -370,6 +376,96 @@ export async function sendVirtOrderSuccess(
     }
   } catch (e) {
     console.error("[virt-order] sendPhoto не удался — отправляю текст", e);
+    await sendTextOnly();
+  }
+}
+
+const COMPLETED_ORDER_REVIEW_PHOTO_NAMES = [
+  "photo_3.jpg",
+  "photo_3.png",
+  "photo_3.jpeg",
+  "photo_3.webp",
+] as const;
+
+/**
+ * Уведомление покупателю после завершения заказа в админке (положите `bot/images/photo_3.*`).
+ * Переопределение: `ORDER_COMPLETED_REVIEW_PHOTO_URL` (https) или `ORDER_COMPLETED_REVIEW_IMAGE_PATH` (от корня бота).
+ */
+function resolveCompletedOrderReviewPhoto(): OrderSuccessPhoto | null {
+  const fromUrl = process.env.ORDER_COMPLETED_REVIEW_PHOTO_URL?.trim();
+  if (fromUrl && /^https?:\/\//i.test(fromUrl)) {
+    return { type: "url", url: fromUrl };
+  }
+  const botRoot = resolve(__dirname, "..");
+  const fromEnv = process.env.ORDER_COMPLETED_REVIEW_IMAGE_PATH?.trim();
+  if (fromEnv) {
+    const p = fromEnv.startsWith("/")
+      ? fromEnv
+      : resolve(botRoot, fromEnv);
+    if (existsSync(p)) {
+      return { type: "file", path: p };
+    }
+  }
+  for (const root of orderPhotoInstallRoots()) {
+    for (const name of COMPLETED_ORDER_REVIEW_PHOTO_NAMES) {
+      const p = resolve(root, "images", name);
+      if (existsSync(p)) {
+        console.info("[order-complete] фото (файл):", p);
+        return { type: "file", path: p };
+      }
+    }
+  }
+  const repoRoot = resolve(__dirname, "../..");
+  for (const name of COMPLETED_ORDER_REVIEW_PHOTO_NAMES) {
+    const p = resolve(repoRoot, "images", name);
+    if (existsSync(p)) {
+      console.info("[order-complete] фото (корень репо):", p);
+      return { type: "file", path: p };
+    }
+  }
+  console.warn(
+    "[order-complete] нет images/photo_3.* — уведомление о выполнении уйдёт без фото. Задайте ORDER_COMPLETED_REVIEW_PHOTO_URL.",
+  );
+  return null;
+}
+
+/**
+ * Сообщение покупателю: заказ выполнен, отзыв, кнопка на пост + фото `photo_3` при наличии.
+ */
+export async function sendOrderCompletedToBuyer(
+  bot: Bot,
+  payload: { telegramUserId: number; orderNumber: string },
+): Promise<void> {
+  const caption = buildOrderCompletedBuyerCaption(payload.orderNumber);
+  const reply_markup = new InlineKeyboard().url(BTN_WRITE_REVIEW, REVIEW_POST_URL);
+
+  const sendTextOnly = async () => {
+    await bot.api.sendMessage(payload.telegramUserId, caption, {
+      reply_markup,
+    });
+  };
+
+  const photo = resolveCompletedOrderReviewPhoto();
+  if (!photo) {
+    await sendTextOnly();
+    return;
+  }
+
+  try {
+    if (photo.type === "url") {
+      await bot.api.sendPhoto(payload.telegramUserId, photo.url, {
+        caption,
+        reply_markup,
+      });
+    } else {
+      await bot.api.sendPhoto(
+        payload.telegramUserId,
+        new InputFile(photo.path),
+        { caption, reply_markup },
+      );
+    }
+  } catch (e) {
+    console.error("[order-complete] sendPhoto", e);
     await sendTextOnly();
   }
 }

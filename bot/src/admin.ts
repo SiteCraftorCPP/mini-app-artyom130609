@@ -47,6 +47,7 @@ import {
   msgProfitSaved,
 } from "./texts.js";
 import { getAllUserIds, getUniqueUserCount } from "./user-usage-store.js";
+import { sendOrderCompletedToBuyer } from "./order-notify.js";
 import {
   closeSupply,
   createSupply,
@@ -154,8 +155,10 @@ function buildStatsMessage(): string {
   return [
     STATS_HEADER,
     "",
-    `📦 Количество заказов: ${count}`,
-    `💵 Общая сумма: ${totalRub.toFixed(2)} RUB`,
+    "Сумма всех актуальных (ещё в выдаче) заказов в рублях:",
+    `<b>${totalRub.toFixed(2)} RUB</b>`,
+    "",
+    `Актуальных заказов: ${count}.`,
   ].join("\n");
 }
 
@@ -618,6 +621,11 @@ async function clearReplyKeyboard(ctx: Context) {
 }
 
 export function installAdminModule(bot: Bot, adminIds: Set<number>) {
+  const sendBuyerCompleted = (telegramUserId: number, orderNumber: string) => {
+    void sendOrderCompletedToBuyer(bot, { telegramUserId, orderNumber }).catch(
+      (e) => console.error("[order-complete] уведомление покупателю:", e),
+    );
+  };
   /** Ожидание ввода чистой прибыли после «Подтвердить выдачу». */
   const awaitingProfitByUserId = new Map<number, string>();
   const awaitingOrderLookup = new Set<number>();
@@ -963,10 +971,14 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
     }
     await ctx.answerCallbackQuery();
     const text = buildStatsMessage();
+    const statsOpts = {
+      parse_mode: "HTML" as const,
+      reply_markup: buildStatsKeyboard(),
+    };
     try {
-      await a.editMessageText(text, { reply_markup: buildStatsKeyboard() });
+      await a.editMessageText(text, statsOpts);
     } catch (e) {
-      await a.reply(text, { reply_markup: buildStatsKeyboard() });
+      await a.reply(text, statsOpts);
     }
   });
 
@@ -1409,6 +1421,16 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
     await ctx.reply(msgProfitSaved(pendingOrderId, amountStr), {
       reply_markup: backToAdminKeyboard(),
     });
+    const completedOrder = getAdminOrderById(pendingOrderId);
+    if (completedOrder) {
+      const uid = Number(completedOrder.telegramUserId);
+      if (Number.isFinite(uid) && uid > 0) {
+        sendBuyerCompleted(
+          uid,
+          completedOrder.publicOrderId ?? pendingOrderId,
+        );
+      }
+    }
     console.info(
       "[admin-profit]",
       "user=",
