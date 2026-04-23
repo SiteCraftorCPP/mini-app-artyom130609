@@ -103,6 +103,12 @@ export const useBuyAccountOptions = ({
         orderKind: "account",
         orderId: result.orderId,
         orderNumber: result.orderNumber,
+        game: virt.name,
+        server,
+        amountRub,
+        bankAccount: "—",
+        virtAmountLabel: selectedOption.label,
+        transferMethod: `${selectedMode.title}: ${selectedOption.label}`,
       });
     } catch {
       showErrorMessage(VIRT_FORM_TEXT.paymentError);

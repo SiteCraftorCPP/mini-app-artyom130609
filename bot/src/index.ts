@@ -8,6 +8,7 @@ import { Bot, InputFile, type Context } from "grammy";
 import { aboutBackKeyboard, mainMenuInlineKeyboard } from "./keyboards.js";
 import { installAdminModule } from "./admin.js";
 import {
+  pickVirtOrderDetailsFromRecord,
   sendSellVirtMessage,
   sendVirtOrderSuccess,
   startOrderNotifyHttpServer,
@@ -249,12 +250,9 @@ bot.on("message", async (ctx, next) => {
     raw.length,
   );
   try {
-    const parsed = JSON.parse(raw) as {
+    const parsed = JSON.parse(raw) as Record<string, unknown> & {
       v?: unknown;
       t?: unknown;
-      orderId?: unknown;
-      orderNumber?: unknown;
-      orderKind?: unknown;
     };
     if (
       parsed.v !== 1 ||
@@ -288,11 +286,13 @@ bot.on("message", async (ctx, next) => {
       parsed.orderKind === "account" || parsed.orderKind === "virt"
         ? parsed.orderKind
         : undefined;
+    const details = pickVirtOrderDetailsFromRecord(parsed);
     await sendVirtOrderSuccess(bot, miniAppUrl, {
       telegramUserId: uid,
       orderId: parsed.orderId,
       orderNumber: parsed.orderNumber,
       ...(orderKind ? { orderKind } : {}),
+      ...details,
     });
     console.info(VIRT_ORDER_LOG, "сообщение пользователю отправлено ok", uid);
   } catch (e) {

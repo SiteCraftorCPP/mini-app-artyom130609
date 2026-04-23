@@ -24,10 +24,11 @@ export const useSubmitBuyAccountRequest = () => {
     mutationFn: async (payload: SubmitBuyAccountRequestPayload) => {
       return await new Promise<SubmitBuyAccountRequestResult>((resolve) => {
         setTimeout(() => {
+          const suffix = Date.now().toString(36).toUpperCase().slice(-6);
           resolve({
             ...payload,
-            orderId: "current-1",
-            orderNumber: `#${Date.now().toString(36).toUpperCase().slice(-6)}`,
+            orderId: `o-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
+            orderNumber: `#${suffix}`,
           });
         }, TIMING.submitDelayMs);
       });

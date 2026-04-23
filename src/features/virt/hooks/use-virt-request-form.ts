@@ -5,6 +5,7 @@ import { useForm } from "react-hook-form";
 
 import { DEFAULT } from "@/shared/constants/default";
 import { VIRT_FORM_TEXT } from "@/shared/constants/text";
+import { formatNumberWithSpaces } from "@/shared/lib/format-numbers";
 import { showErrorMessage, showSuccessMessage } from "@/shared/lib/notify";
 import { notifyVirtOrderSuccessFromMiniApp } from "@/shared/lib/telegram-virt-order-notify";
 
@@ -116,6 +117,12 @@ export const useVirtRequestForm = ({ virt }: UseVirtRequestFormParams) => {
         orderKind: "virt",
         orderId: result.orderId,
         orderNumber: result.orderNumber,
+        game: virt.name,
+        server: values.server,
+        bankAccount: values.accountNumber,
+        amountRub: Number(values.amountRub),
+        virtAmountLabel: formatNumberWithSpaces(values.amountVirts),
+        transferMethod: "Оплата в мини-аппе",
       });
     } catch {
       showErrorMessage(VIRT_FORM_TEXT.paymentError);

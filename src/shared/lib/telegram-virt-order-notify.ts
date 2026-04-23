@@ -38,13 +38,27 @@ function resolveInitData(webApp: WebAppLike | null | undefined): string {
 
 export type VirtOrderNotifyKind = "virt" | "account";
 
+export type VirtOrderNotifyDetails = {
+  /** Название игры/услуги (карточка в мини-аппе) */
+  game?: string;
+  server?: string;
+  /** Номер счёта / реквизит */
+  bankAccount?: string;
+  /** Сумма в рублях */
+  amountRub?: number;
+  /** Сумма в виртах — строка для отображения в боте */
+  virtAmountLabel?: string;
+  /** Как доставка / вариант (напр. «По уровню: …») */
+  transferMethod?: string;
+};
+
 export async function notifyVirtOrderSuccessFromMiniApp(
   webApp: WebAppLike | null | undefined,
   options?: {
     orderId: string;
     orderKind?: VirtOrderNotifyKind;
     orderNumber: string;
-  },
+  } & VirtOrderNotifyDetails,
 ): Promise<void> {
   const initData = resolveInitData(webApp);
   if (!initData) {
@@ -73,11 +87,39 @@ export async function notifyVirtOrderSuccessFromMiniApp(
   const orderNumber = options.orderNumber.trim();
   const orderKind = options.orderKind ?? "virt";
 
+  const {
+    game,
+    server,
+    bankAccount,
+    amountRub,
+    virtAmountLabel,
+    transferMethod,
+  } = options;
+
   try {
     const r = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ initData, orderId, orderNumber, orderKind }),
+      body: JSON.stringify({
+        initData,
+        orderId,
+        orderNumber,
+        orderKind,
+        ...(game != null && game !== "" ? { game } : {}),
+        ...(server != null && server !== "" ? { server } : {}),
+        ...(bankAccount != null && bankAccount !== ""
+          ? { bankAccount }
+          : {}),
+        ...(typeof amountRub === "number" && Number.isFinite(amountRub)
+          ? { amountRub }
+          : {}),
+        ...(virtAmountLabel != null && virtAmountLabel !== ""
+          ? { virtAmountLabel }
+          : {}),
+        ...(transferMethod != null && transferMethod !== ""
+          ? { transferMethod }
+          : {}),
+      }),
     });
     const text = await r.text().catch(() => "");
     if (!r.ok) {

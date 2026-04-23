@@ -538,6 +538,12 @@ type NotifyBody = {
   orderNumber: string;
   telegramUserId: number;
   orderKind?: OrderNotifyKind;
+  game?: string;
+  server?: string;
+  virtAmountLabel?: string;
+  transferMethod?: string;
+  bankAccount?: string;
+  amountRub?: number;
 };
 
 type WebAppNotifyBody = {
@@ -545,7 +551,51 @@ type WebAppNotifyBody = {
   orderId: string;
   orderNumber: string;
   orderKind?: OrderNotifyKind;
+  game?: string;
+  server?: string;
+  virtAmountLabel?: string;
+  transferMethod?: string;
+  bankAccount?: string;
+  amountRub?: number;
 };
+
+export function pickVirtOrderDetailsFromRecord(
+  r: Record<string, unknown>,
+): Pick<
+  VirtOrderSuccessPayload,
+  | "game"
+  | "server"
+  | "virtAmountLabel"
+  | "transferMethod"
+  | "bankAccount"
+  | "amountRub"
+> {
+  const game = typeof r.game === "string" ? r.game : undefined;
+  const server = typeof r.server === "string" ? r.server : undefined;
+  const virtAmountLabel =
+    typeof r.virtAmountLabel === "string" ? r.virtAmountLabel : undefined;
+  const transferMethod =
+    typeof r.transferMethod === "string" ? r.transferMethod : undefined;
+  const bankAccount =
+    typeof r.bankAccount === "string" ? r.bankAccount : undefined;
+  let amountRub: number | undefined;
+  if (typeof r.amountRub === "number" && Number.isFinite(r.amountRub)) {
+    amountRub = r.amountRub;
+  } else if (typeof r.amountRub === "string" && r.amountRub.trim() !== "") {
+    const n = Number(r.amountRub.replace(",", "."));
+    if (Number.isFinite(n)) {
+      amountRub = n;
+    }
+  }
+  return {
+    ...(game !== undefined ? { game } : {}),
+    ...(server !== undefined ? { server } : {}),
+    ...(virtAmountLabel !== undefined ? { virtAmountLabel } : {}),
+    ...(transferMethod !== undefined ? { transferMethod } : {}),
+    ...(bankAccount !== undefined ? { bankAccount } : {}),
+    ...(amountRub !== undefined ? { amountRub } : {}),
+  };
+}
 
 function parseOrderKind(raw: unknown): OrderNotifyKind | undefined {
   if (raw === "virt" || raw === "account") {
@@ -642,16 +692,21 @@ export function startOrderNotifyHttpServer(
           res.writeHead(401, corsNotifyHeaders).end("bad initData");
           return;
         }
+        const details = pickVirtOrderDetailsFromRecord(
+          body as unknown as Record<string, unknown>,
+        );
         console.info("[virt-order] HTTP /notify/virt-order-webapp", {
           telegramUserId,
           orderNumber: body.orderNumber,
           orderId: body.orderId,
+          ...details,
         });
         await sendVirtOrderSuccess(bot, miniAppUrl, {
           telegramUserId,
           orderId: body.orderId,
           orderNumber: body.orderNumber,
           ...(orderKind ? { orderKind } : {}),
+          ...details,
         });
         res.writeHead(200, {
           "Content-Type": "application/json",
@@ -722,11 +777,15 @@ export function startOrderNotifyHttpServer(
         }
 
         const orderKind = parseOrderKind(body.orderKind);
+        const details = pickVirtOrderDetailsFromRecord(
+          body as unknown as Record<string, unknown>,
+        );
         const payload: VirtOrderSuccessPayload = {
           telegramUserId: body.telegramUserId,
           orderNumber: body.orderNumber,
           orderId: body.orderId,
           ...(orderKind ? { orderKind } : {}),
+          ...details,
         };
 
         console.info("[virt-order] HTTP /notify/virt-order-success", payload);

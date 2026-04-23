@@ -22,11 +22,11 @@ export const useSubmitVirtRequest = () => {
     mutationFn: async (payload: SubmitVirtRequestPayload) => {
       return await new Promise<SubmitVirtRequestResult>((resolve) => {
         setTimeout(() => {
+          const suffix = Date.now().toString(36).toUpperCase().slice(-6);
           resolve({
             ...payload,
-            /** Совпадает с моком актуальных заказов — кнопка в боте откроет этот заказ */
-            orderId: "current-1",
-            orderNumber: `#${Date.now().toString(36).toUpperCase().slice(-6)}`,
+            orderId: `o-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
+            orderNumber: `#${suffix}`,
           });
         }, TIMING.submitDelayMs);
       });
