@@ -95,7 +95,7 @@ function stripAt(name: string): string {
 
 function formatListButtonLabel(o: AdminOrderRow): string {
   const u = stripAt(o.telegramUsername);
-  return `#${o.id} (${o.categoryLabel}) - @${u}`;
+  return `#${o.publicOrderId} (${o.categoryLabel}) - @${u}`;
 }
 
 function buildOrderDetailHtml(o: AdminOrderRow): string {

@@ -36,6 +36,13 @@ export type VirtOrderSuccessPayload = {
    * По умолчанию `virt`. Для покупки аккаунта — `account` (шаблон см. ACCOUNT_ORDER_TEMPLATE).
    */
   orderKind?: OrderNotifyKind;
+  // Дополнительные поля, которые должны приходить из мини-аппа
+  game?: string;
+  server?: string;
+  virtAmountLabel?: string;
+  transferMethod?: string;
+  bankAccount?: string;
+  amountRub?: number;
 };
 
 /**
@@ -279,12 +286,12 @@ async function buildActiveOrderRow(
     categoryLabel: kind === "account" ? "Аккаунт" : "Вирты",
     telegramUsername,
     telegramUserId: String(payload.telegramUserId),
-    game: "—",
-    server: "—",
-    virtAmountLabel: "—",
-    transferMethod: "—",
-    bankAccount: "—",
-    amountRub: 0,
+    game: payload.game ?? "—",
+    server: payload.server ?? "—",
+    virtAmountLabel: payload.virtAmountLabel ?? "—",
+    transferMethod: payload.transferMethod ?? "—",
+    bankAccount: payload.bankAccount ?? "—",
+    amountRub: payload.amountRub ?? 0,
     openedAtLine: formatOpenedAtLine(),
   };
 }
