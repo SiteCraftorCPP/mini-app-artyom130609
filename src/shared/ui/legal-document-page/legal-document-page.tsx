@@ -3,7 +3,7 @@ import { useEffect } from "react";
 import { AppText, TAG } from "@/ui/app-text";
 
 type LegalDocumentPageProps = {
-  title: string;
+  title?: string;
   body: string;
 };
 
@@ -29,15 +29,19 @@ export const LegalDocumentPage = ({ title, body }: LegalDocumentPageProps) => {
       }}
     >
       <div className="mx-auto flex w-full max-w-md flex-col gap-4 py-2">
-        <h1 className="sr-only">{title}</h1>
-        <AppText
-          tag={TAG.div}
-          variant="primaryStrong"
-          size="headerInfo"
-          className="w-full text-center text-balance text-[17px] leading-tight sm:text-lg"
-        >
-          {title}
-        </AppText>
+        {title ? (
+          <>
+            <h1 className="sr-only">{title}</h1>
+            <AppText
+              tag={TAG.div}
+              variant="primaryStrong"
+              size="headerInfo"
+              className="w-full text-center text-balance text-[17px] leading-tight sm:text-lg"
+            >
+              {title}
+            </AppText>
+          </>
+        ) : null}
         <AppText
           tag={TAG.div}
           variant="popupBody"
