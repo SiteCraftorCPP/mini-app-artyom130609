@@ -29,19 +29,22 @@ const contentVariants = cva("grid h-full", {
   },
 });
 
-const iconVariants = cva("flex shrink-0 items-center justify-center rounded-md px-2", {
-  variants: {
-    variant: {
-      /** wallet.svg 28×24 — не растягивать на всю высоту h-10 (как в шапке визуально). */
-      header:
-        "-ml-1 min-h-0 self-center tw-bg-gradient-home-action-primary [&_svg]:block [&_svg]:h-6 [&_svg]:w-[28px] [&_svg]:max-h-6 [&_svg]:max-w-[28px] [&_svg]:shrink-0 [&_svg]:object-contain",
-      profile: "-ml-1 bg-background-card",
+const iconVariants = cva(
+  "flex shrink-0 items-center justify-center rounded-md px-2",
+  {
+    variants: {
+      variant: {
+        /** `wallet.svg` 28×24 — одна визуальная норма в шапке и в профиле. */
+        header:
+          "-ml-1 min-h-0 self-center tw-bg-gradient-home-action-primary [&_svg]:block [&_svg]:h-6 [&_svg]:w-[28px] [&_svg]:max-h-6 [&_svg]:max-w-[28px] [&_svg]:shrink-0 [&_svg]:object-contain",
+        profile: "-ml-1 bg-background-card",
+      },
+    },
+    defaultVariants: {
+      variant: "header",
     },
   },
-  defaultVariants: {
-    variant: "header",
-  },
-});
+);
 
 const infoVariants = cva("flex items-center", {
   variants: {
