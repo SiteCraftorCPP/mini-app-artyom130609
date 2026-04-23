@@ -62,8 +62,9 @@ export const BTN_STATS_VIEW_ORDERS = "📦 Просмотреть заказы";
 export const BTN_STATS_BACK = "🔙 Назад";
 export const BTN_CONFIRM_VIRT = "✅ Подтвердить выдачу виртов";
 export const BTN_COPY_ORDER_DATA = "📋 Скопировать данные";
-export const PENDING_ORDERS_HEADER = "📦 Заказы, ожидающие выполнения:";
-export const STATS_HEADER = "💰 Статистика актуальных заказов на выдачу:";
+export const PENDING_ORDERS_HEADER =
+  "📦 Актуальные заказы (к выдаче — подтверждение только в карточке заказа):";
+export const STATS_HEADER = "💰 Сумма текущих заказов в рублях";
 
 /** Кнопка в уведомлении о выполнении заказа (пост с отзывами). */
 export const BTN_WRITE_REVIEW = "🟢 Написать отзыв";
@@ -75,11 +76,9 @@ export function buildOrderCompletedBuyerCaption(orderNumber: string): string {
   return [
     `✅ Заказ ${ref} успешно выполнен!`,
     "",
-    "✅ Вирты успешно зачислены на ваш банковский счёт.",
+    "💳 Вирты успешно зачислены на ваш банковский счёт.",
     "",
     "🪙 Напишите отзыв — и к следующему заказу получите 200 000 бонусных виртов!",
-    "",
-    "——-",
   ].join("\n");
 }
 export const msgProfitPrompt = (orderId: string) => {

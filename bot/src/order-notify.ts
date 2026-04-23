@@ -20,6 +20,7 @@ import {
   addOrUpdateActiveOrder,
   type AdminOrderRow,
 } from "./orders-store.js";
+import { parseRublesAmountFromUserText } from "./money-input.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -582,8 +583,8 @@ export function pickVirtOrderDetailsFromRecord(
   if (typeof r.amountRub === "number" && Number.isFinite(r.amountRub)) {
     amountRub = r.amountRub;
   } else if (typeof r.amountRub === "string" && r.amountRub.trim() !== "") {
-    const n = Number(r.amountRub.replace(",", "."));
-    if (Number.isFinite(n)) {
+    const n = parseRublesAmountFromUserText(r.amountRub);
+    if (n !== null) {
       amountRub = n;
     }
   }

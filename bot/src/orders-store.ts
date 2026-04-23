@@ -2,6 +2,8 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { parseRublesAmountFromUserText } from "./money-input.js";
+
 export type AdminOrderRow = {
   id: string;
   publicOrderId: string;
@@ -13,9 +15,12 @@ export type AdminOrderRow = {
   virtAmountLabel: string;
   transferMethod: string;
   bankAccount: string;
+  /** Сумма заказа в RUB (не перезаписывается при фиксации прибыли). */
   amountRub: number;
   openedAtLine: string;
   closedAtLine?: string;
+  /** Чистая прибыль по заказу (RUB), вводит админ при закрытии. */
+  profitRub?: number;
 };
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -47,12 +52,54 @@ function safeParse(json: string): StoreShapeV1 | null {
   return null;
 }
 
+function coerceAmountRub(raw: unknown): number {
+  if (typeof raw === "number" && Number.isFinite(raw)) {
+    return raw;
+  }
+  if (typeof raw === "string") {
+    const n = parseRublesAmountFromUserText(raw);
+    if (n !== null) {
+      return n;
+    }
+  }
+  return 0;
+}
+
+function coerceProfitRub(raw: unknown): number | undefined {
+  if (raw === undefined || raw === null) {
+    return undefined;
+  }
+  if (typeof raw === "number" && Number.isFinite(raw)) {
+    return raw;
+  }
+  if (typeof raw === "string" && raw.trim() !== "") {
+    const n = parseRublesAmountFromUserText(raw);
+    if (n !== null) {
+      return n;
+    }
+  }
+  return undefined;
+}
+
+function normalizeOrderRow(o: AdminOrderRow): AdminOrderRow {
+  return {
+    ...o,
+    amountRub: coerceAmountRub((o as AdminOrderRow).amountRub),
+    profitRub: coerceProfitRub((o as AdminOrderRow).profitRub),
+  };
+}
+
 function loadStore(): StoreShapeV1 {
   if (!existsSync(STORE_PATH)) {
     return { v: 1, active: [], closed: [] };
   }
   const raw = readFileSync(STORE_PATH, "utf8");
-  return safeParse(raw) ?? { v: 1, active: [], closed: [] };
+  const parsed = safeParse(raw) ?? { v: 1, active: [], closed: [] };
+  return {
+    v: 1,
+    active: parsed.active.map((row) => normalizeOrderRow(row)),
+    closed: parsed.closed.map((row) => normalizeOrderRow(row)),
+  };
 }
 
 function saveStore(s: StoreShapeV1) {
@@ -110,7 +157,7 @@ export function addOrUpdateActiveOrder(row: AdminOrderRow): void {
 export function closeActiveOrder(
   publicOrInternalId: string,
   closedAtLine: string,
-  options?: { amountRub?: number },
+  options?: { profitRub?: number },
 ): AdminOrderRow | null {
   const n = normalizeId(publicOrInternalId);
   const s = loadStore();
@@ -125,8 +172,8 @@ export function closeActiveOrder(
   const closed: AdminOrderRow = {
     ...row,
     closedAtLine,
-    ...(options?.amountRub !== undefined
-      ? { amountRub: options.amountRub }
+    ...(options?.profitRub !== undefined
+      ? { profitRub: options.profitRub }
       : {}),
   };
   s.closed.unshift(closed);

@@ -7,6 +7,7 @@ import {
   getHistory50Slice,
   type AdminOrderRow,
 } from "./admin-orders-mock.js";
+import { parseRublesAmountFromUserText } from "./money-input.js";
 import { closeActiveOrder } from "./orders-store.js";
 import {
   BTN_ADMIN_CURRENT_ORDERS,
@@ -120,6 +121,11 @@ function buildOrderDetailHtml(o: AdminOrderRow): string {
     `Способ передачи: <code>${escapeHtml(o.transferMethod)}</code>`,
     `Счет в банке: <code>${escapeHtml(o.bankAccount)}</code>`,
     `Сумма заказа в рублях: <b><code>${escapeHtml(amountStr)}</code></b>`,
+    ...(typeof o.profitRub === "number"
+      ? [
+          `Чистая прибыль (фикс.): <b><code>${escapeHtml(o.profitRub.toFixed(2))}</code></b> RUB`,
+        ]
+      : []),
   ].join("\n");
 }
 
@@ -142,6 +148,9 @@ function buildOrderPlainForCopy(o: AdminOrderRow): string {
     `Способ передачи: ${o.transferMethod}`,
     `Счет в банке: ${o.bankAccount}`,
     `Сумма заказа в рублях: ${o.amountRub.toFixed(2)}`,
+    ...(typeof o.profitRub === "number"
+      ? [`Чистая прибыль (фикс.): ${o.profitRub.toFixed(2)} RUB`]
+      : []),
   ].join("\n");
 }
 
@@ -157,10 +166,10 @@ function buildStatsMessage(): string {
   return [
     STATS_HEADER,
     "",
-    "Сумма всех актуальных (ещё в выдаче) заказов в рублях:",
+    "Общая сумма в рублях по всем заказам, которые сейчас в списке «актуальные» (это только справка, без подтверждения выдачи):",
     `<b>${totalRub.toFixed(2)} RUB</b>`,
     "",
-    `Актуальных заказов: ${count}.`,
+    `Заказов в списке: ${count}.`,
   ].join("\n");
 }
 
@@ -1277,20 +1286,14 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
         return;
       }
       // virts
-      const normalized = t.replace(/\s/g, "").replace(",", ".");
-      if (!/^\d+(\.\d+)?$/.test(normalized)) {
+      const vRaw = parseRublesAmountFromUserText(t);
+      if (vRaw === null || vRaw <= 0) {
         await ctx.reply("Введите количество виртов числом.", {
           reply_markup: new InlineKeyboard().text(BTN_SUPPLIES_CANCEL_INPUT, CB_SUPPLY_CANCEL),
         });
         return;
       }
-      const v = Number(normalized);
-      if (!Number.isFinite(v) || v <= 0) {
-        await ctx.reply("Введите положительное число.", {
-          reply_markup: new InlineKeyboard().text(BTN_SUPPLIES_CANCEL_INPUT, CB_SUPPLY_CANCEL),
-        });
-        return;
-      }
+      const v = vRaw;
       const project = String(supplyCreate.draft.project ?? "").trim();
       const server = String(supplyCreate.draft.server ?? "").trim();
       clearAwaitingSupplyCreate(ctx.from.id);
@@ -1317,16 +1320,9 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
         });
         return;
       }
-      const normalized = t.replace(/\s/g, "").replace(",", ".");
-      if (!/^\d+(\.\d+)?$/.test(normalized)) {
+      const value = parseRublesAmountFromUserText(t);
+      if (value === null) {
         await ctx.reply("Введите число (например 1500 или 1500,50).", {
-          reply_markup: new InlineKeyboard().text(BTN_SUPPLIES_CANCEL_INPUT, CB_SUPPLY_CANCEL),
-        });
-        return;
-      }
-      const value = Number(normalized);
-      if (!Number.isFinite(value) || value < 0) {
-        await ctx.reply("Введите неотрицательное число.", {
           reply_markup: new InlineKeyboard().text(BTN_SUPPLIES_CANCEL_INPUT, CB_SUPPLY_CANCEL),
         });
         return;
@@ -1413,15 +1409,8 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
       );
       return;
     }
-    const normalized = t.replace(/\s/g, "").replace(",", ".");
-    if (!/^\d+(\.\d+)?$/.test(normalized)) {
-      await ctx.reply(MSG_PROFIT_INVALID, {
-        reply_markup: profitCancelKeyboard(),
-      });
-      return;
-    }
-    const value = Number(normalized);
-    if (!Number.isFinite(value) || value < 0) {
+    const value = parseRublesAmountFromUserText(t);
+    if (value === null) {
       await ctx.reply(MSG_PROFIT_INVALID, {
         reply_markup: profitCancelKeyboard(),
       });
@@ -1434,7 +1423,7 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
       `Чистая прибыль: ${amountStr} RUB`,
     ].join(" · ");
     const moved = closeActiveOrder(pendingOrderId, closedAtLine, {
-      amountRub: value,
+      profitRub: value,
     });
     await ctx.reply(msgProfitSaved(pendingOrderId, amountStr), {
       reply_markup: backToAdminKeyboard(),
