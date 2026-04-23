@@ -70,8 +70,6 @@ function resolveBotAdminIdSet(): Set<number> {
 
 const BOT_ADMIN_IDS = resolveBotAdminIdSet();
 
-installAdminModule(bot, BOT_ADMIN_IDS);
-
 type WelcomePhoto =
   | { type: "url"; url: string }
   | { type: "file"; path: string };
@@ -194,6 +192,8 @@ bot.command("start", async (ctx) => {
   }
   await sendWelcome(ctx);
 });
+
+installAdminModule(bot, BOT_ADMIN_IDS);
 
 async function sendHowToVideo(ctx: Context) {
   const path = resolveInstructionVideoPath();

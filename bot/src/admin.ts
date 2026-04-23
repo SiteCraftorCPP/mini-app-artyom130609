@@ -1,12 +1,13 @@
 import { InlineKeyboard, type Bot, type Context } from "grammy";
 
 import {
-  ADMIN_ORDERS_MOCK,
+  getActiveOrders,
   getAdminOrderById,
   getHistory50PageCount,
   getHistory50Slice,
   type AdminOrderRow,
 } from "./admin-orders-mock.js";
+import { closeActiveOrder } from "./orders-store.js";
 import {
   BTN_ADMIN_CURRENT_ORDERS,
   BTN_ADMIN_FIND_ORDER,
@@ -145,8 +146,9 @@ function buildOrderPlainForCopy(o: AdminOrderRow): string {
 }
 
 function getStatsFromOrders(): { count: number; totalRub: number } {
-  const count = ADMIN_ORDERS_MOCK.length;
-  const totalRub = ADMIN_ORDERS_MOCK.reduce((s, o) => s + o.amountRub, 0);
+  const list = getActiveOrders();
+  const count = list.length;
+  const totalRub = list.reduce((s, o) => s + o.amountRub, 0);
   return { count, totalRub };
 }
 
@@ -572,7 +574,7 @@ function buildOrderDetailKeyboard(
 
 function buildOrderListKeyboard() {
   const kb = new InlineKeyboard();
-  for (const o of ADMIN_ORDERS_MOCK) {
+  for (const o of getActiveOrders()) {
     const d = cbView(o.id);
     assertCbData(d);
     kb.text(formatListButtonLabel(o), d).row();
@@ -583,7 +585,7 @@ function buildOrderListKeyboard() {
 }
 
 function buildPendingOrdersListText(): string {
-  if (ADMIN_ORDERS_MOCK.length === 0) {
+  if (getActiveOrders().length === 0) {
     return [PENDING_ORDERS_HEADER, "", "Пока нет оплаченных заказов в выдачу."].join(
       "\n",
     );
@@ -1223,6 +1225,15 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
     if (ctx.from === undefined) {
       return next();
     }
+    const cmdText = ctx.message?.text?.trim() ?? "";
+    if (
+      cmdText === "/start" ||
+      cmdText.startsWith("/start ") ||
+      cmdText === "/admin" ||
+      cmdText.startsWith("/admin ")
+    ) {
+      return next();
+    }
     if (!adminIds.has(ctx.from.id)) {
       return next();
     }
@@ -1418,10 +1429,17 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
     }
     clearAwaitingProfit(ctx.from.id);
     const amountStr = value.toFixed(2);
+    const closedAtLine = [
+      `Закрыт: ${formatDateTime(Date.now())}`,
+      `Чистая прибыль: ${amountStr} RUB`,
+    ].join(" · ");
+    const moved = closeActiveOrder(pendingOrderId, closedAtLine, {
+      amountRub: value,
+    });
     await ctx.reply(msgProfitSaved(pendingOrderId, amountStr), {
       reply_markup: backToAdminKeyboard(),
     });
-    const completedOrder = getAdminOrderById(pendingOrderId);
+    const completedOrder = moved ?? getAdminOrderById(pendingOrderId);
     if (completedOrder) {
       const uid = Number(completedOrder.telegramUserId);
       if (Number.isFinite(uid) && uid > 0) {

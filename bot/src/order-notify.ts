@@ -16,6 +16,10 @@ import {
   buildOrderCompletedBuyerCaption,
   buildSellVirtCaption,
 } from "./texts.js";
+import {
+  addOrUpdateActiveOrder,
+  type AdminOrderRow,
+} from "./orders-store.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -240,6 +244,44 @@ function formatOrderNumberForCaption(orderNumber: string): string {
   return t.startsWith("#") ? t : `#${t}`;
 }
 
+function formatOpenedAtLine(): string {
+  const d = new Date();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+async function buildActiveOrderRow(
+  bot: Bot,
+  payload: VirtOrderSuccessPayload,
+): Promise<AdminOrderRow> {
+  const id = payload.orderId.trim();
+  const publicOrderId = formatOrderNumberForCaption(payload.orderNumber);
+  const kind = payload.orderKind ?? "virt";
+  let telegramUsername = "user";
+  try {
+    const chat = await bot.api.getChat(payload.telegramUserId);
+    if (chat.type === "private" && "username" in chat && chat.username) {
+      telegramUsername = chat.username;
+    }
+  } catch {
+    /* getChat may fail; stub ok */
+  }
+  return {
+    id,
+    publicOrderId,
+    categoryLabel: kind === "account" ? "Аккаунт" : "Вирты",
+    telegramUsername,
+    telegramUserId: String(payload.telegramUserId),
+    game: "—",
+    server: "—",
+    virtAmountLabel: "—",
+    transferMethod: "—",
+    bankAccount: "—",
+    amountRub: 0,
+    openedAtLine: formatOpenedAtLine(),
+  };
+}
+
 /** Покупка виртов — кнопка «Узнать детали» в мини-апп. */
 function buildVirtOrderCaption(orderNumber: string): string {
   const n = formatOrderNumberForCaption(orderNumber);
@@ -357,26 +399,33 @@ export async function sendVirtOrderSuccess(
       "ORDER_SUCCESS: нет фото на диске и нет рабочего URL — только текст.",
     );
     await sendTextOnly();
-    return;
+  } else {
+    try {
+      if (photo.type === "url") {
+        console.info("[virt-order] sendPhoto по URL", photo.url.slice(0, 72));
+        await bot.api.sendPhoto(payload.telegramUserId, photo.url, {
+          caption,
+          reply_markup,
+        });
+      } else {
+        console.info("[virt-order] sendPhoto заказа с диска", photo.path);
+        await bot.api.sendPhoto(
+          payload.telegramUserId,
+          new InputFile(photo.path),
+          { caption, reply_markup },
+        );
+      }
+    } catch (e) {
+      console.error("[virt-order] sendPhoto не удался — отправляю текст", e);
+      await sendTextOnly();
+    }
   }
 
   try {
-    if (photo.type === "url") {
-      console.info("[virt-order] sendPhoto по URL", photo.url.slice(0, 72));
-      await bot.api.sendPhoto(payload.telegramUserId, photo.url, {
-        caption,
-        reply_markup,
-      });
-    } else {
-      console.info("[virt-order] sendPhoto заказа с диска", photo.path);
-      await bot.api.sendPhoto(payload.telegramUserId, new InputFile(photo.path), {
-        caption,
-        reply_markup,
-      });
-    }
+    const row = await buildActiveOrderRow(bot, payload);
+    addOrUpdateActiveOrder(row);
   } catch (e) {
-    console.error("[virt-order] sendPhoto не удался — отправляю текст", e);
-    await sendTextOnly();
+    console.error("[virt-order] addOrUpdateActiveOrder:", e);
   }
 }
 

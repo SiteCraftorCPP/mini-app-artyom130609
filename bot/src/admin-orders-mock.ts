@@ -1,56 +1,37 @@
 /**
- * TODO: подключить к API. Демо-заказы убраны — только данные, которые реально приходят с бэка/оплаты.
+ * Тип и хелперы для админки заказов. Данные — в `orders-store` (JSON на диске).
  */
-export type AdminOrderRow = {
-  id: string;
-  publicOrderId: string;
-  categoryLabel: string;
-  telegramUsername: string;
-  telegramUserId: string;
-  game: string;
-  server: string;
-  virtAmountLabel: string;
-  transferMethod: string;
-  bankAccount: string;
-  amountRub: number;
-  openedAtLine: string;
-  /** Для завершённых заказов (поиск по номеру). */
-  closedAtLine?: string;
-};
+export type { AdminOrderRow } from "./orders-store.js";
 
-/** Актуальные оплаченные заказы (в выдачу). */
-export const ADMIN_ORDERS_MOCK: AdminOrderRow[] = [];
+const HISTORY_50_PAGE_SIZE = 8;
 
-/** Выполненные; те же поля, что у актуальных, плюс время закрытия. */
-export const ADMIN_ORDERS_ARCHIVE: AdminOrderRow[] = [];
+import {
+  getActiveOrders,
+  getAdminOrderByIdFromStore,
+  getHistory50PageCount as getHistory50PageCountFromStore,
+  getHistory50Slice as getHistory50SliceFromStore,
+} from "./orders-store.js";
 
-/** Последние N заказов для раздела «История 50» (после API — подписка на тот же источник). */
-export const ADMIN_ORDERS_LAST_50: AdminOrderRow[] = [];
+export { getActiveOrders };
 
-export const HISTORY_50_PAGE_SIZE = 8;
+/** @deprecated используйте getActiveOrders — оставлено для старых импортов */
+export const ADMIN_ORDERS_MOCK: never[] = [];
 
-const ALL_ORDERS: AdminOrderRow[] = [
-  ...ADMIN_ORDERS_MOCK,
-  ...ADMIN_ORDERS_ARCHIVE,
-  ...ADMIN_ORDERS_LAST_50,
-];
+export const ADMIN_ORDERS_ARCHIVE: never[] = [];
+export const ADMIN_ORDERS_LAST_50: never[] = [];
 
-export function getHistory50Slice(page: number): AdminOrderRow[] {
-  const start = page * HISTORY_50_PAGE_SIZE;
-  return ADMIN_ORDERS_LAST_50.slice(start, start + HISTORY_50_PAGE_SIZE);
+export function getHistory50Slice(page: number) {
+  return getHistory50SliceFromStore(page, HISTORY_50_PAGE_SIZE);
 }
 
 export function getHistory50PageCount(): number {
-  return Math.ceil(ADMIN_ORDERS_LAST_50.length / HISTORY_50_PAGE_SIZE);
+  return getHistory50PageCountFromStore(HISTORY_50_PAGE_SIZE);
 }
 
 export function normalizeOrderIdForLookup(s: string): string {
   return s.trim().replace(/^#+/, "");
 }
 
-export function getAdminOrderById(id: string): AdminOrderRow | undefined {
-  const n = normalizeOrderIdForLookup(id);
-  return (
-    ALL_ORDERS.find((o) => o.id === n || o.publicOrderId === n) ?? undefined
-  );
+export function getAdminOrderById(id: string) {
+  return getAdminOrderByIdFromStore(id);
 }
