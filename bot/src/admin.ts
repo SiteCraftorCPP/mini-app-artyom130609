@@ -19,6 +19,10 @@ import {
   BTN_CONFIRM_VIRT,
   BTN_COPY_ORDER_DATA,
   BTN_ORDER_PERIOD_STATS,
+  BTN_ADMIN_USER_STATS,
+  BTN_ADMIN_BROADCASTS,
+  BTN_BROADCAST_BACK,
+  BTN_BROADCAST_BUY_VIRTS,
   BTN_STAT_PERIOD_CHOOSE,
   BTN_STATS_BACK,
   BTN_STATS_VIEW_ORDERS,
@@ -34,12 +38,15 @@ import {
   msgProfitPrompt,
   msgProfitSaved,
 } from "./texts.js";
+import { getAllUserIds, getUniqueUserCount } from "./user-usage-store.js";
 
 const CB = {
   list: "admin:lst",
   menu: "admin:menu",
   stats: "admin:st",
   find: "admin:find",
+  userStats: "admin:ust",
+  broadcasts: "admin:bc",
 } as const;
 
 const cbView = (id: string) => `admin:v:${id}`;
@@ -157,7 +164,80 @@ function adminMenuKeyboard() {
     .row()
     .text(BTN_ADMIN_HISTORY_50, "ah:0")
     .row()
-    .text(BTN_ORDER_PERIOD_STATS, "a:st");
+    .text(BTN_ORDER_PERIOD_STATS, "a:st")
+    .row()
+    .text(BTN_ADMIN_USER_STATS, CB.userStats)
+    .row()
+    .text(BTN_ADMIN_BROADCASTS, CB.broadcasts);
+}
+
+function buildUserStatsMessage(): string {
+  const count = getUniqueUserCount();
+  return [
+    "👥 Статистика пользователей",
+    "",
+    `Пользователей воспользовалось ботом: ${count}`,
+  ].join("\n");
+}
+
+function buildUserStatsKeyboard() {
+  assertCbData(CB.menu);
+  return new InlineKeyboard().text(BTN_BACK_TO_ADMIN, CB.menu);
+}
+
+type BroadcastPreset = {
+  key: string;
+  title: string;
+  body: string;
+};
+
+const BROADCAST_PRESETS: BroadcastPreset[] = [
+  {
+    key: "promo1",
+    title: "Рассылка #1 (шаблон)",
+    body: [
+      "📣 Рассылка",
+      "",
+      "Текст рассылки (шаблон).",
+      "Отредактируйте под себя в коде: bot/src/admin.ts",
+    ].join("\n"),
+  },
+  {
+    key: "promo2",
+    title: "Рассылка #2 (шаблон)",
+    body: [
+      "📣 Рассылка",
+      "",
+      "Второй шаблон рассылки.",
+      "Отредактируйте под себя в коде: bot/src/admin.ts",
+    ].join("\n"),
+  },
+];
+
+function buildBroadcastMenuText(): string {
+  return ["📣 Рассылка", "", "Выберите рассылку:"].join("\n");
+}
+
+function buildBroadcastMenuKeyboard() {
+  const kb = new InlineKeyboard();
+  for (const p of BROADCAST_PRESETS) {
+    const d = `admin:bc:${p.key}`;
+    assertCbData(d);
+    kb.text(p.title, d).row();
+  }
+  assertCbData(CB.menu);
+  kb.text(BTN_BACK_TO_ADMIN, CB.menu);
+  return kb;
+}
+
+function buildBroadcastPreviewKeyboard(miniAppUrl: string) {
+  assertCbData(CB.broadcasts);
+  return new InlineKeyboard()
+    .webApp(BTN_BROADCAST_BUY_VIRTS, miniAppUrl)
+    .row()
+    .text(BTN_BROADCAST_BACK, CB.broadcasts)
+    .row()
+    .text(BTN_BACK_TO_ADMIN, CB.menu);
 }
 
 function buildHistory50IntroText(page: number, pageCount: number): string {
@@ -345,6 +425,82 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
     await a.editMessageText(BTN_ADMIN_MAIN, {
       reply_markup: adminMenuKeyboard(),
     });
+  });
+
+  bot.callbackQuery(CB.userStats, async (ctx) => {
+    const a = await requireAdmin(ctx);
+    if (a == null) {
+      return;
+    }
+    if (ctx.from) {
+      clearAwaitingProfit(ctx.from.id);
+      clearAwaitingOrderLookup(ctx.from.id);
+    }
+    await ctx.answerCallbackQuery();
+    const text = buildUserStatsMessage();
+    try {
+      await a.editMessageText(text, { reply_markup: buildUserStatsKeyboard() });
+    } catch {
+      await a.reply(text, { reply_markup: buildUserStatsKeyboard() });
+    }
+  });
+
+  bot.callbackQuery(CB.broadcasts, async (ctx) => {
+    const a = await requireAdmin(ctx);
+    if (a == null) {
+      return;
+    }
+    if (ctx.from) {
+      clearAwaitingProfit(ctx.from.id);
+      clearAwaitingOrderLookup(ctx.from.id);
+    }
+    await ctx.answerCallbackQuery();
+    const text = buildBroadcastMenuText();
+    const kb = buildBroadcastMenuKeyboard();
+    try {
+      await a.editMessageText(text, { reply_markup: kb });
+    } catch {
+      await a.reply(text, { reply_markup: kb });
+    }
+  });
+
+  bot.callbackQuery(/^admin:bc:([a-zA-Z0-9_-]+)$/, async (ctx) => {
+    const a = await requireAdmin(ctx);
+    if (a == null) {
+      return;
+    }
+    if (ctx.from) {
+      clearAwaitingProfit(ctx.from.id);
+      clearAwaitingOrderLookup(ctx.from.id);
+    }
+    const key = ctx.match[1] ?? "";
+    const preset = BROADCAST_PRESETS.find((p) => p.key === key);
+    await ctx.answerCallbackQuery();
+    if (!preset) {
+      await a.reply("Рассылка не найдена.", { reply_markup: backToAdminKeyboard() });
+      return;
+    }
+
+    const miniAppUrl =
+      process.env.MINI_APP_URL?.trim() ||
+      process.env.APP_DOMAIN?.trim() ||
+      "https://artshopvirts.space";
+
+    const count = getAllUserIds().length;
+    const text = [
+      preset.body,
+      "",
+      `Получателей в базе: ${count}`,
+      "",
+      "Кнопка ниже откроет мини-апп «Купить вирты».",
+    ].join("\n");
+
+    const kb = buildBroadcastPreviewKeyboard(miniAppUrl);
+    try {
+      await a.editMessageText(text, { reply_markup: kb });
+    } catch {
+      await a.reply(text, { reply_markup: kb });
+    }
   });
 
   bot.callbackQuery(CB.stats, async (ctx) => {

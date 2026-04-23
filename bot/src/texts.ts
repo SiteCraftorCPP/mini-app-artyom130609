@@ -39,6 +39,12 @@ export const BTN_ADMIN_FIND_ORDER = "🔍 Найти заказ";
 export const BTN_ADMIN_HISTORY_50 = "📋 История заказов";
 /** Пятая: мок-статистика по периодам. */
 export const BTN_ORDER_PERIOD_STATS = "Статистика заказов";
+/** Шестая: сколько уникальных пользователей воспользовалось ботом. */
+export const BTN_ADMIN_USER_STATS = "👥 Статистика пользователей";
+/** Седьмая: рассылки по базе пользователей. */
+export const BTN_ADMIN_BROADCASTS = "📣 Рассылка";
+export const BTN_BROADCAST_BUY_VIRTS = "🟢 Купить вирты";
+export const BTN_BROADCAST_BACK = "🔙 Назад";
 export const BTN_BACK_TO_ADMIN = "🔙 В админ-панель";
 export const BTN_BACK_TO_HISTORY_50 = "🔙 К списку (50)";
 export const BTN_STAT_PERIOD_CHOOSE = "◀ К выбору периода";

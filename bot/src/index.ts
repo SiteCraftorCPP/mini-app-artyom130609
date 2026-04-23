@@ -13,6 +13,7 @@ import {
   startOrderNotifyHttpServer,
 } from "./order-notify.js";
 import { ABOUT_SHOP, VIDEO_CAPTION, WELCOME } from "./texts.js";
+import { touchUserUsage } from "./user-usage-store.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -184,6 +185,9 @@ async function sendSellVirtGuidance(ctx: Context) {
 }
 
 bot.command("start", async (ctx) => {
+  if (ctx.chat?.type === "private" && ctx.from?.id != null) {
+    touchUserUsage(ctx.from.id);
+  }
   if (getStartPayload(ctx) === "sell") {
     await sendSellVirtGuidance(ctx);
     return;
@@ -229,6 +233,9 @@ const VIRT_ORDER_LOG = "[virt-order]";
 
 /** Мини-апп после «успешной» заявки вызывает WebApp.sendData — без отдельного бэкенда. */
 bot.on("message", async (ctx, next) => {
+  if (ctx.chat?.type === "private" && ctx.from?.id != null) {
+    touchUserUsage(ctx.from.id);
+  }
   const raw = ctx.message?.web_app_data?.data;
   if (raw === undefined) {
     return next();
