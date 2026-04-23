@@ -1,3 +1,5 @@
+import { demoBuyerAt, demoOrderPublicId } from "./order-demo-constants.js";
+
 /**
  * TODO: подключить к API. Пока тот же набор, что в моке мини-аппа.
  */
@@ -68,22 +70,20 @@ export const ADMIN_ORDERS_ARCHIVE: AdminOrderRow[] = [
   },
 ];
 
-const pad4 = (n: number) => String(n).padStart(4, "0");
-
-/** Последние 50 (как в мини-апе). */
+/** Последние 50 (как в мини-апе: рефы и ники из демо-пула; позже — API). */
 export const ADMIN_ORDERS_LAST_50: AdminOrderRow[] = Array.from(
   { length: 50 },
   (_, i) => {
-    const n = i + 1;
-    const id = `H${pad4(n)}`;
+    const b = demoBuyerAt(i);
+    const id = demoOrderPublicId(i);
     const isOpen = i % 7 === 0;
     const amountRub = 200 + (i % 10) * 100;
     return {
       id,
       publicOrderId: id,
       categoryLabel: "Вирты",
-      telegramUsername: `client${(i % 20) + 1}`,
-      telegramUserId: String(1_900_000_000 + i),
+      telegramUsername: b.telegramUsername,
+      telegramUserId: b.telegramUserId,
       game: "Black Russia",
       server: `${(i % 3) + 1} (Green)`,
       virtAmountLabel: `${(0.1 + (i % 5) * 0.1).toFixed(1)} кк`,

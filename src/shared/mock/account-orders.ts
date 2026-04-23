@@ -1,5 +1,10 @@
 import { VIRTS_ICONS } from "@/shared/constants/virt-icons";
 
+import {
+  demoBuyerAt,
+  demoOrderPublicId,
+} from "@/shared/mock/order-demo-constants";
+
 export type AccountOrderMock = {
   accountNumber: string;
   completedAt: string;
@@ -124,32 +129,38 @@ export const ACCOUNT_ADMIN_ORDER_ARCHIVE_MOCK: AccountOrderMock[] = [
   },
 ];
 
+/** Обычная «История» (16): номер как в уведомлении + покупатели из демо-пула. */
 export const ACCOUNT_ORDER_HISTORY_MOCK: AccountOrderMock[] = Array.from(
   { length: 16 },
-  (_, index) => ({
-    accountNumber: "1234567890",
-    completedAt: "12:20",
-    game: "Black Russia",
-    id: `history-${index + 1}`,
-    logo: VIRTS_ICONS["black-russia"],
-    number: `Заказ №${index + 1}`,
-    paidAt: "12:15",
-    price: 0,
-    promoCode: "ARTVS",
-    server: `№${index + 1} Green`,
-    time: "12:00",
-    title: "26.03.2026",
-  }),
+  (_, index) => {
+    const b = demoBuyerAt(index + 50);
+    const ref = demoOrderPublicId(300 + index);
+    return {
+      accountNumber: "1234567890",
+      completedAt: "12:20",
+      game: "Black Russia",
+      id: ref,
+      publicOrderId: ref,
+      number: ref,
+      telegramUsername: b.telegramUsername,
+      telegramUserId: b.telegramUserId,
+      logo: VIRTS_ICONS["black-russia"],
+      paidAt: "12:15",
+      price: 0,
+      promoCode: "ARTVS",
+      server: `№${index + 1} Green`,
+      time: "12:00",
+      title: "26.03.2026",
+    };
+  },
 );
-
-const pad4 = (n: number) => String(n).padStart(4, "0");
 
 /** Последние 50 админ-заказов (тот же набор, что в боте; позже — API). */
 export const ACCOUNT_ADMIN_HISTORY_50_MOCK: AccountOrderMock[] = Array.from(
   { length: 50 },
   (_, i) => {
-    const n = i + 1;
-    const id = `H${pad4(n)}`;
+    const b = demoBuyerAt(i);
+    const id = demoOrderPublicId(i);
     const isOpen = i % 7 === 0;
     const amountRub = 200 + (i % 10) * 100;
     return {
@@ -157,8 +168,8 @@ export const ACCOUNT_ADMIN_HISTORY_50_MOCK: AccountOrderMock[] = Array.from(
       publicOrderId: id,
       number: id,
       categoryLabel: "Вирты",
-      telegramUsername: `client${(i % 20) + 1}`,
-      telegramUserId: String(1_900_000_000 + i),
+      telegramUsername: b.telegramUsername,
+      telegramUserId: b.telegramUserId,
       game: "Black Russia",
       server: `${(i % 3) + 1} (Green)`,
       virtAmountLabel: `${(0.1 + (i % 5) * 0.1).toFixed(1)} кк`,

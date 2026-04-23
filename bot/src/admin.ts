@@ -23,7 +23,7 @@ import {
   BTN_STATS_BACK,
   BTN_STATS_VIEW_ORDERS,
   buildOrderPeriodStatsMessage,
-  MSG_ORDER_LOOKUP_CANCELLED,
+  BTN_CANCEL_PROFIT_INPUT,
   MSG_ORDER_LOOKUP_PROMPT,
   MSG_ORDER_NOT_FOUND,
   MSG_PROFIT_CANCELLED,
@@ -45,6 +45,8 @@ const CB = {
 const cbView = (id: string) => `admin:v:${id}`;
 const cbCopy = (id: string) => `admin:c:${id}`;
 const cbOk = (id: string) => `admin:ok:${id}`;
+/** Отмена ввода чистой прибыли (инлайн, без /cancel). */
+const CB_PROFIT_Q = "a:qpf";
 
 const MAX_DATA = 64;
 function assertCbData(s: string) {
@@ -253,6 +255,16 @@ function buildOrderListKeyboard() {
   assertCbData(CB.menu);
   kb.text(BTN_BACK_TO_ADMIN, CB.menu);
   return kb;
+}
+
+function backToAdminKeyboard() {
+  assertCbData(CB.menu);
+  return new InlineKeyboard().text(BTN_BACK_TO_ADMIN, CB.menu);
+}
+
+function profitCancelKeyboard() {
+  assertCbData(CB_PROFIT_Q);
+  return new InlineKeyboard().text(BTN_CANCEL_PROFIT_INPUT, CB_PROFIT_Q);
 }
 
 async function clearReplyKeyboard(ctx: Context) {
@@ -559,7 +571,26 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
       clearAwaitingOrderLookup(ctx.from.id);
     }
     const ref = order.publicOrderId ?? id;
-    await a.reply(msgProfitPrompt(ref));
+    await a.reply(msgProfitPrompt(ref), {
+      reply_markup: profitCancelKeyboard(),
+    });
+  });
+
+  bot.callbackQuery(CB_PROFIT_Q, async (ctx) => {
+    const a = await requireAdmin(ctx);
+    if (a == null) {
+      return;
+    }
+    if (ctx.from) {
+      clearAwaitingProfit(ctx.from.id);
+    }
+    await ctx.answerCallbackQuery();
+    const text = [MSG_PROFIT_CANCELLED, "", BTN_ADMIN_MAIN].join("\n");
+    try {
+      await a.editMessageText(text, { reply_markup: adminMenuKeyboard() });
+    } catch (e) {
+      await a.reply(text, { reply_markup: adminMenuKeyboard() });
+    }
   });
 
   bot.on("message", async (ctx, next) => {
@@ -578,28 +609,31 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
     if (awaitingOrderLookup.has(ctx.from.id)) {
       const text = ctx.message?.text;
       if (text === undefined) {
-        await ctx.reply("Отправьте номер заказа текстом. /cancel — отмена.");
+        await ctx.reply(
+          "Отправьте номер заказа одним сообщением (текстом).",
+          { reply_markup: backToAdminKeyboard() },
+        );
         return;
       }
       const t = text.trim();
       if (t.startsWith("/")) {
-        if (/^\/cancel(@\S+)?$/i.test(t)) {
-          clearAwaitingOrderLookup(ctx.from.id);
-          await ctx.reply(MSG_ORDER_LOOKUP_CANCELLED);
-          return;
-        }
         await ctx.reply(
-          "Сначала введите номер заказа или отправьте /cancel.",
+          "Сначала введите номер заказа без / или нажмите кнопку ниже.",
+          { reply_markup: backToAdminKeyboard() },
         );
         return;
       }
       if (t.length < 1) {
-        await ctx.reply(MSG_ORDER_NOT_FOUND);
+        await ctx.reply(MSG_ORDER_NOT_FOUND, {
+          reply_markup: backToAdminKeyboard(),
+        });
         return;
       }
       const order = getAdminOrderById(t);
       if (!order) {
-        await ctx.reply(MSG_ORDER_NOT_FOUND);
+        await ctx.reply(MSG_ORDER_NOT_FOUND, {
+          reply_markup: backToAdminKeyboard(),
+        });
         return;
       }
       clearAwaitingOrderLookup(ctx.from.id);
@@ -617,31 +651,31 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
     }
     const text = ctx.message?.text;
     if (text === undefined) {
-      await ctx.reply(
-        "Отправьте сумму цифрами одним сообщением. Чтобы отменить: /cancel",
-      );
+      await ctx.reply("Отправьте сумму цифрами одним сообщением.", {
+        reply_markup: profitCancelKeyboard(),
+      });
       return;
     }
     const t = text.trim();
     if (t.startsWith("/")) {
-      if (/^\/cancel(@\S+)?$/i.test(t)) {
-        clearAwaitingProfit(ctx.from.id);
-        await ctx.reply(MSG_PROFIT_CANCELLED);
-        return;
-      }
       await ctx.reply(
-        "Сначала введите число, либо отправьте /cancel для отмены.",
+        "Введите число без / — или нажмите «Отмена» в том сообщении, где запрос прибыли.",
+        { reply_markup: profitCancelKeyboard() },
       );
       return;
     }
     const normalized = t.replace(/\s/g, "").replace(",", ".");
     if (!/^\d+(\.\d+)?$/.test(normalized)) {
-      await ctx.reply(MSG_PROFIT_INVALID);
+      await ctx.reply(MSG_PROFIT_INVALID, {
+        reply_markup: profitCancelKeyboard(),
+      });
       return;
     }
     const value = Number(normalized);
     if (!Number.isFinite(value) || value < 0) {
-      await ctx.reply(MSG_PROFIT_INVALID);
+      await ctx.reply(MSG_PROFIT_INVALID, {
+        reply_markup: profitCancelKeyboard(),
+      });
       return;
     }
     clearAwaitingProfit(ctx.from.id);
