@@ -99,29 +99,25 @@ function formatListButtonLabel(o: AdminOrderRow): string {
 function buildOrderDetailHtml(o: AdminOrderRow): string {
   const un = stripAt(o.telegramUsername);
   const userLink = `https://t.me/${un}`;
-  const g = escapeHtml(o.game);
-  const s = escapeHtml(o.server);
-  const v = escapeHtml(o.virtAmountLabel);
-  const t = escapeHtml(o.transferMethod);
-  const bank = escapeHtml(o.bankAccount);
   const idLine = escapeHtml(o.publicOrderId);
+  const amountStr = o.amountRub.toFixed(2);
   const head = [
-    `<b>Детали заказа ${idLine}:</b>`,
+    `<b>Детали заказа <code>${idLine}</code>:</b>`,
     "",
-    `🕒 Открыт: ${escapeHtml(o.openedAtLine)}`,
+    `🕒 Открыт: <code>${escapeHtml(o.openedAtLine)}</code>`,
   ];
   if (o.closedAtLine) {
-    head.push(`🕐 Закрыт: ${escapeHtml(o.closedAtLine)}`);
+    head.push(`🕐 Закрыт: <code>${escapeHtml(o.closedAtLine)}</code>`);
   }
   return [
     ...head,
-    `Пользователь: <a href="${escapeHtml(userLink)}">@${escapeHtml(un)}</a> (${escapeHtml(o.telegramUserId)})`,
-    `Игра/Услуга: <i>${g}</i>`,
-    `Сервер: <i>${s}</i>`,
-    `Количество виртов: <i>${v}</i>`,
-    `Способ передачи: <i>${t}</i>`,
-    `Счет в банке: ${bank}`,
-    `Сумма заказа в рублях: <b>${escapeHtml(String(o.amountRub))}</b>`,
+    `Пользователь: <a href="${escapeHtml(userLink)}">@${escapeHtml(un)}</a> (<code>${escapeHtml(o.telegramUserId)}</code>)`,
+    `Игра/Услуга: <code>${escapeHtml(o.game)}</code>`,
+    `Сервер: <code>${escapeHtml(o.server)}</code>`,
+    `Количество виртов: <code>${escapeHtml(o.virtAmountLabel)}</code>`,
+    `Способ передачи: <code>${escapeHtml(o.transferMethod)}</code>`,
+    `Счет в банке: <code>${escapeHtml(o.bankAccount)}</code>`,
+    `Сумма заказа в рублях: <b><code>${escapeHtml(amountStr)}</code></b>`,
   ].join("\n");
 }
 
@@ -143,7 +139,7 @@ function buildOrderPlainForCopy(o: AdminOrderRow): string {
     `Количество виртов: ${o.virtAmountLabel}`,
     `Способ передачи: ${o.transferMethod}`,
     `Счет в банке: ${o.bankAccount}`,
-    `Сумма заказа в рублях: ${o.amountRub}`,
+    `Сумма заказа в рублях: ${o.amountRub.toFixed(2)}`,
   ].join("\n");
 }
 
@@ -480,6 +476,13 @@ function buildBroadcastPreviewKeyboard(miniAppUrl: string) {
 }
 
 function buildHistory50IntroText(page: number, pageCount: number): string {
+  if (pageCount === 0) {
+    return [
+      "📋 История заказов",
+      "",
+      "Пока пусто — заказы сюда попадут после появления данных.",
+    ].join("\n");
+  }
   return [
     "📋 Последние 50 заказов (полные данные, как в «Найти заказ»).",
     "",
@@ -576,6 +579,15 @@ function buildOrderListKeyboard() {
   return kb;
 }
 
+function buildPendingOrdersListText(): string {
+  if (ADMIN_ORDERS_MOCK.length === 0) {
+    return [PENDING_ORDERS_HEADER, "", "Пока нет оплаченных заказов в выдачу."].join(
+      "\n",
+    );
+  }
+  return PENDING_ORDERS_HEADER;
+}
+
 function backToAdminKeyboard() {
   assertCbData(CB.menu);
   return new InlineKeyboard().text(BTN_BACK_TO_ADMIN, CB.menu);
@@ -583,7 +595,11 @@ function backToAdminKeyboard() {
 
 function profitCancelKeyboard() {
   assertCbData(CB_PROFIT_Q);
-  return new InlineKeyboard().text(BTN_CANCEL_PROFIT_INPUT, CB_PROFIT_Q);
+  assertCbData(CB.menu);
+  return new InlineKeyboard()
+    .text(BTN_CANCEL_PROFIT_INPUT, CB_PROFIT_Q)
+    .row()
+    .text(BTN_BACK_TO_ADMIN, CB.menu);
 }
 
 async function clearReplyKeyboard(ctx: Context) {
@@ -964,7 +980,7 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
       clearAwaitingOrderLookup(ctx.from.id);
     }
     await ctx.answerCallbackQuery();
-    const text = PENDING_ORDERS_HEADER;
+    const text = buildPendingOrdersListText();
     try {
       await a.editMessageText(text, { reply_markup: buildOrderListKeyboard() });
     } catch (e) {
@@ -1133,7 +1149,10 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
     }
     await ctx.answerCallbackQuery();
     const text = buildOrderPlainForCopy(order);
-    await a.reply(`<pre>${escapeHtml(text)}</pre>`, { parse_mode: "HTML" });
+    await a.reply(`<pre>${escapeHtml(text)}</pre>`, {
+      parse_mode: "HTML",
+      reply_markup: backToAdminKeyboard(),
+    });
   });
 
   bot.callbackQuery(/^admin:ok:([^:\s]+)$/, async (ctx) => {
@@ -1155,11 +1174,11 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
       return;
     }
     await ctx.answerCallbackQuery();
+    const ref = order.publicOrderId ?? id;
     if (ctx.from) {
-      awaitingProfitByUserId.set(ctx.from.id, id);
+      awaitingProfitByUserId.set(ctx.from.id, ref);
       clearAwaitingOrderLookup(ctx.from.id);
     }
-    const ref = order.publicOrderId ?? id;
     await a.reply(msgProfitPrompt(ref), {
       reply_markup: profitCancelKeyboard(),
     });
@@ -1387,7 +1406,9 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
     }
     clearAwaitingProfit(ctx.from.id);
     const amountStr = value.toFixed(2);
-    await ctx.reply(msgProfitSaved(pendingOrderId, amountStr));
+    await ctx.reply(msgProfitSaved(pendingOrderId, amountStr), {
+      reply_markup: backToAdminKeyboard(),
+    });
     console.info(
       "[admin-profit]",
       "user=",
