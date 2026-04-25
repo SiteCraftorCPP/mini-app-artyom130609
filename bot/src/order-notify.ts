@@ -294,14 +294,13 @@ async function buildActiveOrderRow(
 function buildVirtOrderCaption(orderNumber: string): string {
   const n = formatOrderNumberForCaption(orderNumber);
   return [
-    `✅ Заказ ${n} успешно оформлен!`,
+    `<tg-emoji emoji-id="5368324170671202286">🟢</tg-emoji> <b>Заказ ${n} успешно оформлен!</b>`,
     "",
-    "🕔 Срок выдачи: от 5 минут до 24 часов",
-    "(среднее время — ~20 минут)",
+    `<tg-emoji emoji-id="5427142475440733842">⏱</tg-emoji> <b>Срок выдачи: от 5 минут до 24 часов</b>`,
+    "<b>(среднее время — ~20 минут)</b>",
     "",
-    "После зачисления виртов на ваш счёт вы получите уведомление в этом чате.",
-    "",
-    "Чтобы узнать детали заказа, нажмите кнопку ниже 👇",
+    "<b>После зачисления виртов на ваш счёт вы получите</b>",
+    "<b>уведомление в этом чате.</b>"
   ].join("\n");
 }
 
@@ -309,14 +308,12 @@ function buildVirtOrderCaption(orderNumber: string): string {
 function buildAccountAppOrderCaption(orderNumber: string): string {
   const n = formatOrderNumberForCaption(orderNumber);
   return [
-    `✅ Заказ ${n} успешно оформлен!`,
+    `<tg-emoji emoji-id="5368324170671202286">🟢</tg-emoji> <b>Заказ ${n} успешно оформлен!</b>`,
     "",
-    "🕔 Срок выдачи: от 5 минут до 24 часов",
-    "(среднее время — ~20 минут)",
+    `<tg-emoji emoji-id="5427142475440733842">⏱</tg-emoji> <b>Срок выдачи: от 5 минут до 24 часов</b>`,
+    "<b>(среднее время — ~20 минут)</b>",
     "",
-    "Информация по заказу будет отправлена в этот чат.",
-    "",
-    "Чтобы узнать детали заказа, нажмите кнопку ниже 👇",
+    "<b>Информация по заказу будет отправлена в этот чат.</b>"
   ].join("\n");
 }
 
@@ -324,10 +321,10 @@ function buildAccountAppOrderCaption(orderNumber: string): string {
 function buildAccountManagerOrderCaption(orderNumber: string): string {
   const n = formatOrderNumberForCaption(orderNumber);
   return [
-    `✅ Заказ ${n} успешно оформлен!`,
+    `<tg-emoji emoji-id="5368324170671202286">🟢</tg-emoji> <b>Заказ ${n} успешно оформлен!</b>`,
     "",
-    "💬 Следующие действия:",
-    "Скопируйте номер заказ и отпишите нашему менеджеру, нажав на кнопку ниже 🔽",
+    `<tg-emoji emoji-id="5364171092657444212">💬</tg-emoji> <b>Следующие действия:</b>`,
+    "<b>Скопируйте номер заказ и отпишите нашему менеджеру, нажав на кнопку ниже 🔽</b>",
   ].join("\n");
 }
 
@@ -418,6 +415,7 @@ export async function sendVirtOrderSuccess(
   const sendTextOnly = async () => {
     await bot.api.sendMessage(payload.telegramUserId, caption, {
       reply_markup,
+      parse_mode: "HTML"
     });
   };
 
@@ -431,14 +429,14 @@ export async function sendVirtOrderSuccess(
   await retrySendPhoto(async () => {
       if (photo.type === "url") {
         console.info("[virt-order] sendPhoto по URL", photo.url.slice(0, 72));
-        await bot.api.sendPhoto(payload.telegramUserId, photo.url, { caption, reply_markup });
+        await bot.api.sendPhoto(payload.telegramUserId, photo.url, { caption, reply_markup, parse_mode: "HTML" });
       } else {
         console.info("[virt-order] sendPhoto заказа с диска", photo.path);
         const buffer = readFileSync(photo.path);
         await bot.api.sendPhoto(
           payload.telegramUserId,
           new InputFile(buffer, `${Date.now()}_${basename(photo.path)}`),
-          { caption, reply_markup }
+          { caption, reply_markup, parse_mode: "HTML" }
         );
       }
     }).catch(e => {
@@ -527,6 +525,7 @@ export async function sendOrderCompletedToBuyer(
   const sendTextOnly = async () => {
     await bot.api.sendMessage(payload.telegramUserId, caption, {
       reply_markup,
+      parse_mode: "HTML"
     });
   };
 
@@ -538,13 +537,13 @@ export async function sendOrderCompletedToBuyer(
 
   await retrySendPhoto(async () => {
     if (photo.type === "url") {
-      await bot.api.sendPhoto(payload.telegramUserId, photo.url, { caption, reply_markup });
+      await bot.api.sendPhoto(payload.telegramUserId, photo.url, { caption, reply_markup, parse_mode: "HTML" });
     } else {
       const buffer = readFileSync(photo.path);
       await bot.api.sendPhoto(
         payload.telegramUserId,
         new InputFile(buffer, `${Date.now()}_${basename(photo.path)}`),
-        { caption, reply_markup }
+        { caption, reply_markup, parse_mode: "HTML" }
       );
     }
   }).catch(e => {
