@@ -62,8 +62,7 @@ export const BTN_STATS_VIEW_ORDERS = "📦 Просмотреть заказы";
 export const BTN_STATS_BACK = "🔙 Назад";
 export const BTN_CONFIRM_VIRT = "✅ Подтвердить выдачу виртов";
 export const BTN_COPY_ORDER_DATA = "📋 Скопировать данные";
-export const PENDING_ORDERS_HEADER =
-  "📦 Актуальные заказы (к выдаче — подтверждение только в карточке заказа):";
+export const PENDING_ORDERS_HEADER = "📦 Актуальные заказы";
 export const STATS_HEADER = "💰 Сумма текущих заказов в рублях";
 
 /** Кнопка в уведомлении о выполнении заказа (пост с отзывами). */
