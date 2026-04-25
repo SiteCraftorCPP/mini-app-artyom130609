@@ -461,13 +461,16 @@ function resolveCompletedOrderReviewPhoto(): OrderSuccessPhoto | null {
     return { type: "url", url: fromUrl };
   }
   const botRoot = resolve(__dirname, "..");
-  const fromEnv = process.env.ORDER_COMPLETED_REVIEW_IMAGE_PATH?.trim();
+  const fromEnv = (process.env.ORDER_COMPLETED_REVIEW_IMAGE_PATH || process.env.ORDER_COMPLETED_REVIEW_PHOTO_PATH)?.trim();
   if (fromEnv) {
     const p = fromEnv.startsWith("/")
       ? fromEnv
       : resolve(botRoot, fromEnv);
     if (existsSync(p)) {
+      console.info("[order-complete] фото из env (найдено):", p);
       return { type: "file", path: p };
+    } else {
+      console.error("[order-complete] фото из env НЕ НАЙДЕНО по пути:", p);
     }
   }
   for (const root of orderPhotoInstallRoots()) {
