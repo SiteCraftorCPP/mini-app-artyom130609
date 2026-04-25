@@ -3,7 +3,7 @@ import { dirname, resolve, basename } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { config } from "dotenv";
-import { Bot, InputFile, type Context } from "grammy";
+import { Bot, InputFile, type Context, InlineKeyboard } from "grammy";
 
 process.on("unhandledRejection", (reason, promise) => {
   console.error("Unhandled Rejection at:", promise, "reason:", reason);
@@ -194,6 +194,58 @@ async function sendSellVirtGuidance(ctx: Context) {
   await clearReplyKeyboard(ctx);
   await sendSellVirtMessage(bot, uid);
 }
+
+
+const requiredChannelId = process.env.REQUIRED_CHANNEL_ID?.trim();
+const requiredChannelUrl = process.env.REQUIRED_CHANNEL_URL?.trim();
+
+bot.use(async (ctx, next) => {
+  if (!requiredChannelId || !requiredChannelUrl) return next();
+  if (ctx.from?.id === undefined) return next();
+  if (ctx.chat?.type !== "private") return next();
+
+  if (ctx.callbackQuery?.data === "check_sub") {
+    try {
+      const member = await ctx.api.getChatMember(requiredChannelId, ctx.from.id);
+      const isSubscribed = ["creator", "administrator", "member"].includes(member.status);
+      if (isSubscribed) {
+        await ctx.answerCallbackQuery({ text: "✅ Подписка подтверждена!", show_alert: true });
+        await ctx.deleteMessage().catch(() => {});
+        return sendWelcome(ctx);
+      } else {
+        await ctx.answerCallbackQuery({ text: "❌ Вы еще не подписались на канал.", show_alert: true });
+        return;
+      }
+    } catch (e) {
+      console.error("Check sub error:", e);
+      return next();
+    }
+  }
+
+  try {
+    const member = await ctx.api.getChatMember(requiredChannelId, ctx.from.id);
+    const isSubscribed = ["creator", "administrator", "member"].includes(member.status);
+    if (!isSubscribed) {
+      const text = "❗️ Для использования бота необходимо подписаться на наш канал.";
+      const kb = new InlineKeyboard()
+        .url("Подписаться", requiredChannelUrl)
+        .row()
+        .text("Проверить", "check_sub");
+      
+      if (ctx.callbackQuery) {
+        await ctx.answerCallbackQuery();
+        await ctx.editMessageText(text, { reply_markup: kb }).catch(() => {});
+      } else {
+        await ctx.reply(text, { reply_markup: kb });
+      }
+      return;
+    }
+  } catch (e) {
+    console.error("GetChatMember error:", e);
+  }
+
+  return next();
+});
 
 bot.command("start", async (ctx) => {
   if (ctx.chat?.type === "private" && ctx.from?.id != null) {
