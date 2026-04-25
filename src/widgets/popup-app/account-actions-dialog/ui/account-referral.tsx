@@ -2,6 +2,7 @@ import { AppText, TAG } from "@/ui/app-text";
 import { Spinner } from "@/ui/spinner";
 import { useQuery } from "@tanstack/react-query";
 import { useWebApp } from "@vkruglikov/react-telegram-web-app";
+import { copyText } from "@/shared/lib/copy-text";
 
 function resolveInitData(webApp: any): string {
   const fromHook = webApp?.initData?.trim();
@@ -81,7 +82,7 @@ export const AccountReferral = () => {
         <div className="flex flex-col items-center justify-center gap-2 rounded-lg bg-[#2A2A2A] p-2 mt-2">
           <AppText className="text-xs break-all" variant="primaryStrong" size="small">{data.link}</AppText>
           <button 
-            onClick={() => navigator.clipboard.writeText(data.link)}
+            onClick={() => copyText(data.link)}
             className="mt-1 px-3 py-1 bg-[#00FF00]/10 text-[#00FF00] rounded text-xs"
           >
             Скопировать
