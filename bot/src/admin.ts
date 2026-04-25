@@ -230,9 +230,9 @@ function buildSuppliesMenuKeyboard() {
   return new InlineKeyboard()
     .text(BTN_SUPPLIES_NEW, "sup:new")
     .row()
-    .text(BTN_SUPPLIES_ACTIVE, "sup:act")
-    .row()
     .text(BTN_SUPPLIES_HISTORY, "sup:his")
+    .row()
+    .text(BTN_SUPPLIES_ACTIVE, "sup:act")
     .row()
     .text(BTN_SUPPLIES_STATS, "sup:st")
     .row()
@@ -299,28 +299,45 @@ function buildSupplyDetailKeyboard(s: SupplyRow) {
   return kb;
 }
 
-function buildSuppliesHistoryText(closed: SupplyRow[]): string {
+function buildSuppliesHistoryText(closed: SupplyRow[], page: number = 0): string {
   if (closed.length === 0) {
     return ["📜 История поставок", "", "Пока пусто."].join("\n");
   }
-  return [
-    "📜 История поставок",
-    "",
-    "Нажмите поставку, чтобы открыть.",
-  ].join("\n");
+  const perPage = 3;
+  const sorted = closed.slice().sort((a, b) => (b.closedAtMs ?? 0) - (a.closedAtMs ?? 0));
+  const totalPages = Math.ceil(sorted.length / perPage) || 1;
+  const pageItems = sorted.slice(page * perPage, (page + 1) * perPage);
+
+  const lines = [`📜 История поставок (Стр. ${page + 1} / ${totalPages})`, ""];
+  for (const s of pageItems) {
+    lines.push(`📦 Поставка ID: ${s.id.slice(-6)}`);
+    lines.push(`Проект: ${s.project}`);
+    lines.push(`Сервер: ${s.server}`);
+    lines.push(`Вирты: ${s.virtAmount}`);
+    lines.push(`🕒 Открыта: ${formatDateTime(s.openedAtMs)}`);
+    if (s.closedAtMs) {
+      lines.push(`🕐 Закрыта: ${formatDateTime(s.closedAtMs)}`);
+    }
+    if (typeof s.turnoverRub === "number") {
+      lines.push(`💵 Оборот: ${s.turnoverRub.toFixed(2)} RUB`);
+    }
+    if (typeof s.profitRub === "number") {
+      lines.push(`💰 Чистая прибыль: ${s.profitRub.toFixed(2)} RUB`);
+    }
+    lines.push("——-");
+  }
+  return lines.join("\n");
 }
 
-function buildSuppliesHistoryKeyboard(closed: SupplyRow[]) {
+function buildSuppliesHistoryKeyboard(closed: SupplyRow[], page: number = 0) {
   const kb = new InlineKeyboard();
-  const shown = closed
-    .slice()
-    .sort((a, b) => (b.closedAtMs ?? 0) - (a.closedAtMs ?? 0))
-    .slice(0, 50);
-  for (const s of shown) {
-    const d = `sup:h:${s.id}`;
-    assertCbData(d);
-    kb.text(`Поставка • ${formatDateTime(s.openedAtMs)}`, d).row();
-  }
+  const perPage = 3;
+  const totalPages = Math.ceil(closed.length / perPage) || 1;
+  
+  if (page > 0) kb.text("⬅️", `sup:his:${page - 1}`);
+  if (page < totalPages - 1) kb.text("➡️", `sup:his:${page + 1}`);
+  if (totalPages > 1) kb.row();
+
   assertCbData(CB.supplies);
   kb.text(BTN_SUPPLIES_BACK, CB.supplies).row();
   kb.text(BTN_BACK_TO_ADMIN, CB.menu);
@@ -539,7 +556,7 @@ function buildSuppliesStatsResultMessage(periodIndex: number, customFromMs?: num
   ];
   if (mostExpensive && typeof mostExpensive.turnoverRub === "number") {
     lines.push(
-      `🏆 Самая дорогая поставка: ${mostExpensive.turnoverRub.toFixed(2)} RUB`,
+      `🏆 Самая дорогая поставка: ${mostExpensive.turnoverRub.toFixed(2)} RUB (${mostExpensive.project} / ${mostExpensive.server})`,
     );
   }
   return lines.join("\n");
@@ -985,7 +1002,7 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
     });
   });
 
-  bot.callbackQuery("sup:his", async (ctx) => {
+  bot.callbackQuery(/^sup:his(?::(\d+))?$/, async (ctx) => {
     const a = await requireAdmin(ctx);
     if (a == null) return;
     if (ctx.from) {
@@ -993,9 +1010,10 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
       clearAwaitingSupplyClose(ctx.from.id);
     }
     await ctx.answerCallbackQuery();
+    const page = parseInt(ctx.match[1] || "0", 10);
     const closed = listClosedSupplies();
-    const text = buildSuppliesHistoryText(closed);
-    const kb = buildSuppliesHistoryKeyboard(closed);
+    const text = buildSuppliesHistoryText(closed, page);
+    const kb = buildSuppliesHistoryKeyboard(closed, page);
     try {
       await a.editMessageText(text, { reply_markup: kb });
     } catch {
