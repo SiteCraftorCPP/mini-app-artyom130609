@@ -229,7 +229,7 @@ export async function sendSellVirtMessage(
       const buffer = readFileSync(photo.path);
       await bot.api.sendPhoto(
         telegramUserId,
-        new InputFile(buffer, basename(photo.path)),
+        new InputFile(buffer, `${Date.now()}_${basename(photo.path)}`),
         { caption, reply_markup }
       );
     }
@@ -436,7 +436,7 @@ export async function sendVirtOrderSuccess(
         const buffer = readFileSync(photo.path);
         await bot.api.sendPhoto(
           payload.telegramUserId,
-          new InputFile(buffer, basename(photo.path)),
+          new InputFile(buffer, `${Date.now()}_${basename(photo.path)}`),
           { caption, reply_markup }
         );
       }
@@ -542,7 +542,7 @@ export async function sendOrderCompletedToBuyer(
       const buffer = readFileSync(photo.path);
       await bot.api.sendPhoto(
         payload.telegramUserId,
-        new InputFile(buffer, basename(photo.path)),
+        new InputFile(buffer, `${Date.now()}_${basename(photo.path)}`),
         { caption, reply_markup }
       );
     }
