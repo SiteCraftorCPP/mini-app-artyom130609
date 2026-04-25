@@ -352,6 +352,58 @@ function startOfYear(d: Date) {
   return new Date(d.getFullYear(), 0, 1, 0, 0, 0, 0);
 }
 
+
+function getPeriodInputPrompt(idx: number) {
+  if (idx === 3) return "Введите дату в формате ДД.ММ.ГГГГ (например, 23.04.2026):";
+  if (idx === 4) return "Введите месяц в формате ММ.ГГГГ (например, 04.2026):";
+  if (idx === 5) return "Введите год в формате ГГГГ (например, 2026):";
+  return "Введите период в формате ДД.ММ.ГГГГ-ДД.ММ.ГГГГ (например, 01.04.2026-23.04.2026):";
+}
+
+function parsePeriodInput(text: string, periodIndex: number): { fromMs: number, toMs: number, label: string } | null {
+  try {
+    if (periodIndex === 3) {
+      const m = /^(\d{1,2})\.(\d{1,2})\.(\d{4})$/.exec(text);
+      if (!m) return null;
+      const from = new Date(parseInt(m[3],10), parseInt(m[2],10)-1, parseInt(m[1],10));
+      const to = new Date(parseInt(m[3],10), parseInt(m[2],10)-1, parseInt(m[1],10), 23, 59, 59, 999);
+      if (isNaN(from.getTime())) return null;
+      return { fromMs: from.getTime(), toMs: to.getTime(), label: `Статистика за ${text}` };
+    }
+    if (periodIndex === 4) {
+      const m = /^(\d{1,2})\.(\d{4})$/.exec(text);
+      if (!m) return null;
+      const from = new Date(parseInt(m[2],10), parseInt(m[1],10)-1, 1);
+      const to = new Date(parseInt(m[2],10), parseInt(m[1],10), 0, 23, 59, 59, 999);
+      if (isNaN(from.getTime())) return null;
+      return { fromMs: from.getTime(), toMs: to.getTime(), label: `Статистика за ${text}` };
+    }
+    if (periodIndex === 5) {
+      const m = /^(\d{4})$/.exec(text);
+      if (!m) return null;
+      const y = parseInt(m[1], 10);
+      const from = new Date(y, 0, 1);
+      const to = new Date(y, 11, 31, 23, 59, 59, 999);
+      if (isNaN(from.getTime())) return null;
+      return { fromMs: from.getTime(), toMs: to.getTime(), label: `Статистика за ${y} год` };
+    }
+    if (periodIndex === 7) {
+      const parts = text.split(/[-—–]/).map(s => s.trim());
+      if (parts.length !== 2) return null;
+      const m1 = /^(\d{1,2})\.(\d{1,2})\.(\d{4})$/.exec(parts[0]);
+      const m2 = /^(\d{1,2})\.(\d{1,2})\.(\d{4})$/.exec(parts[1]);
+      if (!m1 || !m2) return null;
+      const from = new Date(parseInt(m1[3],10), parseInt(m1[2],10)-1, parseInt(m1[1],10));
+      const to = new Date(parseInt(m2[3],10), parseInt(m2[2],10)-1, parseInt(m2[1],10), 23, 59, 59, 999);
+      if (isNaN(from.getTime()) || isNaN(to.getTime())) return null;
+      return { fromMs: from.getTime(), toMs: to.getTime(), label: `Статистика (${parts[0]} - ${parts[1]})` };
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
 function computeOrderStatsForRange(fromMs: number, toMs: number) {
   const parseOrderDateMs = (o: AdminOrderRow): number => {
     const str = o.closedAtLine || o.openedAtLine || "";
@@ -397,33 +449,26 @@ function computeOrderStatsForRange(fromMs: number, toMs: number) {
   return { count, turnoverSum, profitSum, avgCheck, mostExpensiveOrder, topBuyer };
 }
 
-function buildOrderPeriodStatsMessage(periodIndex: number): string {
-  const label =
+function buildOrderPeriodStatsMessage(periodIndex: number, customFromMs?: number, customToMs?: number, customLabel?: string): string {
+  const label = customLabel ?? (
     periodIndex >= 0 && periodIndex < STAT_PERIOD_TITLES.length
       ? STAT_PERIOD_TITLES[periodIndex]
-      : "Период";
+      : "Период"
+  );
   const now = new Date();
 
-  // Для "определённых" периодов без ввода пока даём подсказку.
-  if ([3, 4, 5, 7].includes(periodIndex)) {
-    return [
-      `📊 Статистика заказов • ${label}`,
-      "",
-      "Ввод даты/периода пока в разработке.",
-    ].join("\n");
-  }
-
-  const from =
+  const fromMs = customFromMs ?? (
     periodIndex === 0
       ? startOfDay(now)
       : periodIndex === 1
         ? startOfMonth(now)
         : periodIndex === 2
           ? startOfYear(now)
-          : new Date(0);
-  const to = now;
+          : new Date(0)
+  ).getTime();
+  const toMs = customToMs ?? now.getTime();
 
-  const { count, turnoverSum, profitSum, avgCheck, mostExpensiveOrder, topBuyer } = computeOrderStatsForRange(from.getTime(), to.getTime());
+  const { count, turnoverSum, profitSum, avgCheck, mostExpensiveOrder, topBuyer } = computeOrderStatsForRange(fromMs, toMs);
 
   const lines = [
     `📊 Статистика заказов • ${label}`,
@@ -461,34 +506,26 @@ function computeSupplyStatsForRange(fromMs: number, toMs: number) {
   return { turnoverSum, profitSum, mostExpensive, count: closed.length };
 }
 
-function buildSuppliesStatsResultMessage(periodIndex: number): string {
-  const label =
+function buildSuppliesStatsResultMessage(periodIndex: number, customFromMs?: number, customToMs?: number, customLabel?: string): string {
+  const label = customLabel ?? (
     periodIndex >= 0 && periodIndex < STAT_PERIOD_TITLES.length
       ? STAT_PERIOD_TITLES[periodIndex]
-      : "Период";
+      : "Период"
+  );
   const now = new Date();
 
-  // Для "определённых" периодов без ввода пока даём подсказку.
-  if ([3, 4, 5, 7].includes(periodIndex)) {
-    return [
-      `📊 Поставки • ${label}`,
-      "",
-      "Для этого режима нужен ввод даты/периода в чат.",
-      "Сделаю это следующим шагом (формат: 23.04.2026 или 04.2026 или 2026, период: 01.04.2026-23.04.2026).",
-    ].join("\n");
-  }
-
-  const from =
+  const fromMs = customFromMs ?? (
     periodIndex === 0
       ? startOfDay(now)
       : periodIndex === 1
         ? startOfMonth(now)
         : periodIndex === 2
           ? startOfYear(now)
-          : new Date(0);
-  const to = now;
+          : new Date(0)
+  ).getTime();
+  const toMs = customToMs ?? now.getTime();
   const { turnoverSum, profitSum, mostExpensive, count } =
-    computeSupplyStatsForRange(from.getTime(), to.getTime());
+    computeSupplyStatsForRange(fromMs, toMs);
 
   const lines = [
     `📊 Поставки • ${label}`,
@@ -528,32 +565,25 @@ function buildUserStatsMenuKeyboard() {
   return kb;
 }
 
-function buildUserStatsResultMessage(periodIndex: number): string {
-  const label =
+function buildUserStatsResultMessage(periodIndex: number, customFromMs?: number, customToMs?: number, customLabel?: string): string {
+  const label = customLabel ?? (
     periodIndex >= 0 && periodIndex < STAT_PERIOD_TITLES.length
       ? STAT_PERIOD_TITLES[periodIndex]
-      : "Период";
+      : "Период"
+  );
   const now = new Date();
 
-  // Для "определённых" периодов без ввода пока даём подсказку.
-  if ([3, 4, 5, 7].includes(periodIndex)) {
-    return [
-      `👥 Статистика пользователей • ${label}`,
-      "",
-      "Ввод даты/периода пока в разработке.",
-    ].join("\n");
-  }
-
-  const from =
+  const fromMs = customFromMs ?? (
     periodIndex === 0
       ? startOfDay(now)
       : periodIndex === 1
         ? startOfMonth(now)
         : periodIndex === 2
           ? startOfYear(now)
-          : new Date(0);
-  const to = now;
-  const { newUsers, activeUsers } = getUserStatsForRange(from.getTime(), to.getTime());
+          : new Date(0)
+  ).getTime();
+  const toMs = customToMs ?? now.getTime();
+  const { newUsers, activeUsers } = getUserStatsForRange(fromMs, toMs);
 
   return [
     `👥 Статистика пользователей • ${label}`,
@@ -781,6 +811,7 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
   };
   /** Ожидание ввода чистой прибыли после «Подтвердить выдачу». */
   const awaitingProfitByUserId = new Map<number, string>();
+  const awaitingPeriodInputByUserId = new Map<number, { statType: "order" | "user" | "supply"; periodIndex: number }>();
   const awaitingOrderLookup = new Set<number>();
   /** Новый ввод поставки: проект → сервер → вирты. */
   const awaitingSupplyCreateByUserId = new Map<
@@ -792,6 +823,10 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
     number,
     { step: "turnover" | "profit"; supplyId: string; turnoverRub?: number }
   >();
+
+  function clearAwaitingPeriodInput(userId: number) {
+    awaitingPeriodInputByUserId.delete(userId);
+  }
 
   function clearAwaitingProfit(userId: number) {
     awaitingProfitByUserId.delete(userId);
@@ -838,6 +873,7 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
     }
     if (ctx.from) {
       clearAwaitingProfit(ctx.from.id);
+      clearAwaitingPeriodInput(ctx.from.id);
       clearAwaitingOrderLookup(ctx.from.id);
       clearAwaitingSupplyCreate(ctx.from.id);
       clearAwaitingSupplyClose(ctx.from.id);
@@ -855,6 +891,7 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
     }
     if (ctx.from) {
       clearAwaitingProfit(ctx.from.id);
+      clearAwaitingPeriodInput(ctx.from.id);
       clearAwaitingOrderLookup(ctx.from.id);
       clearAwaitingSupplyCreate(ctx.from.id);
       clearAwaitingSupplyClose(ctx.from.id);
@@ -870,6 +907,7 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
     if (a == null) return;
     if (ctx.from) {
       clearAwaitingProfit(ctx.from.id);
+      clearAwaitingPeriodInput(ctx.from.id);
       clearAwaitingOrderLookup(ctx.from.id);
       clearAwaitingSupplyCreate(ctx.from.id);
       clearAwaitingSupplyClose(ctx.from.id);
@@ -1028,6 +1066,17 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
     if (a == null) return;
     const idx = parseInt(ctx.match[1] ?? "0", 10);
     await ctx.answerCallbackQuery();
+    if ([3, 4, 5, 7].includes(idx)) {
+      if (ctx.from) awaitingPeriodInputByUserId.set(ctx.from.id, { statType: "supply", periodIndex: idx });
+      const prompt = getPeriodInputPrompt(idx);
+      const kb = new InlineKeyboard().text("Отмена", "sup:st");
+      try {
+        await a.editMessageText(prompt, { reply_markup: kb });
+      } catch {
+        await a.reply(prompt, { reply_markup: kb });
+      }
+      return;
+    }
     const text = buildSuppliesStatsResultMessage(idx);
     const kb = buildSuppliesStatsResultKeyboard();
     try {
@@ -1044,6 +1093,7 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
     }
     if (ctx.from) {
       clearAwaitingProfit(ctx.from.id);
+      clearAwaitingPeriodInput(ctx.from.id);
       clearAwaitingOrderLookup(ctx.from.id);
     }
     await ctx.answerCallbackQuery();
@@ -1060,6 +1110,17 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
     if (a == null) return;
     const idx = parseInt(ctx.match[1] ?? "0", 10);
     await ctx.answerCallbackQuery();
+    if ([3, 4, 5, 7].includes(idx)) {
+      if (ctx.from) awaitingPeriodInputByUserId.set(ctx.from.id, { statType: "user", periodIndex: idx });
+      const prompt = getPeriodInputPrompt(idx);
+      const kb = new InlineKeyboard().text("Отмена", CB.userStats);
+      try {
+        await a.editMessageText(prompt, { reply_markup: kb });
+      } catch {
+        await a.reply(prompt, { reply_markup: kb });
+      }
+      return;
+    }
     const text = buildUserStatsResultMessage(idx);
     const kb = buildUserStatsResultKeyboard();
     try {
@@ -1076,6 +1137,7 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
     }
     if (ctx.from) {
       clearAwaitingProfit(ctx.from.id);
+      clearAwaitingPeriodInput(ctx.from.id);
       clearAwaitingOrderLookup(ctx.from.id);
     }
     await ctx.answerCallbackQuery();
@@ -1095,6 +1157,7 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
     }
     if (ctx.from) {
       clearAwaitingProfit(ctx.from.id);
+      clearAwaitingPeriodInput(ctx.from.id);
       clearAwaitingOrderLookup(ctx.from.id);
     }
     const key = ctx.match[1] ?? "";
@@ -1134,6 +1197,7 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
     }
     if (ctx.from) {
       clearAwaitingProfit(ctx.from.id);
+      clearAwaitingPeriodInput(ctx.from.id);
       clearAwaitingOrderLookup(ctx.from.id);
     }
     await ctx.answerCallbackQuery();
@@ -1156,6 +1220,7 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
     }
     if (ctx.from) {
       clearAwaitingProfit(ctx.from.id);
+      clearAwaitingPeriodInput(ctx.from.id);
       clearAwaitingOrderLookup(ctx.from.id);
     }
     await ctx.answerCallbackQuery();
@@ -1204,6 +1269,7 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
     }
     if (ctx.from) {
       clearAwaitingProfit(ctx.from.id);
+      clearAwaitingPeriodInput(ctx.from.id);
       awaitingOrderLookup.add(ctx.from.id);
     }
     await ctx.answerCallbackQuery();
@@ -1223,6 +1289,7 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
     }
     if (ctx.from) {
       clearAwaitingProfit(ctx.from.id);
+      clearAwaitingPeriodInput(ctx.from.id);
       clearAwaitingOrderLookup(ctx.from.id);
     }
     await ctx.answerCallbackQuery();
@@ -1250,6 +1317,7 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
     }
     if (ctx.from) {
       clearAwaitingProfit(ctx.from.id);
+      clearAwaitingPeriodInput(ctx.from.id);
       clearAwaitingOrderLookup(ctx.from.id);
     }
     await ctx.answerCallbackQuery();
@@ -1269,10 +1337,22 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
     }
     if (ctx.from) {
       clearAwaitingProfit(ctx.from.id);
+      clearAwaitingPeriodInput(ctx.from.id);
       clearAwaitingOrderLookup(ctx.from.id);
     }
     const idx = parseInt(ctx.match[1] ?? "0", 10);
     await ctx.answerCallbackQuery();
+    if ([3, 4, 5, 7].includes(idx)) {
+      if (ctx.from) awaitingPeriodInputByUserId.set(ctx.from.id, { statType: "order", periodIndex: idx });
+      const prompt = getPeriodInputPrompt(idx);
+      const kb = new InlineKeyboard().text("Отмена", "a:st");
+      try {
+        await a.editMessageText(prompt, { reply_markup: kb });
+      } catch {
+        await a.reply(prompt, { reply_markup: kb });
+      }
+      return;
+    }
     const text = buildOrderPeriodStatsMessage(idx);
     const kb = buildOrderPeriodResultKeyboard();
     try {
@@ -1289,6 +1369,7 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
     }
     if (ctx.from) {
       clearAwaitingProfit(ctx.from.id);
+      clearAwaitingPeriodInput(ctx.from.id);
       clearAwaitingOrderLookup(ctx.from.id);
     }
     const id = ctx.match[1] ?? "";
@@ -1319,6 +1400,7 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
     }
     if (ctx.from) {
       clearAwaitingProfit(ctx.from.id);
+      clearAwaitingPeriodInput(ctx.from.id);
       clearAwaitingOrderLookup(ctx.from.id);
     }
     const id = ctx.match[1] ?? "";
@@ -1396,6 +1478,7 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
     }
     if (ctx.from) {
       clearAwaitingProfit(ctx.from.id);
+      clearAwaitingPeriodInput(ctx.from.id);
     }
     await ctx.answerCallbackQuery();
     const text = [MSG_PROFIT_CANCELLED, "", BTN_ADMIN_MAIN].join("\n");
@@ -1428,6 +1511,37 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
     if (!adminIds.has(ctx.from.id)) {
       return next();
     }
+    const periodInput = awaitingPeriodInputByUserId.get(ctx.from.id);
+    if (periodInput) {
+      const text = ctx.message?.text?.trim() || "";
+      if (!text || text.startsWith("/")) return;
+
+      const parsed = parsePeriodInput(text, periodInput.periodIndex);
+      if (!parsed) {
+        await ctx.reply("❌ Неверный формат. Попробуйте еще раз или нажмите Отмена.", {
+          reply_markup: new InlineKeyboard().text("Отмена", CB.menu)
+        });
+        return;
+      }
+      clearAwaitingPeriodInput(ctx.from.id);
+
+      let msg = "";
+      let kb: InlineKeyboard;
+      if (periodInput.statType === "order") {
+        msg = buildOrderPeriodStatsMessage(periodInput.periodIndex, parsed.fromMs, parsed.toMs, parsed.label);
+        kb = buildOrderPeriodResultKeyboard();
+      } else if (periodInput.statType === "user") {
+        msg = buildUserStatsResultMessage(periodInput.periodIndex, parsed.fromMs, parsed.toMs, parsed.label);
+        kb = buildUserStatsResultKeyboard();
+      } else {
+        msg = buildSuppliesStatsResultMessage(periodInput.periodIndex, parsed.fromMs, parsed.toMs, parsed.label);
+        kb = buildSuppliesStatsResultKeyboard();
+      }
+
+      await ctx.reply(msg, { reply_markup: kb });
+      return;
+    }
+
 
     const supplyCreate = awaitingSupplyCreateByUserId.get(ctx.from.id);
     if (supplyCreate) {
@@ -1599,6 +1713,7 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
       return;
     }
     clearAwaitingProfit(ctx.from.id);
+      clearAwaitingPeriodInput(ctx.from.id);
     const amountStr = value.toFixed(2);
     const closedAtLine = [
       `Закрыт: ${formatDateTime(Date.now())}`,
