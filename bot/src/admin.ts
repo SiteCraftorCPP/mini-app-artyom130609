@@ -1244,7 +1244,7 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
     if (ctx.from) awaitingRefModTargetByUserId.add(ctx.from.id);
     await ctx.answerCallbackQuery();
     
-    const text = "Отправьте юзернейм (с @ или без) или ID пользователя, которому нужно изменить баланс:";
+    const text = "Отправьте ID пользователя,которому нужно изменить баланс:";
     const kb = new InlineKeyboard().text("❌ Отмена", "ref:menu");
     try {
       await a.editMessageText(text, { reply_markup: kb });
@@ -1259,7 +1259,7 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
     if (ctx.from) awaitingRefSearchByUserId.add(ctx.from.id);
     await ctx.answerCallbackQuery();
     
-    const text = "Отправьте юзернейм (с @ или без) или ID пользователя для поиска в реф. системе:";
+    const text = "Отправьте ID пользователя для поиска:";
     const kb = new InlineKeyboard().text("❌ Отмена", "ref:menu");
     try {
       await a.editMessageText(text, { reply_markup: kb });

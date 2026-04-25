@@ -3,16 +3,27 @@ import { Spinner } from "@/ui/spinner";
 import { useQuery } from "@tanstack/react-query";
 import { useWebApp } from "@vkruglikov/react-telegram-web-app";
 
+function resolveInitData(webApp: any): string {
+  const fromHook = webApp?.initData?.trim();
+  if (fromHook) return fromHook;
+  if (typeof window !== "undefined") {
+    const tg = (window as any).Telegram?.WebApp;
+    const raw = tg?.initData?.trim();
+    if (raw) return raw;
+  }
+  return "";
+}
+
 export const AccountReferral = () => {
-  const { initData } = useWebApp();
-  const initDataString = initData;
+  const webApp = useWebApp();
+  const initDataString = resolveInitData(webApp);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["referral-data"],
     queryFn: async () => {
       if (!initDataString) throw new Error("No init data");
       
-      const apiUrl = import.meta.env.VITE_API_URL || "";
+      const apiUrl = typeof window !== "undefined" && window.location?.origin ? window.location.origin : "";
       const res = await fetch(`${apiUrl}/notify/referral`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
