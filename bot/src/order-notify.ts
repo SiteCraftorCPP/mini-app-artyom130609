@@ -204,7 +204,7 @@ export async function sendSellVirtMessage(
 ): Promise<void> {
   const orderRef = randomSellOrderRef();
   const caption = buildSellVirtCaption(orderRef);
-  const diag = diagnoseOrderSuccessPhoto();
+  const photo = resolveOrderSuccessPhoto();
   const managerUrl =
     process.env.MANAGER_TELEGRAM_URL?.trim() || "https://t.me/artshopvirts_man";
   const reply_markup = new InlineKeyboard().url(BTN_WRITE_MANAGER, managerUrl);
@@ -216,18 +216,18 @@ export async function sendSellVirtMessage(
   };
 
   try {
-    if (diag.firstExistingPath) {
-      console.info("[sell] sendPhoto", diag.firstExistingPath, "ref=", orderRef);
+    if (photo?.type === "file") {
+      console.info("[sell] sendPhoto", photo.path, "ref=", orderRef);
       await bot.api.sendPhoto(
         telegramUserId,
-        new InputFile(diag.firstExistingPath),
+        new InputFile(photo.path),
         {
           caption,
           reply_markup,
         },
       );
-    } else if (diag.urlFallback) {
-      await bot.api.sendPhoto(telegramUserId, diag.urlFallback, {
+    } else if (photo?.type === "url") {
+      await bot.api.sendPhoto(telegramUserId, photo.url, {
         caption,
         reply_markup,
       });
