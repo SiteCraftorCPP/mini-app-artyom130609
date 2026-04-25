@@ -109,22 +109,6 @@ export const STAT_PERIOD_TITLES = [
   "За определённый период",
 ] as const;
 
-export function buildOrderPeriodStatsMessage(periodIndex: number): string {
-  const label =
-    periodIndex >= 0 && periodIndex < STAT_PERIOD_TITLES.length
-      ? STAT_PERIOD_TITLES[periodIndex]
-      : "Период";
-  return [
-    `📊 ${label}`,
-    "",
-    "Данных по периодам пока нет: история заказов заполняется с API/оплат.",
-    "После подключения источника здесь появятся фактические цифры.",
-    "",
-    "📦 Заказов: 0",
-    "💵 Оборот: 0.00 RUB",
-  ].join("\n");
-}
-
 export const VIDEO_CAPTION = "Ознакомление: как оформить заказ";
 
 /**
