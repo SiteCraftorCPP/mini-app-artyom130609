@@ -158,6 +158,7 @@ export function changeBalanceAdmin(telegramUserId: number, amount: number, isAdd
 export function getTopReferrals(limit: number = 10): ReferralUser[] {
   const s = loadStore();
   return Object.values(s.users)
+    .filter(u => u.earned > 0)
     .sort((a, b) => b.earned - a.earned)
     .slice(0, limit);
 }

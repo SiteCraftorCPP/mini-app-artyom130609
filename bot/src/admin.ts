@@ -1202,7 +1202,7 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
     for (const tx of res.list) {
       const dt = formatDateTime(tx.dateMs);
       const sign = tx.type === "admin_sub" ? "-" : "+";
-      text += `• [${dt}] ID: ${tx.telegramUserId}\n  Сумма: ${sign}${tx.amount} RUB\n  ${tx.desc}\n\n`;
+      text += `[${dt}] ID: ${tx.telegramUserId}\nСумма: ${sign}${tx.amount} RUB\n${tx.desc}\n\n`;
     }
     
     const kb = new InlineKeyboard();
@@ -1227,7 +1227,8 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
     let text = "🏆 Топ-15 рефералов по заработанному:\n\n";
     if (top.length === 0) text += "Пока никого нет.";
     top.forEach((u, i) => {
-      text += `${i + 1}. ${u.telegramUsername ? '@'+u.telegramUsername : 'ID '+u.telegramUserId} — заработал: ${u.earned.toFixed(2)} RUB\n`;
+      const userStr = u.telegramUsername ? `ID ${u.telegramUserId} (@${u.telegramUsername})` : `ID ${u.telegramUserId}`;
+      text += `${i + 1}. ${userStr} — заработал: ${u.earned.toFixed(2)} RUB\n`;
     });
     
     const kb = new InlineKeyboard().text("🔙 Назад", "ref:menu");
