@@ -5,6 +5,7 @@ import {
   getAdminOrderById,
   getHistory50PageCount,
   getHistory50Slice,
+  getClosedOrders,
   type AdminOrderRow,
 } from "./admin-orders-mock.js";
 import { parseRublesAmountFromUserText } from "./money-input.js";
@@ -36,7 +37,6 @@ import {
   BTN_STAT_PERIOD_CHOOSE,
   BTN_STATS_BACK,
   BTN_STATS_VIEW_ORDERS,
-  buildOrderPeriodStatsMessage,
   BTN_CANCEL_PROFIT_INPUT,
   MSG_ORDER_LOOKUP_PROMPT,
   MSG_ORDER_NOT_FOUND,
@@ -352,6 +352,65 @@ function startOfYear(d: Date) {
   return new Date(d.getFullYear(), 0, 1, 0, 0, 0, 0);
 }
 
+function computeOrderStatsForRange(fromMs: number, toMs: number) {
+  const parseOrderDateMs = (o: AdminOrderRow): number => {
+    const str = o.closedAtLine || o.openedAtLine || "";
+    const match = str.match(/(\d{2})\.(\d{2})\.(\d{4})/);
+    if (match) {
+      const [_, d, m, y] = match;
+      return new Date(Number(y), Number(m) - 1, Number(d)).getTime();
+    }
+    return 0;
+  };
+
+  const closed = getClosedOrders().filter((o) => {
+    const t = parseOrderDateMs(o);
+    return t >= fromMs && t <= toMs;
+  });
+  const count = closed.length;
+  const turnoverSum = closed.reduce((acc, o) => acc + (o.amountRub ?? 0), 0);
+  const profitSum = closed.reduce((acc, o) => acc + (o.profitRub ?? 0), 0);
+  return { count, turnoverSum, profitSum };
+}
+
+function buildOrderPeriodStatsMessage(periodIndex: number): string {
+  const label =
+    periodIndex >= 0 && periodIndex < STAT_PERIOD_TITLES.length
+      ? STAT_PERIOD_TITLES[periodIndex]
+      : "Период";
+  const now = new Date();
+
+  // Для "определённых" периодов без ввода пока даём подсказку.
+  if ([3, 4, 5, 7].includes(periodIndex)) {
+    return [
+      `📊 Статистика заказов • ${label}`,
+      "",
+      "Для этого режима нужен ввод даты/периода в чат.",
+      "Сделаю это следующим шагом (формат: 23.04.2026 или 04.2026 или 2026, период: 01.04.2026-23.04.2026).",
+    ].join("\n");
+  }
+
+  const from =
+    periodIndex === 0
+      ? startOfDay(now)
+      : periodIndex === 1
+        ? startOfMonth(now)
+        : periodIndex === 2
+          ? startOfYear(now)
+          : new Date(0);
+  const to = now;
+
+  const { count, turnoverSum, profitSum } = computeOrderStatsForRange(from.getTime(), to.getTime());
+
+  return [
+    `📊 Статистика заказов • ${label}`,
+    "",
+    `✅ Завершённых заказов: ${count}`,
+    `💵 Оборот: ${turnoverSum.toFixed(2)} RUB`,
+    `💰 Чистая прибыль: ${profitSum.toFixed(2)} RUB`,
+  ].join("\n");
+}
+
 function computeSupplyStatsForRange(fromMs: number, toMs: number) {
   const closed = listClosedSupplies().filter((s) => {
     const t = s.closedAtMs ?? 0;
@@ -498,9 +557,8 @@ function buildHistory50IntroText(page: number, pageCount: number): string {
     ].join("\n");
   }
   return [
-    "📋 Последние 50 заказов (полные данные, как в «Найти заказ»).",
-    "",
-    `Стр. ${page + 1} / ${pageCount} — нажмите заказ в кнопках ниже.`,
+    "📋 Последние 50 заказов:",
+    `Стр. ${page + 1} / ${pageCount}`,
   ].join("\n");
 }
 
@@ -1104,11 +1162,7 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
       clearAwaitingOrderLookup(ctx.from.id);
     }
     await ctx.answerCallbackQuery();
-    const text = [
-      "📊 Статистика заказов",
-      "",
-      "Выберите период (сейчас — демо, позже — из API):",
-    ].join("\n");
+    const text = "📊 Статистика заказов";
     const kb = buildOrderPeriodMenuKeyboard();
     try {
       await a.editMessageText(text, { reply_markup: kb });

@@ -10,9 +10,10 @@ import {
   getAdminOrderByIdFromStore,
   getHistory50PageCount as getHistory50PageCountFromStore,
   getHistory50Slice as getHistory50SliceFromStore,
+  getClosedOrders,
 } from "./orders-store.js";
 
-export { getActiveOrders };
+export { getActiveOrders, getClosedOrders };
 
 /** @deprecated используйте getActiveOrders — оставлено для старых импортов */
 export const ADMIN_ORDERS_MOCK: never[] = [];
