@@ -16,28 +16,42 @@ export const useLoginByInitData = (initDataString?: string) => {
         throw new Error("Invalid init data");
       }
 
-      const data: LoginByInitDataResponse = await new Promise((resolve) => {
-        setTimeout(() => {
-          resolve({
-            user: {
-              id: "1",
-              telegramId: "1",
-              name: "Faradey",
-              photoUrl: null,
-              level: 1,
-              balance: 0,
-              status: "Новичок",
-              currency: {
-                name: CURRENCY.RUB,
-                icon: "string",
-              },
-            },
-            token: "mock-token",
-            success: true,
-            message: "Login successful",
-          });
-        }, 500);
-      });
+      let balance = 0;
+      try {
+        let apiUrl = typeof window !== "undefined" && window.location?.origin ? window.location.origin : "";
+        if (import.meta.env.VITE_API_URL) apiUrl = import.meta.env.VITE_API_URL;
+        
+        const res = await fetch(`${apiUrl}/notify/sell-virt-webapp`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ initData: initDataString, action: "get_referral" }),
+        });
+        if (res.ok) {
+          const d = await res.json();
+          balance = d.balance || 0;
+        }
+      } catch (e) {
+        console.error("Failed to fetch balance", e);
+      }
+
+      const data: LoginByInitDataResponse = {
+        user: {
+          id: "1",
+          telegramId: "1",
+          name: "User",
+          photoUrl: null,
+          level: 1,
+          balance: balance,
+          status: "Новичок",
+          currency: {
+            name: CURRENCY.RUB,
+            icon: "string",
+          },
+        },
+        token: "mock-token",
+        success: true,
+        message: "Login successful",
+      };
 
       setLocalStorage(LOCAL_STORAGE_VARIABLES.TOKEN, data.token);
       return data;
