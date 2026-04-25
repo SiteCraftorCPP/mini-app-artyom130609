@@ -18,7 +18,7 @@ export const useAuthMe = (): UseQueryResult<User, Error> => {
             name: "Faradey",
             photoUrl: null,
             level: 1,
-            balance: 1,
+            balance: 0,
             status: "Новичок",
             currency: {
               name: CURRENCY.RUB,

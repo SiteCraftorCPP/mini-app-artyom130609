@@ -11,6 +11,7 @@ import { AccountOrderHistory } from "./ui/account-order-history";
 import { AccountOrderLookup } from "./ui/account-order-lookup";
 import { AccountOrderPeriodStats } from "./ui/account-order-period-stats";
 import { AccountOrderStats } from "./ui/account-order-stats";
+import { AccountReferral } from "./ui/account-referral";
 import { PopupAppHeader } from "@/widgets/popup-app";
 import { PopupApp } from "@/widgets/popup-app";
 
@@ -123,6 +124,10 @@ const renderAccountActionContent = ({
     ) : (
       <AccountOrderHistory onSelectOrder={setSelectedOrderId} />
     );
+  }
+
+  if (actionId === "referral") {
+    return <AccountReferral />;
   }
 
   return (

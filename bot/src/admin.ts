@@ -10,6 +10,7 @@ import {
 } from "./admin-orders-mock.js";
 import { parseRublesAmountFromUserText } from "./money-input.js";
 import { closeActiveOrder } from "./orders-store.js";
+import { addReferralBonus, changeBalanceAdmin, getAllReferralUsers, getReferralUser, getTopReferrals, getTransactions, searchReferralUser } from "./referrals-store.js";
 import {
   BTN_ADMIN_CURRENT_ORDERS,
   BTN_ADMIN_FIND_ORDER,
@@ -198,7 +199,9 @@ function adminMenuKeyboard() {
     .row()
     .text(BTN_ADMIN_BROADCASTS, CB.broadcasts)
     .row()
-    .text(BTN_ADMIN_SUPPLIES, CB.supplies);
+    .text(BTN_ADMIN_SUPPLIES, CB.supplies)
+    .row()
+    .text("🔗 Реферальная система", "ref:menu");
 }
 
 function formatDateTime(ms: number): string {
@@ -773,6 +776,9 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
     number,
     { step: "turnover" | "profit"; supplyId: string; turnoverRub?: number }
   >();
+  const awaitingRefSearchByUserId = new Set<number>();
+  const awaitingRefModTargetByUserId = new Set<number>();
+  const awaitingRefModAmountByUserId = new Map<number, { targetId: number }>();
 
   function clearAwaitingBroadcast(userId: number) {
     awaitingBroadcastTextByUserId.delete(userId);
@@ -801,6 +807,11 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
 
   function clearAwaitingSupplyClose(userId: number) {
     awaitingSupplyCloseByUserId.delete(userId);
+  }
+  function clearAwaitingRefActions(userId: number) {
+    awaitingRefSearchByUserId.delete(userId);
+    awaitingRefModTargetByUserId.delete(userId);
+    awaitingRefModAmountByUserId.delete(userId);
   }
 
   async function requireAdmin(
@@ -838,6 +849,7 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
       clearAwaitingOrderLookup(ctx.from.id);
       clearAwaitingSupplyCreate(ctx.from.id);
       clearAwaitingSupplyClose(ctx.from.id);
+      clearAwaitingRefActions(ctx.from.id);
     }
     await clearReplyKeyboard(a);
     await a.reply(BTN_ADMIN_MAIN, {
@@ -1153,6 +1165,107 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
 
     clearAwaitingBroadcast(adminId);
     await a.editMessageText("Рассылка отправлена", { reply_markup: backToAdminKeyboard() });
+  });
+
+
+  bot.callbackQuery("ref:menu", async (ctx) => {
+    const a = await requireAdmin(ctx);
+    if (!a) return;
+    if (ctx.from) clearAwaitingRefActions(ctx.from.id);
+    await ctx.answerCallbackQuery();
+    
+    const text = "🔗 Реферальная система\n\nВыберите раздел:";
+    const kb = new InlineKeyboard()
+      .text("📄 Транзакции", "ref:txs:0").row()
+      .text("🏆 Топ рефералов", "ref:top").row()
+      .text("💸 Снять/добавить баланс", "ref:mod").row()
+      .text("🔍 Найти пользователя", "ref:search").row()
+      .text("🔙 В админ-панель", CB.menu);
+      
+    try {
+      await a.editMessageText(text, { reply_markup: kb });
+    } catch {
+      await a.reply(text, { reply_markup: kb });
+    }
+  });
+
+  bot.callbackQuery(/^ref:txs:(\d+)$/, async (ctx) => {
+    const a = await requireAdmin(ctx);
+    if (!a) return;
+    await ctx.answerCallbackQuery();
+    const page = parseInt(ctx.match[1], 10) || 0;
+    const limit = 20;
+    const res = getTransactions(limit, page);
+    
+    let text = `📄 Транзакции (стр. ${page + 1} / ${res.totalPages || 1})\n\n`;
+    if (res.list.length === 0) text += "Транзакций пока нет.";
+    for (const tx of res.list) {
+      const dt = formatDateTime(tx.dateMs);
+      const sign = tx.type === "admin_sub" ? "-" : "+";
+      text += `• [${dt}] ID: ${tx.telegramUserId}\n  Сумма: ${sign}${tx.amount} RUB\n  ${tx.desc}\n\n`;
+    }
+    
+    const kb = new InlineKeyboard();
+    if (page > 0) kb.text("⬅️", `ref:txs:${page - 1}`);
+    if (page < res.totalPages - 1) kb.text("➡️", `ref:txs:${page + 1}`);
+    if (res.totalPages > 1) kb.row();
+    kb.text("🔙 Назад", "ref:menu");
+
+    try {
+      await a.editMessageText(text, { reply_markup: kb });
+    } catch {
+      await a.reply(text, { reply_markup: kb });
+    }
+  });
+
+  bot.callbackQuery("ref:top", async (ctx) => {
+    const a = await requireAdmin(ctx);
+    if (!a) return;
+    await ctx.answerCallbackQuery();
+    
+    const top = getTopReferrals(15);
+    let text = "🏆 Топ-15 рефералов по заработанному:\n\n";
+    if (top.length === 0) text += "Пока никого нет.";
+    top.forEach((u, i) => {
+      text += `${i + 1}. ${u.telegramUsername ? '@'+u.telegramUsername : 'ID '+u.telegramUserId} — заработал: ${u.earned.toFixed(2)} RUB\n`;
+    });
+    
+    const kb = new InlineKeyboard().text("🔙 Назад", "ref:menu");
+    try {
+      await a.editMessageText(text, { reply_markup: kb });
+    } catch {
+      await a.reply(text, { reply_markup: kb });
+    }
+  });
+
+  bot.callbackQuery("ref:mod", async (ctx) => {
+    const a = await requireAdmin(ctx);
+    if (!a) return;
+    if (ctx.from) awaitingRefModTargetByUserId.add(ctx.from.id);
+    await ctx.answerCallbackQuery();
+    
+    const text = "Отправьте юзернейм (с @ или без) или ID пользователя, которому нужно изменить баланс:";
+    const kb = new InlineKeyboard().text("❌ Отмена", "ref:menu");
+    try {
+      await a.editMessageText(text, { reply_markup: kb });
+    } catch {
+      await a.reply(text, { reply_markup: kb });
+    }
+  });
+
+  bot.callbackQuery("ref:search", async (ctx) => {
+    const a = await requireAdmin(ctx);
+    if (!a) return;
+    if (ctx.from) awaitingRefSearchByUserId.add(ctx.from.id);
+    await ctx.answerCallbackQuery();
+    
+    const text = "Отправьте юзернейм (с @ или без) или ID пользователя для поиска в реф. системе:";
+    const kb = new InlineKeyboard().text("❌ Отмена", "ref:menu");
+    try {
+      await a.editMessageText(text, { reply_markup: kb });
+    } catch {
+      await a.reply(text, { reply_markup: kb });
+    }
   });
 
   bot.callbackQuery(CB.stats, async (ctx) => {
@@ -1522,6 +1635,74 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
       return;
     }
 
+
+    if (awaitingRefSearchByUserId.has(ctx.from.id)) {
+      const text = ctx.message?.text?.trim() || "";
+      if (!text || text.startsWith("/")) return;
+      awaitingRefSearchByUserId.delete(ctx.from.id);
+      
+      const user = searchReferralUser(text);
+      if (!user) {
+        await ctx.reply("❌ Пользователь не найден в реферальной системе.", { reply_markup: new InlineKeyboard().text("🔙 Назад", "ref:menu") });
+        return;
+      }
+      
+      const msg = [
+        "👤 Информация по реф. системе:",
+        `ID: ${user.telegramUserId}`,
+        `Юзернейм: ${user.telegramUsername ? '@'+user.telegramUsername : '—'}`,
+        `Баланс: ${user.balance.toFixed(2)} RUB`,
+        `Всего заработано: ${user.earned.toFixed(2)} RUB`,
+        `Приглашено: ${user.invitedCount} чел.`,
+        `Кто пригласил его: ${user.referrerId ? user.referrerId : '—'}`,
+      ].join("\n");
+      await ctx.reply(msg, { reply_markup: new InlineKeyboard().text("🔙 Назад", "ref:menu") });
+      return;
+    }
+
+    if (awaitingRefModTargetByUserId.has(ctx.from.id)) {
+      const text = ctx.message?.text?.trim() || "";
+      if (!text || text.startsWith("/")) return;
+      
+      const user = searchReferralUser(text);
+      if (!user) {
+        await ctx.reply("❌ Пользователь не найден. Попробуйте другой юзернейм или ID:", { reply_markup: new InlineKeyboard().text("❌ Отмена", "ref:menu") });
+        return;
+      }
+      
+      awaitingRefModTargetByUserId.delete(ctx.from.id);
+      awaitingRefModAmountByUserId.set(ctx.from.id, { targetId: user.telegramUserId });
+      
+      const msg = [
+        `Выбран пользователь ${user.telegramUsername ? '@'+user.telegramUsername : 'ID '+user.telegramUserId}`,
+        `Текущий баланс: ${user.balance.toFixed(2)} RUB\n`,
+        "Отправьте сумму изменения (положительное число для зачисления, отрицательное со знаком минус для списания):"
+      ].join("\n");
+      await ctx.reply(msg, { reply_markup: new InlineKeyboard().text("❌ Отмена", "ref:menu") });
+      return;
+    }
+
+    const modAmountState = awaitingRefModAmountByUserId.get(ctx.from.id);
+    if (modAmountState) {
+      const text = ctx.message?.text?.trim() || "";
+      if (!text || text.startsWith("/")) return;
+      
+      const amount = parseFloat(text.replace(",", "."));
+      if (isNaN(amount) || amount === 0) {
+        await ctx.reply("❌ Неверная сумма. Введите число (например, 100 или -50):", { reply_markup: new InlineKeyboard().text("❌ Отмена", "ref:menu") });
+        return;
+      }
+      
+      awaitingRefModAmountByUserId.delete(ctx.from.id);
+      
+      const isAdd = amount > 0;
+      const absAmount = Math.abs(amount);
+      const newBal = changeBalanceAdmin(modAmountState.targetId, absAmount, isAdd, ctx.from.username || String(ctx.from.id));
+      
+      await ctx.reply(`✅ Баланс успешно изменен!\nНовый баланс пользователя: ${newBal.toFixed(2)} RUB`, { reply_markup: new InlineKeyboard().text("🔙 Назад", "ref:menu") });
+      return;
+    }
+
     const periodInput = awaitingPeriodInputByUserId.get(ctx.from.id);
     if (periodInput) {
       const text = ctx.message?.text?.trim() || "";
@@ -1748,9 +1929,13 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
       `Закрыт: ${formatDateTime(Date.now())}`,
       `Чистая прибыль: ${amountStr} RUB`,
     ].join(" · ");
+    const completedOrderTemp = getAdminOrderById(pendingOrderId);
     const moved = closeActiveOrder(pendingOrderId, closedAtLine, {
       profitRub: value,
     });
+    if (completedOrderTemp && completedOrderTemp.amountRub) {
+      addReferralBonus(Number(completedOrderTemp.telegramUserId), completedOrderTemp.amountRub, completedOrderTemp.publicOrderId ?? pendingOrderId);
+    }
     await ctx.reply(msgProfitSaved(pendingOrderId, amountStr), {
       reply_markup: backToAdminKeyboard(),
     });

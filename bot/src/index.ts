@@ -22,6 +22,7 @@ import {
 } from "./order-notify.js";
 import { ABOUT_SHOP, VIDEO_CAPTION, WELCOME } from "./texts.js";
 import { touchUserUsage } from "./user-usage-store.js";
+import { setReferrer } from "./referrals-store.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -226,7 +227,7 @@ bot.use(async (ctx, next) => {
     const member = await ctx.api.getChatMember(requiredChannelId, ctx.from.id);
     const isSubscribed = ["creator", "administrator", "member"].includes(member.status);
     if (!isSubscribed) {
-      const text = "❗️ Для использования бота необходимо подписаться на наш канал.";
+      const text = "❗️ Для использования бота необходимо подписаться на канал.";
       const kb = new InlineKeyboard()
         .url("Подписаться", requiredChannelUrl)
         .row()
@@ -251,10 +252,20 @@ bot.command("start", async (ctx) => {
   if (ctx.chat?.type === "private" && ctx.from?.id != null) {
     touchUserUsage(ctx.from.id);
   }
-  if (getStartPayload(ctx) === "sell") {
+  const payload = getStartPayload(ctx);
+  if (payload === "sell") {
     await sendSellVirtGuidance(ctx);
     return;
   }
+  
+  if (payload.startsWith("ref_")) {
+    const refIdStr = payload.replace("ref_", "");
+    const refId = parseInt(refIdStr, 10);
+    if (!isNaN(refId) && ctx.from) {
+      setReferrer(ctx.from.id, refId, ctx.from.username);
+    }
+  }
+
   await sendWelcome(ctx);
 });
 
