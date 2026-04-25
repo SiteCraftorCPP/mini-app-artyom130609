@@ -93,8 +93,8 @@ function resolveWelcomePhoto(): WelcomePhoto | null {
    */
   const candidates = [
     fromEnv && resolve(botRoot, fromEnv),
-    resolve(botRoot, "images", "welcome.jpg"),
-    resolve(botRoot, "images", "welcome.png"),
+    resolve(botRoot, "images", "photo_1.jpg"),
+    resolve(botRoot, "images", "photo_1.png"),
     resolve(botRoot, "images", "photo_2026-04-07_20-21-06.jpg"),
     resolve(repoRoot, "images", "photo_2026-04-07_20-21-06.jpg"),
   ].filter((p): p is string => Boolean(p));
