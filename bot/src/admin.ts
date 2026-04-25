@@ -354,10 +354,10 @@ function startOfYear(d: Date) {
 
 
 function getPeriodInputPrompt(idx: number) {
-  if (idx === 3) return "Введите дату в формате ДД.ММ.ГГГГ (например, 23.04.2026):";
-  if (idx === 4) return "Введите месяц в формате ММ.ГГГГ (например, 04.2026):";
-  if (idx === 5) return "Введите год в формате ГГГГ (например, 2026):";
-  return "Введите период в формате ДД.ММ.ГГГГ-ДД.ММ.ГГГГ (например, 01.04.2026-23.04.2026):";
+  if (idx === 3) return "Введите дату в формате ДД.ММ.ГГГГ:";
+  if (idx === 4) return "Введите месяц в формате ММ.ГГГГ:";
+  if (idx === 5) return "Введите год в формате ГГГГ:";
+  return "Введите период в формате ДД.ММ.ГГГГ-ДД.ММ.ГГГГ:";
 }
 
 function parsePeriodInput(text: string, periodIndex: number): { fromMs: number, toMs: number, label: string } | null {
@@ -415,7 +415,7 @@ function computeOrderStatsForRange(fromMs: number, toMs: number) {
     return 0;
   };
 
-  const closed = getClosedOrders().filter((o) => {
+  const closed = [...getActiveOrders(), ...getClosedOrders()].filter((o) => {
     const t = parseOrderDateMs(o);
     return t >= fromMs && t <= toMs;
   });
@@ -473,7 +473,7 @@ function buildOrderPeriodStatsMessage(periodIndex: number, customFromMs?: number
   const lines = [
     `📊 Статистика заказов • ${label}`,
     "",
-    `✅ Оборот (кол-во заказов): ${count}`,
+    `✅ Оформлено заказов (кол-во): ${count}`,
     `💵 Оборот (RUB): ${turnoverSum.toFixed(2)} RUB`,
     `💰 Чистая прибыль: ${profitSum.toFixed(2)} RUB`,
     "",
