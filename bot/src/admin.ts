@@ -164,18 +164,18 @@ function getStatsFromOrders(): { count: number; totalRub: number } {
 function buildStatsMessage(): string {
   const { count, totalRub } = getStatsFromOrders();
   return [
-    STATS_HEADER,
+    `💰 <b>${STATS_HEADER}</b>`,
     "",
-    "Общая сумма в рублях по всем заказам, которые сейчас в списке «актуальные» (это только справка, без подтверждения выдачи):",
-    `<b>${totalRub.toFixed(2)} RUB</b>`,
+    `📦 Количество заказов: <b>${count}</b>`,
+    `💵 Общая сумма: <b>${totalRub.toFixed(2)} RUB</b>`,
     "",
-    `Заказов в списке: ${count}.`,
+    "<i>В этом разделе отображаются только оплаченные заказы, ожидающие выдачи.</i>",
   ].join("\n");
 }
 
 function buildStatsKeyboard() {
   return new InlineKeyboard()
-    .text(BTN_STATS_VIEW_ORDERS, CB.list)
+    .text(BTN_STATS_VIEW_ORDERS, "admin:stats_list")
     .row()
     .text(BTN_STATS_BACK, CB.menu);
 }
@@ -554,7 +554,7 @@ function buildOrderPeriodResultKeyboard(): InlineKeyboard {
 
 function buildOrderDetailKeyboard(
   id: string,
-  mode: "list" | "find" | "hist50",
+  mode: "list" | "find" | "hist50" | "stats",
   histPage = 0,
 ) {
   const order = getAdminOrderById(id);
@@ -562,11 +562,14 @@ function buildOrderDetailKeyboard(
   const dCopy = cbCopy(id);
   assertCbData(dCopy);
   const kb = new InlineKeyboard().text(BTN_COPY_ORDER_DATA, dCopy).row();
-  if (!isClosed) {
+
+  // Кнопка выдачи НЕ показывается в режиме просмотра из статистики
+  if (!isClosed && mode !== "stats") {
     const dOk = cbOk(id);
     assertCbData(dOk);
     kb.text(BTN_CONFIRM_VIRT, dOk).row();
   }
+
   if (mode === "find") {
     assertCbData(CB.menu);
     kb.text(BTN_BACK_TO_ADMIN, CB.menu);
@@ -574,6 +577,9 @@ function buildOrderDetailKeyboard(
     const d = `ah:${histPage}`;
     assertCbData(d);
     kb.text(BTN_BACK_TO_HISTORY_50, d);
+  } else if (mode === "stats") {
+    assertCbData(CB.stats);
+    kb.text(BTN_BACK_TO_ORDER_LIST, CB.stats);
   } else {
     assertCbData(CB.list);
     kb.text(BTN_BACK_TO_ORDER_LIST, CB.list);
@@ -581,15 +587,16 @@ function buildOrderDetailKeyboard(
   return kb;
 }
 
-function buildOrderListKeyboard() {
+function buildOrderListKeyboard(mode: "list" | "stats" = "list") {
   const kb = new InlineKeyboard();
+  const cbPrefix = mode === "stats" ? "admin:sv:" : "admin:v:";
   for (const o of getActiveOrders()) {
-    const d = cbView(o.id);
+    const d = `${cbPrefix}${o.id}`;
     assertCbData(d);
     kb.text(formatListButtonLabel(o), d).row();
   }
-  assertCbData(CB.menu);
-  kb.text(BTN_BACK_TO_ADMIN, CB.menu);
+  const backCb = mode === "stats" ? CB.stats : CB.menu;
+  kb.text(BTN_BACK_TO_ADMIN, backCb).row();
   return kb;
 }
 
@@ -1005,10 +1012,40 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
     await ctx.answerCallbackQuery();
     const text = buildPendingOrdersListText();
     try {
-      await a.editMessageText(text, { reply_markup: buildOrderListKeyboard() });
+      await a.editMessageText(text, { reply_markup: buildOrderListKeyboard("list") });
     } catch (e) {
-      await a.reply(text, { reply_markup: buildOrderListKeyboard() });
+      await a.reply(text, { reply_markup: buildOrderListKeyboard("list") });
     }
+  });
+
+  bot.callbackQuery("admin:stats_list", async (ctx) => {
+    const a = await requireAdmin(ctx);
+    if (a == null) {
+      return;
+    }
+    await ctx.answerCallbackQuery();
+    const text = "📦 Список актуальных заказов (просмотр):";
+    await a.editMessageText(text, { reply_markup: buildOrderListKeyboard("stats") });
+  });
+
+  bot.callbackQuery(/^admin:sv:([^:\s]+)$/, async (ctx) => {
+    const a = await requireAdmin(ctx);
+    if (a == null) {
+      return;
+    }
+    const id = ctx.match[1] ?? "";
+    const order = getAdminOrderById(id);
+    if (!order) {
+      await ctx.answerCallbackQuery({ text: "Заказ не найден", show_alert: true });
+      return;
+    }
+    await ctx.answerCallbackQuery();
+    const html = buildOrderDetailHtml(order);
+    await a.editMessageText(html, {
+      parse_mode: "HTML",
+      link_preview_options: { is_disabled: true },
+      reply_markup: buildOrderDetailKeyboard(id, "stats"),
+    });
   });
 
   bot.callbackQuery(CB.find, async (ctx) => {
