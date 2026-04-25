@@ -79,3 +79,14 @@ export function getAllUserIds(): number[] {
   return ids;
 }
 
+export function getUserStatsForRange(fromMs: number, toMs: number) {
+  const store = loadStore();
+  let newUsers = 0;
+  let activeUsers = 0;
+  for (const v of Object.values(store.users)) {
+    if (v.firstSeenAt >= fromMs && v.firstSeenAt <= toMs) newUsers++;
+    if (v.lastSeenAt >= fromMs && v.lastSeenAt <= toMs) activeUsers++;
+  }
+  return { newUsers, activeUsers };
+}
+

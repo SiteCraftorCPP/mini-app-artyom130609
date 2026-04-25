@@ -48,7 +48,7 @@ import {
   msgProfitPrompt,
   msgProfitSaved,
 } from "./texts.js";
-import { getAllUserIds, getUniqueUserCount } from "./user-usage-store.js";
+import { getAllUserIds, getUniqueUserCount, getUserStatsForRange } from "./user-usage-store.js";
 import { sendOrderCompletedToBuyer } from "./order-notify.js";
 import {
   closeSupply,
@@ -515,18 +515,60 @@ function buildSuppliesStatsResultKeyboard() {
     .text(BTN_BACK_TO_ADMIN, CB.menu);
 }
 
-function buildUserStatsMessage(): string {
-  const count = getUniqueUserCount();
+function buildUserStatsMenuKeyboard() {
+  const kb = new InlineKeyboard();
+  for (let i = 0; i < STAT_PERIOD_TITLES.length; i += 1) {
+    const t = STAT_PERIOD_TITLES[i]!;
+    const d = `u:s${i}` as const;
+    assertCbData(d);
+    kb.text(t, d).row();
+  }
+  assertCbData(CB.menu);
+  kb.text(BTN_BACK_TO_ADMIN, CB.menu);
+  return kb;
+}
+
+function buildUserStatsResultMessage(periodIndex: number): string {
+  const label =
+    periodIndex >= 0 && periodIndex < STAT_PERIOD_TITLES.length
+      ? STAT_PERIOD_TITLES[periodIndex]
+      : "Период";
+  const now = new Date();
+
+  // Для "определённых" периодов без ввода пока даём подсказку.
+  if ([3, 4, 5, 7].includes(periodIndex)) {
+    return [
+      `👥 Статистика пользователей • ${label}`,
+      "",
+      "Ввод даты/периода пока в разработке.",
+    ].join("\n");
+  }
+
+  const from =
+    periodIndex === 0
+      ? startOfDay(now)
+      : periodIndex === 1
+        ? startOfMonth(now)
+        : periodIndex === 2
+          ? startOfYear(now)
+          : new Date(0);
+  const to = now;
+  const { newUsers, activeUsers } = getUserStatsForRange(from.getTime(), to.getTime());
+
   return [
-    "👥 Статистика пользователей",
+    `👥 Статистика пользователей • ${label}`,
     "",
-    `Пользователей воспользовалось ботом: ${count}`,
+    `✅ Новых пользователей: ${newUsers}`,
+    `🔥 Активных пользователей: ${activeUsers}`,
   ].join("\n");
 }
 
-function buildUserStatsKeyboard() {
-  assertCbData(CB.menu);
-  return new InlineKeyboard().text(BTN_BACK_TO_ADMIN, CB.menu);
+function buildUserStatsResultKeyboard() {
+  assertCbData(CB.userStats);
+  return new InlineKeyboard()
+    .text(BTN_STAT_PERIOD_CHOOSE, CB.userStats)
+    .row()
+    .text(BTN_BACK_TO_ADMIN, CB.menu);
 }
 
 type BroadcastPreset = {
@@ -1006,11 +1048,25 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
       clearAwaitingOrderLookup(ctx.from.id);
     }
     await ctx.answerCallbackQuery();
-    const text = buildUserStatsMessage();
+    const text = ["👥 Статистика пользователей", "", "Выберите период:"].join("\n");
     try {
-      await a.editMessageText(text, { reply_markup: buildUserStatsKeyboard() });
+      await a.editMessageText(text, { reply_markup: buildUserStatsMenuKeyboard() });
     } catch {
-      await a.reply(text, { reply_markup: buildUserStatsKeyboard() });
+      await a.reply(text, { reply_markup: buildUserStatsMenuKeyboard() });
+    }
+  });
+
+  bot.callbackQuery(/^u:s([0-7])$/, async (ctx) => {
+    const a = await requireAdmin(ctx);
+    if (a == null) return;
+    const idx = parseInt(ctx.match[1] ?? "0", 10);
+    await ctx.answerCallbackQuery();
+    const text = buildUserStatsResultMessage(idx);
+    const kb = buildUserStatsResultKeyboard();
+    try {
+      await a.editMessageText(text, { reply_markup: kb });
+    } catch {
+      await a.reply(text, { reply_markup: kb });
     }
   });
 
