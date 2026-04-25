@@ -21,20 +21,37 @@ export const AccountReferral = () => {
   const { data, isLoading, error } = useQuery({
     queryKey: ["referral-data"],
     queryFn: async () => {
-      if (!initDataString) throw new Error("No init data");
+      if (!initDataString) {
+        throw new Error("No init data: try opening from Telegram");
+      }
       
-      const apiUrl = typeof window !== "undefined" && window.location?.origin ? window.location.origin : "";
-      const res = await fetch(`${apiUrl}/notify/referral`, {
+      let apiUrl = typeof window !== "undefined" && window.location?.origin ? window.location.origin : "";
+      if (import.meta.env.VITE_API_URL) apiUrl = import.meta.env.VITE_API_URL;
+
+      const res = await fetch(`${apiUrl}/notify/sell-virt-webapp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ initData: initDataString }),
+        body: JSON.stringify({ initData: initDataString, action: "get_referral" }),
       });
       
-      if (!res.ok) throw new Error("Failed to load");
+      if (!res.ok) {
+        const errText = await res.text().catch(() => "Unknown error");
+        throw new Error(`HTTP ${res.status}: ${errText || res.statusText}`);
+      }
       return res.json();
     },
     enabled: !!initDataString,
   });
+
+  if (!initDataString) {
+    return (
+      <div className="px-4 pb-4">
+        <AppText variant="popupBody" size="popupBody">
+          Пожалуйста, откройте мини-приложение внутри Telegram, чтобы увидеть реферальную систему.
+        </AppText>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (
@@ -48,7 +65,8 @@ export const AccountReferral = () => {
     return (
       <div className="px-4 pb-4">
         <AppText variant="popupBody" size="popupBody">
-          Не удалось загрузить данные реферальной системы. Попробуйте позже.
+          Не удалось загрузить данные реферальной системы. 
+          Ошибка: {error instanceof Error ? error.message : String(error)}
         </AppText>
       </div>
     );
