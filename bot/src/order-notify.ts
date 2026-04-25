@@ -1,6 +1,6 @@
 import { createServer } from "node:http";
 import { randomInt } from "node:crypto";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { dirname, resolve, basename } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -218,9 +218,10 @@ export async function sendSellVirtMessage(
   try {
     if (photo?.type === "file") {
       console.info("[sell] sendPhoto", photo.path, "ref=", orderRef);
+      const buffer = readFileSync(photo.path);
       await bot.api.sendPhoto(
         telegramUserId,
-        new InputFile(photo.path),
+        new InputFile(buffer, basename(photo.path)),
         {
           caption,
           reply_markup,
@@ -424,9 +425,10 @@ export async function sendVirtOrderSuccess(
         });
       } else {
         console.info("[virt-order] sendPhoto заказа с диска", photo.path);
+        const buffer = readFileSync(photo.path);
         await bot.api.sendPhoto(
           payload.telegramUserId,
-          new InputFile(photo.path),
+          new InputFile(buffer, basename(photo.path)),
           { caption, reply_markup },
         );
       }
@@ -537,9 +539,10 @@ export async function sendOrderCompletedToBuyer(
         reply_markup,
       });
     } else {
+      const buffer = readFileSync(photo.path);
       await bot.api.sendPhoto(
         payload.telegramUserId,
-        new InputFile(photo.path),
+        new InputFile(buffer, basename(photo.path)),
         { caption, reply_markup },
       );
     }

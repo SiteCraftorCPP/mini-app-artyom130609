@@ -1,5 +1,5 @@
-import { existsSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { existsSync, readFileSync } from "node:fs";
+import { dirname, resolve, basename } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { config } from "dotenv";
@@ -164,7 +164,8 @@ async function sendWelcome(ctx: Context) {
   if (photo.type === "url") {
     await ctx.replyWithPhoto(photo.url, extra);
   } else {
-    await ctx.replyWithPhoto(new InputFile(photo.path), extra);
+    const buffer = readFileSync(photo.path);
+    await ctx.replyWithPhoto(new InputFile(buffer, basename(photo.path)), extra);
   }
 }
 
