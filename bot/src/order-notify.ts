@@ -387,6 +387,25 @@ function resolveVirtOrderCaptionAndKeyboard(
 /**
  * Уведомление после успешной покупки виртов (мини-апп → бэкенд вызывает HTTP, см. startOrderNotifyHttpServer).
  */
+
+async function retrySendPhoto(fn: () => Promise<void>, maxRetries = 10) {
+  let attempt = 0;
+  while (true) {
+    try {
+      await fn();
+      return;
+    } catch (err) {
+      attempt++;
+      if (attempt >= maxRetries) {
+        console.error(`[photo-retry] All ${maxRetries} attempts failed.`, err);
+        throw err;
+      }
+      console.warn(`[photo-retry] sendPhoto failed, retrying (${attempt}/${maxRetries})...`);
+      await new Promise(r => setTimeout(r, 3000));
+    }
+  }
+}
+
 export async function sendVirtOrderSuccess(
   bot: Bot,
   miniAppUrl: string,
@@ -416,30 +435,23 @@ export async function sendVirtOrderSuccess(
     );
     await sendTextOnly();
   } else {
-    try {
+    await retrySendPhoto(async () => {
       if (photo.type === "url") {
         console.info("[virt-order] sendPhoto по URL", photo.url.slice(0, 72));
-        await bot.api.sendPhoto(payload.telegramUserId, photo.url, {
-          caption,
-          reply_markup,
-        });
+        await bot.api.sendPhoto(payload.telegramUserId, photo.url, { caption, reply_markup });
       } else {
         console.info("[virt-order] sendPhoto заказа с диска", photo.path);
         const buffer = readFileSync(photo.path);
         await bot.api.sendPhoto(
           payload.telegramUserId,
           new InputFile(buffer, basename(photo.path)),
-          { caption, reply_markup },
+          { caption, reply_markup }
         );
       }
-    } catch (e) {
-      console.error("[virt-order] sendPhoto не удался — отправляю текст", e);
-      try {
-        await sendTextOnly();
-      } catch (err2) {
-        console.error("[virt-order] sendTextOnly тоже упал", err2);
-      }
-    }
+    }).catch(e => {
+      console.error("[virt-order] Фото так и не отправилось", e);
+      // Не отправляем текст, если фото не загрузилось, как просил клиент
+    });
   }
 
   try {
@@ -532,28 +544,20 @@ export async function sendOrderCompletedToBuyer(
     return;
   }
 
-  try {
+  await retrySendPhoto(async () => {
     if (photo.type === "url") {
-      await bot.api.sendPhoto(payload.telegramUserId, photo.url, {
-        caption,
-        reply_markup,
-      });
+      await bot.api.sendPhoto(payload.telegramUserId, photo.url, { caption, reply_markup });
     } else {
       const buffer = readFileSync(photo.path);
       await bot.api.sendPhoto(
         payload.telegramUserId,
         new InputFile(buffer, basename(photo.path)),
-        { caption, reply_markup },
+        { caption, reply_markup }
       );
     }
-  } catch (e) {
-    console.error("[order-complete] sendPhoto", e);
-    try {
-      await sendTextOnly();
-    } catch (err2) {
-      console.error("[order-complete] sendTextOnly тоже упал", err2);
-    }
-  }
+  }).catch(e => {
+    console.error("[order-complete] Фото так и не отправилось", e);
+  });
 }
 
 type NotifyBody = {
