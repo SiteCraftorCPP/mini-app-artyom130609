@@ -40,17 +40,21 @@ function loadEnv() {
 loadEnv();
 
 const token = process.env.TELEGRAM_BOT_TOKEN;
-const miniAppUrl =
-  process.env.MINI_APP_URL?.trim() ||
-  process.env.APP_DOMAIN?.trim() ||
-  "https://artshopvirts.space";
-
 if (!token) {
   console.error("TELEGRAM_BOT_TOKEN не задан в .env");
   process.exit(1);
 }
 
-const bot = new Bot(token);
+const bot = new Bot(token, {
+  client: {
+    apiRoot: process.env.TELEGRAM_API_ROOT || "https://api.telegram.org",
+  },
+});
+
+const miniAppUrl =
+  process.env.MINI_APP_URL?.trim() ||
+  process.env.APP_DOMAIN?.trim() ||
+  "https://artshopvirts.space";
 
 function resolveBotAdminIdSet(): Set<number> {
   const ids = new Set<number>();

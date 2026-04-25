@@ -1,7 +1,7 @@
 import { createServer } from "node:http";
 import { randomInt } from "node:crypto";
 import { existsSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { dirname, resolve, basename } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import type { Bot } from "grammy";
@@ -471,6 +471,14 @@ function resolveCompletedOrderReviewPhoto(): OrderSuccessPhoto | null {
       return { type: "file", path: p };
     } else {
       console.error("[order-complete] фото из env НЕ НАЙДЕНО по пути:", p);
+      // Попробуем поискать в папке images рядом с этим путем
+      const fileName = basename(p);
+      const repoRoot = resolve(__dirname, "../..");
+      const altPath = resolve(repoRoot, "images", fileName);
+      if (existsSync(altPath)) {
+        console.info("[order-complete] фото найдено по альтернативному пути:", altPath);
+        return { type: "file", path: altPath };
+      }
     }
   }
   for (const root of orderPhotoInstallRoots()) {
