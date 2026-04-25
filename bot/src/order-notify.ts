@@ -159,26 +159,26 @@ export function diagnoseOrderSuccessPhoto(): OrderSuccessPhotoDiag {
 }
 
 function resolveOrderSuccessPhoto(): OrderSuccessPhoto | null {
-  const diag = diagnoseOrderSuccessPhoto();
+  const fromEnv = process.env.ORDER_SUCCESS_IMAGE_PATH?.trim();
+  const botRoot = resolve(__dirname, "..");
 
+  if (fromEnv) {
+    const p = fromEnv.startsWith("/") ? fromEnv : resolve(botRoot, fromEnv);
+    if (existsSync(p)) {
+      console.info("[virt-order] фото заказа из env (найдено):", p);
+      return { type: "file", path: p };
+    } else {
+      console.error("[virt-order] фото заказа из env НЕ НАЙДЕНО по пути:", p);
+    }
+  }
+
+  const diag = diagnoseOrderSuccessPhoto();
   if (diag.firstExistingPath) {
-    console.info("[virt-order] фото заказа (файл):", diag.firstExistingPath);
+    console.info("[virt-order] фото заказа (авто-поиск):", diag.firstExistingPath);
     return { type: "file", path: diag.firstExistingPath };
   }
 
-  console.warn(
-    "[virt-order] фото заказа на диске не найдено. runtimeDirname=",
-    diag.runtimeDirname,
-    "botRoot=",
-    diag.botRoot,
-    "cwd=",
-    diag.cwd,
-    "кандидаты:",
-    diag.candidates,
-  );
-
   if (diag.urlFallback) {
-    console.info("[virt-order] фото заказа (URL):", diag.urlFallback.slice(0, 80));
     return { type: "url", url: diag.urlFallback };
   }
 
