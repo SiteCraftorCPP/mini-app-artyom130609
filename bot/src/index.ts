@@ -70,7 +70,7 @@ function resolveBotAdminIdSet(): Set<number> {
   if (single && /^\d+$/.test(single)) {
     ids.add(Number(single));
   }
-  const list = process.env.TELEGRAM_ADMIN_IDS?.trim();
+  const list = process.env.TELEGRAM_ADMIN_IDS?.trim() || process.env.VITE_ADMIN_TELEGRAM_IDS?.trim();
   if (list) {
     for (const part of list.split(/[\s,;]+/).map((s) => s.trim())) {
       if (/^\d+$/.test(part)) {
