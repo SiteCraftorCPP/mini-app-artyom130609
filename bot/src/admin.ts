@@ -370,7 +370,31 @@ function computeOrderStatsForRange(fromMs: number, toMs: number) {
   const count = closed.length;
   const turnoverSum = closed.reduce((acc, o) => acc + (o.amountRub ?? 0), 0);
   const profitSum = closed.reduce((acc, o) => acc + (o.profitRub ?? 0), 0);
-  return { count, turnoverSum, profitSum };
+  const avgCheck = count > 0 ? turnoverSum / count : 0;
+
+  let mostExpensiveOrder: AdminOrderRow | null = null;
+  for (const o of closed) {
+    if (!mostExpensiveOrder || (o.amountRub ?? 0) > (mostExpensiveOrder.amountRub ?? 0)) {
+      mostExpensiveOrder = o;
+    }
+  }
+
+  const buyers = new Map<string, { username: string; total: number }>();
+  for (const o of closed) {
+    const uid = String(o.telegramUserId);
+    const existing = buyers.get(uid) || { username: o.telegramUsername || "user", total: 0 };
+    existing.total += (o.amountRub ?? 0);
+    buyers.set(uid, existing);
+  }
+
+  let topBuyer: { username: string; total: number } | null = null;
+  for (const b of buyers.values()) {
+    if (!topBuyer || b.total > topBuyer.total) {
+      topBuyer = b;
+    }
+  }
+
+  return { count, turnoverSum, profitSum, avgCheck, mostExpensiveOrder, topBuyer };
 }
 
 function buildOrderPeriodStatsMessage(periodIndex: number): string {
@@ -399,15 +423,28 @@ function buildOrderPeriodStatsMessage(periodIndex: number): string {
           : new Date(0);
   const to = now;
 
-  const { count, turnoverSum, profitSum } = computeOrderStatsForRange(from.getTime(), to.getTime());
+  const { count, turnoverSum, profitSum, avgCheck, mostExpensiveOrder, topBuyer } = computeOrderStatsForRange(from.getTime(), to.getTime());
 
-  return [
+  const lines = [
     `📊 Статистика заказов • ${label}`,
     "",
-    `✅ Завершённых заказов: ${count}`,
-    `💵 Оборот: ${turnoverSum.toFixed(2)} RUB`,
+    `✅ Оборот (кол-во заказов): ${count}`,
+    `💵 Оборот (RUB): ${turnoverSum.toFixed(2)} RUB`,
     `💰 Чистая прибыль: ${profitSum.toFixed(2)} RUB`,
-  ].join("\n");
+    "",
+    `📈 Средний чек: ${avgCheck.toFixed(2)} RUB`,
+  ];
+
+  if (mostExpensiveOrder) {
+    lines.push(`🏆 Самый дорогой заказ: #${mostExpensiveOrder.publicOrderId} на ${mostExpensiveOrder.amountRub.toFixed(2)} RUB`);
+  }
+
+  if (topBuyer) {
+    const u = topBuyer.username.replace(/^@/, "");
+    lines.push(`👑 Самый платежеспособный покупатель: @${u} на ${topBuyer.total.toFixed(2)} RUB`);
+  }
+
+  return lines.join("\n");
 }
 
 function computeSupplyStatsForRange(fromMs: number, toMs: number) {
