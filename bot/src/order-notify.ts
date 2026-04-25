@@ -432,7 +432,11 @@ export async function sendVirtOrderSuccess(
       }
     } catch (e) {
       console.error("[virt-order] sendPhoto не удался — отправляю текст", e);
-      await sendTextOnly();
+      try {
+        await sendTextOnly();
+      } catch (err2) {
+        console.error("[virt-order] sendTextOnly тоже упал", err2);
+      }
     }
   }
 
@@ -541,7 +545,11 @@ export async function sendOrderCompletedToBuyer(
     }
   } catch (e) {
     console.error("[order-complete] sendPhoto", e);
-    await sendTextOnly();
+    try {
+      await sendTextOnly();
+    } catch (err2) {
+      console.error("[order-complete] sendTextOnly тоже упал", err2);
+    }
   }
 }
 
