@@ -215,37 +215,28 @@ export async function sendSellVirtMessage(
     });
   };
 
-  try {
-    if (photo?.type === "file") {
-      console.info("[sell] sendPhoto", photo.path, "ref=", orderRef);
+  if (!photo) {
+    console.warn(
+      "[sell] нет ORDER_SUCCESS фото — сообщение не отправлено.",
+    );
+    return;
+  }
+
+  await retrySendPhoto(async () => {
+    if (photo.type === "url") {
+      await bot.api.sendPhoto(telegramUserId, photo.url, { caption, reply_markup });
+    } else {
       const buffer = readFileSync(photo.path);
       await bot.api.sendPhoto(
         telegramUserId,
         new InputFile(buffer, basename(photo.path)),
-        {
-          caption,
-          reply_markup,
-        },
+        { caption, reply_markup }
       );
-    } else if (photo?.type === "url") {
-      await bot.api.sendPhoto(telegramUserId, photo.url, {
-        caption,
-        reply_markup,
-      });
-    } else {
-      console.warn(
-        "[sell] нет ORDER_SUCCESS фото — только текст (ORDER_SUCCESS_IMAGE_PATH / ORDER_SUCCESS_PHOTO_URL).",
-      );
-      await sendTextOnly();
     }
-  } catch (e) {
-    console.error("[sell] sendSellVirtMessage", e);
-    try {
-      await sendTextOnly();
-    } catch {
-      /* ignore */
-    }
-  }
+  }).catch(e => {
+    console.error("[sell] Фото так и не отправилось", e);
+    throw e;
+  });
 }
 
 function formatOrderNumberForCaption(orderNumber: string): string {
@@ -431,11 +422,12 @@ export async function sendVirtOrderSuccess(
 
   if (!photo) {
     console.warn(
-      "ORDER_SUCCESS: нет фото на диске и нет рабочего URL — только текст.",
+      "ORDER_SUCCESS: нет фото на диске и нет рабочего URL — сообщение не отправлено по вашему требованию.",
     );
-    await sendTextOnly();
-  } else {
-    await retrySendPhoto(async () => {
+    return;
+  }
+  
+  await retrySendPhoto(async () => {
       if (photo.type === "url") {
         console.info("[virt-order] sendPhoto по URL", photo.url.slice(0, 72));
         await bot.api.sendPhoto(payload.telegramUserId, photo.url, { caption, reply_markup });
@@ -450,9 +442,8 @@ export async function sendVirtOrderSuccess(
       }
     }).catch(e => {
       console.error("[virt-order] Фото так и не отправилось", e);
-      // Не отправляем текст, если фото не загрузилось, как просил клиент
+      throw e;
     });
-  }
 
   try {
     const row = await buildActiveOrderRow(bot, payload);
@@ -540,7 +531,7 @@ export async function sendOrderCompletedToBuyer(
 
   const photo = resolveCompletedOrderReviewPhoto();
   if (!photo) {
-    await sendTextOnly();
+    console.warn("ORDER_COMPLETE: нет фото на диске — сообщение не отправлено.");
     return;
   }
 
@@ -557,6 +548,7 @@ export async function sendOrderCompletedToBuyer(
     }
   }).catch(e => {
     console.error("[order-complete] Фото так и не отправилось", e);
+    throw e;
   });
 }
 
