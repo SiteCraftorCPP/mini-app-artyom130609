@@ -43,7 +43,7 @@ export const BTN_ORDER_PERIOD_STATS = "Статистика заказов";
 export const BTN_ADMIN_USER_STATS = "👥 Статистика пользователей";
 /** Седьмая: рассылки по базе пользователей. */
 export const BTN_ADMIN_BROADCASTS = "📣 Рассылка";
-export const BTN_BROADCAST_BUY_VIRTS = "🟢 Купить вирты";
+export const BTN_BROADCAST_BUY_VIRTS = "🟢 Открыть приложение";
 export const BTN_BROADCAST_BACK = "🔙 Назад";
 /** Восьмая: поставки. */
 export const BTN_ADMIN_SUPPLIES = "📦 Поставки";

@@ -600,63 +600,6 @@ function buildUserStatsResultKeyboard() {
     .text(BTN_BACK_TO_ADMIN, CB.menu);
 }
 
-type BroadcastPreset = {
-  key: string;
-  title: string;
-  body: string;
-};
-
-const BROADCAST_PRESETS: BroadcastPreset[] = [
-  {
-    key: "promo1",
-    title: "Рассылка #1 (шаблон)",
-    body: [
-      "📣 Рассылка",
-      "",
-      "Текст рассылки (шаблон).",
-      "Отредактируйте под себя в коде: bot/src/admin.ts",
-    ].join("\n"),
-  },
-  {
-    key: "promo2",
-    title: "Рассылка #2 (шаблон)",
-    body: [
-      "📣 Рассылка",
-      "",
-      "Второй шаблон рассылки.",
-      "Отредактируйте под себя в коде: bot/src/admin.ts",
-    ].join("\n"),
-  },
-];
-
-function buildBroadcastMenuText(): string {
-  return ["📣 Рассылка", "", "Выберите рассылку:"].join("\n");
-}
-
-function buildBroadcastMenuKeyboard() {
-  const kb = new InlineKeyboard();
-  for (const p of BROADCAST_PRESETS) {
-    const d = `admin:bc:${p.key}`;
-    assertCbData(d);
-    kb.text(p.title, d).row();
-  }
-  assertCbData(CB.menu);
-  kb.text(BTN_BACK_TO_ADMIN, CB.menu);
-  return kb;
-}
-
-function buildBroadcastPreviewKeyboard(miniAppUrl: string, presetKey: string) {
-  assertCbData(CB.broadcasts);
-  assertCbData(`admin:sbc:${presetKey}`);
-  return new InlineKeyboard()
-    .webApp(BTN_BROADCAST_BUY_VIRTS, miniAppUrl)
-    .row()
-    .text("🚀 Отправить рассылку", `admin:sbc:${presetKey}`)
-    .row()
-    .text(BTN_BROADCAST_BACK, CB.broadcasts)
-    .row()
-    .text(BTN_BACK_TO_ADMIN, CB.menu);
-}
 
 function buildHistory50IntroText(page: number, pageCount: number): string {
   if (pageCount === 0) {
@@ -815,6 +758,8 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
   /** Ожидание ввода чистой прибыли после «Подтвердить выдачу». */
   const awaitingProfitByUserId = new Map<number, string>();
   const awaitingPeriodInputByUserId = new Map<number, { statType: "order" | "user" | "supply"; periodIndex: number }>();
+  const awaitingBroadcastTextByUserId = new Map<number, boolean>();
+  const awaitingBroadcastConfirmMsgId = new Map<number, number>();
   const awaitingOrderLookup = new Set<number>();
   /** Новый ввод поставки: проект → сервер → вирты. */
   const awaitingSupplyCreateByUserId = new Map<
@@ -826,6 +771,11 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
     number,
     { step: "turnover" | "profit"; supplyId: string; turnoverRub?: number }
   >();
+
+  function clearAwaitingBroadcast(userId: number) {
+    awaitingBroadcastTextByUserId.delete(userId);
+    awaitingBroadcastConfirmMsgId.delete(userId);
+  }
 
   function clearAwaitingPeriodInput(userId: number) {
     awaitingPeriodInputByUserId.delete(userId);
@@ -877,6 +827,7 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
     if (ctx.from) {
       clearAwaitingProfit(ctx.from.id);
       clearAwaitingPeriodInput(ctx.from.id);
+      clearAwaitingBroadcast(ctx.from.id);
       clearAwaitingOrderLookup(ctx.from.id);
       clearAwaitingSupplyCreate(ctx.from.id);
       clearAwaitingSupplyClose(ctx.from.id);
@@ -895,6 +846,7 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
     if (ctx.from) {
       clearAwaitingProfit(ctx.from.id);
       clearAwaitingPeriodInput(ctx.from.id);
+      clearAwaitingBroadcast(ctx.from.id);
       clearAwaitingOrderLookup(ctx.from.id);
       clearAwaitingSupplyCreate(ctx.from.id);
       clearAwaitingSupplyClose(ctx.from.id);
@@ -911,6 +863,7 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
     if (ctx.from) {
       clearAwaitingProfit(ctx.from.id);
       clearAwaitingPeriodInput(ctx.from.id);
+      clearAwaitingBroadcast(ctx.from.id);
       clearAwaitingOrderLookup(ctx.from.id);
       clearAwaitingSupplyCreate(ctx.from.id);
       clearAwaitingSupplyClose(ctx.from.id);
@@ -1097,6 +1050,7 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
     if (ctx.from) {
       clearAwaitingProfit(ctx.from.id);
       clearAwaitingPeriodInput(ctx.from.id);
+      clearAwaitingBroadcast(ctx.from.id);
       clearAwaitingOrderLookup(ctx.from.id);
     }
     await ctx.answerCallbackQuery();
@@ -1133,73 +1087,38 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
     }
   });
 
-  bot.callbackQuery(CB.broadcasts, async (ctx) => {
-    const a = await requireAdmin(ctx);
-    if (a == null) {
-      return;
-    }
-    if (ctx.from) {
-      clearAwaitingProfit(ctx.from.id);
-      clearAwaitingPeriodInput(ctx.from.id);
-      clearAwaitingOrderLookup(ctx.from.id);
-    }
-    await ctx.answerCallbackQuery();
-    const text = buildBroadcastMenuText();
-    const kb = buildBroadcastMenuKeyboard();
-    try {
-      await a.editMessageText(text, { reply_markup: kb });
-    } catch {
-      await a.reply(text, { reply_markup: kb });
-    }
-  });
-
-  bot.callbackQuery(/^admin:bc:([a-zA-Z0-9_-]+)$/, async (ctx) => {
-    const a = await requireAdmin(ctx);
-    if (a == null) {
-      return;
-    }
-    if (ctx.from) {
-      clearAwaitingProfit(ctx.from.id);
-      clearAwaitingPeriodInput(ctx.from.id);
-      clearAwaitingOrderLookup(ctx.from.id);
-    }
-    const key = ctx.match[1] ?? "";
-    const preset = BROADCAST_PRESETS.find((p) => p.key === key);
-    await ctx.answerCallbackQuery();
-    if (!preset) {
-      await a.reply("Рассылка не найдена.", { reply_markup: backToAdminKeyboard() });
-      return;
-    }
-
-    const miniAppUrl =
-      process.env.MINI_APP_URL?.trim() ||
-      process.env.APP_DOMAIN?.trim() ||
-      "https://artshopvirts.space";
-
-    const count = getAllUserIds().length;
-    const text = [
-      preset.body,
-      "",
-      `Получателей в базе: ${count}`,
-      "",
-      "Кнопка ниже откроет мини-апп «Купить вирты».",
-    ].join("\n");
-
-    const kb = buildBroadcastPreviewKeyboard(miniAppUrl, key);
-    try {
-      await a.editMessageText(text, { reply_markup: kb });
-    } catch {
-      await a.reply(text, { reply_markup: kb });
-    }
-  });
-
-  bot.callbackQuery(/^admin:sbc:([a-zA-Z0-9_-]+)$/, async (ctx) => {
+    bot.callbackQuery(CB.broadcasts, async (ctx) => {
     const a = await requireAdmin(ctx);
     if (!a) return;
-    const key = ctx.match[1] ?? "";
-    const preset = BROADCAST_PRESETS.find((p) => p.key === key);
-    if (!preset) {
-      await ctx.answerCallbackQuery({ text: "Рассылка не найдена", show_alert: true });
+    if (ctx.from) {
+      clearAwaitingProfit(ctx.from.id);
+      clearAwaitingPeriodInput(ctx.from.id);
+      clearAwaitingOrderLookup(ctx.from.id);
+      clearAwaitingBroadcast(ctx.from.id);
+      awaitingBroadcastTextByUserId.set(ctx.from.id, true);
+    }
+    await ctx.answerCallbackQuery();
+    const text = [
+      "📣 Рассылка",
+      "",
+      "Отправьте сообщение (текст, фото, видео и т.д.), которое нужно разослать всем пользователям.",
+      "К сообщению автоматически добавится кнопка «Открыть приложение».",
+    ].join("\n");
+    const kb = new InlineKeyboard().text("❌ Отмена", CB.menu);
+    try {
+      await a.editMessageText(text, { reply_markup: kb });
+    } catch {
+      await a.reply(text, { reply_markup: kb });
+    }
+  });
+
+  bot.callbackQuery("admin:sbc", async (ctx) => {
+    const a = await requireAdmin(ctx);
+    if (!a) return;
+    const adminId = ctx.from!.id;
+    const msgId = awaitingBroadcastConfirmMsgId.get(adminId);
+    if (!msgId) {
+      await ctx.answerCallbackQuery({ text: "Сообщение не найдено. Начните заново.", show_alert: true });
       return;
     }
     await ctx.answerCallbackQuery();
@@ -1215,13 +1134,14 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
     (async () => {
       for (const uid of userIds) {
         try {
-          await bot.api.sendMessage(uid, preset.body, { reply_markup: kb });
+          await bot.api.copyMessage(uid, adminId, msgId, { reply_markup: kb });
         } catch {
           // ignore
         }
       }
     })();
 
+    clearAwaitingBroadcast(adminId);
     await a.editMessageText("Рассылка отправлена", { reply_markup: backToAdminKeyboard() });
   });
 
@@ -1233,6 +1153,7 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
     if (ctx.from) {
       clearAwaitingProfit(ctx.from.id);
       clearAwaitingPeriodInput(ctx.from.id);
+      clearAwaitingBroadcast(ctx.from.id);
       clearAwaitingOrderLookup(ctx.from.id);
     }
     await ctx.answerCallbackQuery();
@@ -1256,6 +1177,7 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
     if (ctx.from) {
       clearAwaitingProfit(ctx.from.id);
       clearAwaitingPeriodInput(ctx.from.id);
+      clearAwaitingBroadcast(ctx.from.id);
       clearAwaitingOrderLookup(ctx.from.id);
     }
     await ctx.answerCallbackQuery();
@@ -1305,6 +1227,7 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
     if (ctx.from) {
       clearAwaitingProfit(ctx.from.id);
       clearAwaitingPeriodInput(ctx.from.id);
+      clearAwaitingBroadcast(ctx.from.id);
       awaitingOrderLookup.add(ctx.from.id);
     }
     await ctx.answerCallbackQuery();
@@ -1325,6 +1248,7 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
     if (ctx.from) {
       clearAwaitingProfit(ctx.from.id);
       clearAwaitingPeriodInput(ctx.from.id);
+      clearAwaitingBroadcast(ctx.from.id);
       clearAwaitingOrderLookup(ctx.from.id);
     }
     await ctx.answerCallbackQuery();
@@ -1353,6 +1277,7 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
     if (ctx.from) {
       clearAwaitingProfit(ctx.from.id);
       clearAwaitingPeriodInput(ctx.from.id);
+      clearAwaitingBroadcast(ctx.from.id);
       clearAwaitingOrderLookup(ctx.from.id);
     }
     await ctx.answerCallbackQuery();
@@ -1373,6 +1298,7 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
     if (ctx.from) {
       clearAwaitingProfit(ctx.from.id);
       clearAwaitingPeriodInput(ctx.from.id);
+      clearAwaitingBroadcast(ctx.from.id);
       clearAwaitingOrderLookup(ctx.from.id);
     }
     const idx = parseInt(ctx.match[1] ?? "0", 10);
@@ -1405,6 +1331,7 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
     if (ctx.from) {
       clearAwaitingProfit(ctx.from.id);
       clearAwaitingPeriodInput(ctx.from.id);
+      clearAwaitingBroadcast(ctx.from.id);
       clearAwaitingOrderLookup(ctx.from.id);
     }
     const id = ctx.match[1] ?? "";
@@ -1436,6 +1363,7 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
     if (ctx.from) {
       clearAwaitingProfit(ctx.from.id);
       clearAwaitingPeriodInput(ctx.from.id);
+      clearAwaitingBroadcast(ctx.from.id);
       clearAwaitingOrderLookup(ctx.from.id);
     }
     const id = ctx.match[1] ?? "";
@@ -1514,6 +1442,7 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
     if (ctx.from) {
       clearAwaitingProfit(ctx.from.id);
       clearAwaitingPeriodInput(ctx.from.id);
+      clearAwaitingBroadcast(ctx.from.id);
     }
     await ctx.answerCallbackQuery();
     const text = [MSG_PROFIT_CANCELLED, "", BTN_ADMIN_MAIN].join("\n");
@@ -1546,6 +1475,26 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
     if (!adminIds.has(ctx.from.id)) {
       return next();
     }
+    
+    if (awaitingBroadcastTextByUserId.get(ctx.from.id)) {
+      clearAwaitingBroadcast(ctx.from.id);
+      const msgId = ctx.message.message_id;
+      awaitingBroadcastConfirmMsgId.set(ctx.from.id, msgId);
+
+      const miniAppUrl = process.env.MINI_APP_URL?.trim() || process.env.APP_DOMAIN?.trim() || "https://artshopvirts.space";
+      const kb = new InlineKeyboard().webApp(BTN_BROADCAST_BUY_VIRTS, miniAppUrl);
+
+      await ctx.reply("Вот так будет выглядеть сообщение:");
+      await ctx.copyMessage(ctx.chat.id, { reply_markup: kb });
+
+      const confirmKb = new InlineKeyboard()
+        .text("🚀 Отправить всем", "admin:sbc")
+        .row()
+        .text("❌ Отмена", CB.menu);
+      await ctx.reply("Отправить эту рассылку всем пользователям?", { reply_markup: confirmKb });
+      return;
+    }
+
     const periodInput = awaitingPeriodInputByUserId.get(ctx.from.id);
     if (periodInput) {
       const text = ctx.message?.text?.trim() || "";
@@ -1559,6 +1508,7 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
         return;
       }
       clearAwaitingPeriodInput(ctx.from.id);
+      clearAwaitingBroadcast(ctx.from.id);
 
       let msg = "";
       let kb: InlineKeyboard;
@@ -1749,6 +1699,7 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
     }
     clearAwaitingProfit(ctx.from.id);
       clearAwaitingPeriodInput(ctx.from.id);
+      clearAwaitingBroadcast(ctx.from.id);
     const amountStr = value.toFixed(2);
     const closedAtLine = [
       `Закрыт: ${formatDateTime(Date.now())}`,
