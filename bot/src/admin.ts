@@ -645,10 +645,13 @@ function buildBroadcastMenuKeyboard() {
   return kb;
 }
 
-function buildBroadcastPreviewKeyboard(miniAppUrl: string) {
+function buildBroadcastPreviewKeyboard(miniAppUrl: string, presetKey: string) {
   assertCbData(CB.broadcasts);
+  assertCbData(`admin:sbc:${presetKey}`);
   return new InlineKeyboard()
     .webApp(BTN_BROADCAST_BUY_VIRTS, miniAppUrl)
+    .row()
+    .text("🚀 Отправить рассылку", `admin:sbc:${presetKey}`)
     .row()
     .text(BTN_BROADCAST_BACK, CB.broadcasts)
     .row()
@@ -1182,12 +1185,44 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
       "Кнопка ниже откроет мини-апп «Купить вирты».",
     ].join("\n");
 
-    const kb = buildBroadcastPreviewKeyboard(miniAppUrl);
+    const kb = buildBroadcastPreviewKeyboard(miniAppUrl, key);
     try {
       await a.editMessageText(text, { reply_markup: kb });
     } catch {
       await a.reply(text, { reply_markup: kb });
     }
+  });
+
+  bot.callbackQuery(/^admin:sbc:([a-zA-Z0-9_-]+)$/, async (ctx) => {
+    const a = await requireAdmin(ctx);
+    if (!a) return;
+    const key = ctx.match[1] ?? "";
+    const preset = BROADCAST_PRESETS.find((p) => p.key === key);
+    if (!preset) {
+      await ctx.answerCallbackQuery({ text: "Рассылка не найдена", show_alert: true });
+      return;
+    }
+    await ctx.answerCallbackQuery();
+
+    const miniAppUrl =
+      process.env.MINI_APP_URL?.trim() ||
+      process.env.APP_DOMAIN?.trim() ||
+      "https://artshopvirts.space";
+
+    const kb = new InlineKeyboard().webApp(BTN_BROADCAST_BUY_VIRTS, miniAppUrl);
+    const userIds = getAllUserIds();
+
+    (async () => {
+      for (const uid of userIds) {
+        try {
+          await bot.api.sendMessage(uid, preset.body, { reply_markup: kb });
+        } catch {
+          // ignore
+        }
+      }
+    })();
+
+    await a.editMessageText("Рассылка отправлена", { reply_markup: backToAdminKeyboard() });
   });
 
   bot.callbackQuery(CB.stats, async (ctx) => {
