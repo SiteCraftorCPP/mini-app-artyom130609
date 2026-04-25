@@ -515,9 +515,9 @@ function resolveCompletedOrderReviewPhoto(): OrderSuccessPhoto | null {
  */
 export async function sendOrderCompletedToBuyer(
   bot: Bot,
-  payload: { telegramUserId: number; orderNumber: string },
+  payload: { telegramUserId: number; orderNumber: string; isAccount?: boolean; accountData?: string },
 ): Promise<void> {
-  const caption = buildOrderCompletedBuyerCaption(payload.orderNumber);
+  const caption = buildOrderCompletedBuyerCaption(payload.orderNumber, payload.isAccount, payload.accountData);
   const reply_markup = new InlineKeyboard().url(BTN_WRITE_REVIEW, REVIEW_POST_URL);
 
   const sendTextOnly = async () => {

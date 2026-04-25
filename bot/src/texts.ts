@@ -69,9 +69,19 @@ export const STATS_HEADER = "💰 Сумма текущих заказов в р
 export const BTN_WRITE_REVIEW = "🟢 Написать отзыв";
 export const REVIEW_POST_URL = "https://t.me/artshopvirts_channel/85";
 
-export function buildOrderCompletedBuyerCaption(orderNumber: string): string {
+export function buildOrderCompletedBuyerCaption(orderNumber: string, isAccount?: boolean, accountData?: string): string {
   const t = orderNumber.trim().replace(/^#+/, "");
   const ref = `#${t}`;
+  if (isAccount && accountData) {
+    return [
+      `✅ Заказ ${ref} успешно выполнен!`,
+      "",
+      "✅ Данные для входа в аккаунт:",
+      accountData,
+      "",
+      "🪙 Напишите отзыв — и к следующему заказу получите 200 000 бонусных виртов!",
+    ].join("\n");
+  }
   return [
     `✅ Заказ ${ref} успешно выполнен!`,
     "",

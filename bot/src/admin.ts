@@ -750,13 +750,15 @@ async function clearReplyKeyboard(ctx: Context) {
 }
 
 export function installAdminModule(bot: Bot, adminIds: Set<number>) {
-  const sendBuyerCompleted = (telegramUserId: number, orderNumber: string) => {
-    void sendOrderCompletedToBuyer(bot, { telegramUserId, orderNumber }).catch(
+  const sendBuyerCompleted = (telegramUserId: number, orderNumber: string, isAccount?: boolean, accountData?: string) => {
+    void sendOrderCompletedToBuyer(bot, { telegramUserId, orderNumber, isAccount, accountData }).catch(
       (e) => console.error("[order-complete] уведомление покупателю:", e),
     );
   };
   /** Ожидание ввода чистой прибыли после «Подтвердить выдачу». */
   const awaitingProfitByUserId = new Map<number, string>();
+  const awaitingAccountDataByUserId = new Map<number, string>();
+  const pendingAccountData = new Map<string, string>();
   const awaitingPeriodInputByUserId = new Map<number, { statType: "order" | "user" | "supply"; periodIndex: number }>();
   const awaitingBroadcastTextByUserId = new Map<number, boolean>();
   const awaitingBroadcastConfirmMsgId = new Map<number, number>();
@@ -779,6 +781,10 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
 
   function clearAwaitingPeriodInput(userId: number) {
     awaitingPeriodInputByUserId.delete(userId);
+  }
+
+  function clearAwaitingAccountData(userId: number) {
+    awaitingAccountDataByUserId.delete(userId);
   }
 
   function clearAwaitingProfit(userId: number) {
@@ -826,6 +832,7 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
     }
     if (ctx.from) {
       clearAwaitingProfit(ctx.from.id);
+      clearAwaitingAccountData(ctx.from.id);
       clearAwaitingPeriodInput(ctx.from.id);
       clearAwaitingBroadcast(ctx.from.id);
       clearAwaitingOrderLookup(ctx.from.id);
@@ -845,6 +852,7 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
     }
     if (ctx.from) {
       clearAwaitingProfit(ctx.from.id);
+      clearAwaitingAccountData(ctx.from.id);
       clearAwaitingPeriodInput(ctx.from.id);
       clearAwaitingBroadcast(ctx.from.id);
       clearAwaitingOrderLookup(ctx.from.id);
@@ -862,6 +870,7 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
     if (a == null) return;
     if (ctx.from) {
       clearAwaitingProfit(ctx.from.id);
+      clearAwaitingAccountData(ctx.from.id);
       clearAwaitingPeriodInput(ctx.from.id);
       clearAwaitingBroadcast(ctx.from.id);
       clearAwaitingOrderLookup(ctx.from.id);
@@ -1049,6 +1058,7 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
     }
     if (ctx.from) {
       clearAwaitingProfit(ctx.from.id);
+      clearAwaitingAccountData(ctx.from.id);
       clearAwaitingPeriodInput(ctx.from.id);
       clearAwaitingBroadcast(ctx.from.id);
       clearAwaitingOrderLookup(ctx.from.id);
@@ -1092,6 +1102,7 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
     if (!a) return;
     if (ctx.from) {
       clearAwaitingProfit(ctx.from.id);
+      clearAwaitingAccountData(ctx.from.id);
       clearAwaitingPeriodInput(ctx.from.id);
       clearAwaitingOrderLookup(ctx.from.id);
       clearAwaitingBroadcast(ctx.from.id);
@@ -1101,8 +1112,7 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
     const text = [
       "📣 Рассылка",
       "",
-      "Отправьте сообщение (текст, фото, видео и т.д.), которое нужно разослать всем пользователям.",
-      "К сообщению автоматически добавится кнопка «Открыть приложение».",
+      "Отправьте сообщение/фото:",
     ].join("\n");
     const kb = new InlineKeyboard().text("❌ Отмена", CB.menu);
     try {
@@ -1152,6 +1162,7 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
     }
     if (ctx.from) {
       clearAwaitingProfit(ctx.from.id);
+      clearAwaitingAccountData(ctx.from.id);
       clearAwaitingPeriodInput(ctx.from.id);
       clearAwaitingBroadcast(ctx.from.id);
       clearAwaitingOrderLookup(ctx.from.id);
@@ -1176,6 +1187,7 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
     }
     if (ctx.from) {
       clearAwaitingProfit(ctx.from.id);
+      clearAwaitingAccountData(ctx.from.id);
       clearAwaitingPeriodInput(ctx.from.id);
       clearAwaitingBroadcast(ctx.from.id);
       clearAwaitingOrderLookup(ctx.from.id);
@@ -1226,6 +1238,7 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
     }
     if (ctx.from) {
       clearAwaitingProfit(ctx.from.id);
+      clearAwaitingAccountData(ctx.from.id);
       clearAwaitingPeriodInput(ctx.from.id);
       clearAwaitingBroadcast(ctx.from.id);
       awaitingOrderLookup.add(ctx.from.id);
@@ -1247,6 +1260,7 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
     }
     if (ctx.from) {
       clearAwaitingProfit(ctx.from.id);
+      clearAwaitingAccountData(ctx.from.id);
       clearAwaitingPeriodInput(ctx.from.id);
       clearAwaitingBroadcast(ctx.from.id);
       clearAwaitingOrderLookup(ctx.from.id);
@@ -1276,6 +1290,7 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
     }
     if (ctx.from) {
       clearAwaitingProfit(ctx.from.id);
+      clearAwaitingAccountData(ctx.from.id);
       clearAwaitingPeriodInput(ctx.from.id);
       clearAwaitingBroadcast(ctx.from.id);
       clearAwaitingOrderLookup(ctx.from.id);
@@ -1297,6 +1312,7 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
     }
     if (ctx.from) {
       clearAwaitingProfit(ctx.from.id);
+      clearAwaitingAccountData(ctx.from.id);
       clearAwaitingPeriodInput(ctx.from.id);
       clearAwaitingBroadcast(ctx.from.id);
       clearAwaitingOrderLookup(ctx.from.id);
@@ -1330,6 +1346,7 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
     }
     if (ctx.from) {
       clearAwaitingProfit(ctx.from.id);
+      clearAwaitingAccountData(ctx.from.id);
       clearAwaitingPeriodInput(ctx.from.id);
       clearAwaitingBroadcast(ctx.from.id);
       clearAwaitingOrderLookup(ctx.from.id);
@@ -1362,6 +1379,7 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
     }
     if (ctx.from) {
       clearAwaitingProfit(ctx.from.id);
+      clearAwaitingAccountData(ctx.from.id);
       clearAwaitingPeriodInput(ctx.from.id);
       clearAwaitingBroadcast(ctx.from.id);
       clearAwaitingOrderLookup(ctx.from.id);
@@ -1426,12 +1444,20 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
     await ctx.answerCallbackQuery();
     const ref = order.publicOrderId ?? id;
     if (ctx.from) {
-      awaitingProfitByUserId.set(ctx.from.id, ref);
       clearAwaitingOrderLookup(ctx.from.id);
+      
+      if (order.categoryLabel === "Аккаунт") {
+        awaitingAccountDataByUserId.set(ctx.from.id, ref);
+        await a.reply("Введите данные для входа в аккаунт:\nСервер:\nNick-Name:\nПароль:", {
+          reply_markup: profitCancelKeyboard(),
+        });
+      } else {
+        awaitingProfitByUserId.set(ctx.from.id, ref);
+        await a.reply(msgProfitPrompt(ref), {
+          reply_markup: profitCancelKeyboard(),
+        });
+      }
     }
-    await a.reply(msgProfitPrompt(ref), {
-      reply_markup: profitCancelKeyboard(),
-    });
   });
 
   bot.callbackQuery(CB_PROFIT_Q, async (ctx) => {
@@ -1441,6 +1467,7 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
     }
     if (ctx.from) {
       clearAwaitingProfit(ctx.from.id);
+      clearAwaitingAccountData(ctx.from.id);
       clearAwaitingPeriodInput(ctx.from.id);
       clearAwaitingBroadcast(ctx.from.id);
     }
@@ -1488,7 +1515,7 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
       await ctx.copyMessage(ctx.chat.id, { reply_markup: kb });
 
       const confirmKb = new InlineKeyboard()
-        .text("🚀 Отправить всем", "admin:sbc")
+        .text("🚀 Отправить", "admin:sbc")
         .row()
         .text("❌ Отмена", CB.menu);
       await ctx.reply("Отправить эту рассылку всем пользователям?", { reply_markup: confirmKb });
@@ -1671,6 +1698,21 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
       });
       return;
     }
+    
+    const accountDataOrderRef = awaitingAccountDataByUserId.get(ctx.from.id);
+    if (accountDataOrderRef) {
+      const text = ctx.message?.text?.trim() || "";
+      if (!text || text.startsWith("/")) return;
+
+      pendingAccountData.set(accountDataOrderRef, text);
+      clearAwaitingAccountData(ctx.from.id);
+      awaitingProfitByUserId.set(ctx.from.id, accountDataOrderRef);
+
+      await ctx.reply(msgProfitPrompt(accountDataOrderRef), {
+        reply_markup: profitCancelKeyboard(),
+      });
+      return;
+    }
     const pendingOrderId = awaitingProfitByUserId.get(ctx.from.id);
     if (pendingOrderId === undefined) {
       return next();
@@ -1698,6 +1740,7 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
       return;
     }
     clearAwaitingProfit(ctx.from.id);
+      clearAwaitingAccountData(ctx.from.id);
       clearAwaitingPeriodInput(ctx.from.id);
       clearAwaitingBroadcast(ctx.from.id);
     const amountStr = value.toFixed(2);
@@ -1715,10 +1758,15 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
     if (completedOrder) {
       const uid = Number(completedOrder.telegramUserId);
       if (Number.isFinite(uid) && uid > 0) {
+        const isAccount = completedOrder.categoryLabel === "Аккаунт";
+        const accountData = pendingAccountData.get(pendingOrderId);
         sendBuyerCompleted(
           uid,
           completedOrder.publicOrderId ?? pendingOrderId,
+          isAccount,
+          accountData
         );
+        pendingAccountData.delete(pendingOrderId);
       }
     }
     console.info(
