@@ -924,7 +924,7 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
       awaitingSupplyCreateByUserId.set(ctx.from.id, { step: "project", draft: {} });
     }
     await ctx.answerCallbackQuery();
-    await a.reply("Введите проект (одним сообщением):", {
+    await a.reply("Введите проект:", {
       reply_markup: new InlineKeyboard().text(BTN_SUPPLIES_CANCEL_INPUT, CB_SUPPLY_CANCEL),
     });
   });
@@ -1197,7 +1197,6 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
       .text("📄 Транзакции", "ref:txs:0").row()
       .text("🏆 Топ рефералов", "ref:top").row()
       .text("💸 Снять/добавить баланс", "ref:mod").row()
-      .text("🔍 Найти пользователя", "ref:search").row()
       .text("🔙 В админ-панель", CB.menu);
       
     try {
@@ -1777,7 +1776,7 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
           step: "server",
           draft: supplyCreate.draft,
         });
-        await ctx.reply("Введите сервер (одним сообщением):", {
+        await ctx.reply("Введите сервер:", {
           reply_markup: new InlineKeyboard().text(BTN_SUPPLIES_CANCEL_INPUT, CB_SUPPLY_CANCEL),
         });
         return;
@@ -1788,7 +1787,7 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
           step: "virts",
           draft: supplyCreate.draft,
         });
-        await ctx.reply("Введите количество виртов (числом):", {
+        await ctx.reply("Введите количество виртов:", {
           reply_markup: new InlineKeyboard().text(BTN_SUPPLIES_CANCEL_INPUT, CB_SUPPLY_CANCEL),
         });
         return;
