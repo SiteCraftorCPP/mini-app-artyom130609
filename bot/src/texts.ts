@@ -94,13 +94,7 @@ export const MSG_PROFIT_CANCELLED = "Ввод прибыли отменён.";
 
 export const BTN_CANCEL_PROFIT_INPUT = "❌ Отмена";
 
-export const MSG_ORDER_LOOKUP_PROMPT = [
-  "Введите номер заказа (как в уведомлении о заказе, можно с #).",
-  "",
-  "Покажем все данные по заказу. Если он уже выполнен — время закрытия тоже.",
-  "",
-  "Выйти из режима поиска — кнопка «В админ-панель» внизу.",
-].join("\n");
+export const MSG_ORDER_LOOKUP_PROMPT = "Введите номер заказа:";
 export const MSG_ORDER_NOT_FOUND = "Заказ с таким номером не найден. Проверьте ввод и попробуйте снова.";
 export const MSG_ORDER_LOOKUP_CANCELLED = "Поиск отменён.";
 
