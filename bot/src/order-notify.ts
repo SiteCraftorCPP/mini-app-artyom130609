@@ -680,7 +680,8 @@ export function startOrderNotifyHttpServer(
       req.method === "OPTIONS" &&
       (url === "/notify/virt-order-webapp" ||
         url === "/notify/sell-virt-webapp" ||
-        url === "/notify/virt-order-success")
+        url === "/notify/virt-order-success" ||
+        url === "/notify/referral")
     ) {
       res.writeHead(204, corsNotifyHeaders).end();
       return;
@@ -739,6 +740,41 @@ export function startOrderNotifyHttpServer(
       return;
     }
 
+
+    if (req.method === "POST" && url === "/notify/referral") {
+      if (!botToken) {
+        res.writeHead(503, corsNotifyHeaders).end("no bot token");
+        return;
+      }
+      try {
+        const body = await readJsonBody<{ initData: string }>(req);
+        if (typeof body.initData !== "string") {
+          res.writeHead(400, corsNotifyHeaders).end("bad body");
+          return;
+        }
+        const telegramUserId = getTelegramUserIdFromWebAppInitData(body.initData, botToken);
+        if (telegramUserId === null) {
+          res.writeHead(401, corsNotifyHeaders).end("bad initData");
+          return;
+        }
+        
+        const refUser = getReferralUser(telegramUserId);
+        const botUsername = process.env.VITE_BOT_ADDRESS?.trim() || "MiniAppArtyom130609_BOT";
+        const refLink = `https://t.me/${botUsername}?start=ref_${telegramUserId}`;
+
+        res.writeHead(200, { "Content-Type": "application/json", ...corsNotifyHeaders });
+        res.end(JSON.stringify({ 
+          ok: true, 
+          balance: refUser.balance, 
+          earned: refUser.earned, 
+          invitedCount: refUser.invitedCount,
+          link: refLink
+        }));
+      } catch (e) {
+        res.writeHead(500, corsNotifyHeaders).end("error");
+      }
+      return;
+    }
     if (req.method === "POST" && url === "/notify/sell-virt-webapp") {
       if (!botToken) {
         res.writeHead(503, corsNotifyHeaders).end("no bot token");

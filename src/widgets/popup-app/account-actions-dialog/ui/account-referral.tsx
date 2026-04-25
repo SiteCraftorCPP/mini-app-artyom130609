@@ -13,7 +13,7 @@ export const AccountReferral = () => {
       if (!initDataString) throw new Error("No init data");
       
       const apiUrl = import.meta.env.VITE_API_URL || "";
-      const res = await fetch(`${apiUrl}/api/referral`, {
+      const res = await fetch(`${apiUrl}/notify/referral`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ initData: initDataString }),
