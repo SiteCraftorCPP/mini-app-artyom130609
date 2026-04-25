@@ -558,8 +558,7 @@ function buildUserStatsResultMessage(periodIndex: number): string {
   return [
     `👥 Статистика пользователей • ${label}`,
     "",
-    `✅ Новых пользователей: ${newUsers}`,
-    `🔥 Активных пользователей: ${activeUsers}`,
+    `Пользователей воспользовалось ботом: ${activeUsers}`,
   ].join("\n");
 }
 
