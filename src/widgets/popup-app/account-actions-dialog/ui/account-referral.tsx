@@ -83,7 +83,7 @@ export const AccountReferral = () => {
           <AppText className="text-xs break-all" variant="primaryStrong" size="small">{data.link}</AppText>
           <button 
             onClick={() => copyText(data.link)}
-            className="mt-1 px-3 py-1 bg-[#00FF00]/10 text-[#00FF00] rounded text-xs"
+            className="mt-1 touch-manipulation select-none rounded bg-[#00FF00]/10 px-3 py-1 text-xs text-[#00FF00] transition-all duration-150 active:[transform:translate3d(0,1px,0)_scale(0.985)] active:brightness-90"
           >
             Скопировать
           </button>

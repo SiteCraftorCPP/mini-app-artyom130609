@@ -456,6 +456,12 @@ body {
   font-family: var(--font-montserrat);
 }
 
+/* Мини-апп: без системной вспышки; обратная связь — в классах (Button / active) */
+button,
+[data-slot="button"] {
+  -webkit-tap-highlight-color: transparent;
+}
+
 body::-webkit-scrollbar {
   display: none;
 }

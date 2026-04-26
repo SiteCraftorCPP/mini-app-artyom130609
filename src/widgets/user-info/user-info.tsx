@@ -60,7 +60,7 @@ export const UserInfo = () => {
             type="button"
             onClick={() => fileInputRef.current?.click()}
             title={ACCOUNT_PAGE_TEXT.changeProfilePhoto}
-            className="bg-surface-inverse text-text-primary focus-visible:ring-primary flex size-35 shrink-0 items-center justify-center overflow-hidden rounded-full ring-offset-2 focus-visible:ring-2 focus-visible:ring-offset-surface-void focus-visible:outline-none"
+            className="bg-surface-inverse text-text-primary focus-visible:ring-primary flex size-35 shrink-0 select-none touch-manipulation items-center justify-center overflow-hidden rounded-full ring-offset-2 transition-all duration-150 active:[transform:translate3d(0,1px,0)_scale(0.985)] active:brightness-95 focus-visible:ring-2 focus-visible:ring-offset-surface-void focus-visible:outline-none"
           >
             {displayPhotoUrl ? (
               <img

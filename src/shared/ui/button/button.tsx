@@ -5,34 +5,34 @@ import * as React from "react";
 import { cn } from "@/shared/utils";
 
 const buttonVariants = cva(
-  "hover:cursor-pointer inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all outline-none disabled:pointer-events-none disabled:opacity-50 focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 [&_svg]:pointer-events-none [&_svg]:shrink-0  dark:aria-invalid:ring-destructive/40",
+  "hover:cursor-pointer inline-flex shrink-0 select-none touch-manipulation items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium outline-none transition-all duration-150 ease-out active:[transform:translate3d(0,1px,0)_scale(0.985)] disabled:pointer-events-none disabled:opacity-50 focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 [&_svg]:pointer-events-none [&_svg]:shrink-0 dark:aria-invalid:ring-destructive/40",
   {
     variants: {
       variant: {
         default:
-          "bg-primary text-primary-foreground shadow-xs hover:bg-primary/90",
+          "bg-primary text-primary-foreground shadow-xs hover:bg-primary/90 active:bg-primary/80 active:shadow-sm",
         accountMenu:
-          "tw-bg-gradient-badge-background w-full justify-start rounded-[16px] border  text-white shadow-[0_8px_20px_var(--app-shadow)] hover:brightness-110",
+          "tw-bg-gradient-badge-background w-full justify-start rounded-[16px] border  text-white shadow-[0_8px_20px_var(--app-shadow)] hover:brightness-110 active:brightness-90",
         brand:
-          "tw-bg-gradient-home-action-primary text-app-highlight-foreground shadow-[0_10px_30px_var(--app-shadow)] hover:brightness-105",
-        faq: "group w-full justify-start overflow-hidden rounded-[6px] bg-white text-left text-text-dark-cyan shadow-none duration-200 hover:tw-bg-gradient-badge-background hover:text-white hover:brightness-105 [&_svg_*]:fill-current",
+          "tw-bg-gradient-home-action-primary text-app-highlight-foreground shadow-[0_10px_30px_var(--app-shadow)] hover:brightness-105 active:brightness-90",
+        faq: "group w-full justify-start overflow-hidden rounded-[6px] bg-white text-left text-text-dark-cyan shadow-none duration-200 hover:tw-bg-gradient-badge-background hover:text-white hover:brightness-105 active:brightness-90 active:[&_svg_*]:text-white/95 [&_svg_*]:fill-current",
         ghost:
-          "hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50",
-        link: "tw-bg-gradient-badge-background text-primary border  rounded-[50px]",
-        menu: "inline-flex rounded-[16px] border transition",
+          "hover:bg-accent hover:text-accent-foreground active:bg-accent/80 dark:hover:bg-accent/50 dark:active:bg-accent/40",
+        link: "tw-bg-gradient-badge-background text-primary border  rounded-[50px] active:brightness-90",
+        menu: "inline-flex rounded-[16px] border transition active:brightness-90",
         popupSubmit:
-          "tw-bg-popup-submit border border-app-border-soft text-white shadow-[0_8px_20px_var(--app-shadow)] hover:brightness-110",
+          "tw-bg-popup-submit border border-app-border-soft text-white shadow-[0_8px_20px_var(--app-shadow)] hover:brightness-110 active:brightness-90",
         support:
-          "bg-background-card w-full justify-start rounded-[8px] text-white shadow-[0_8px_20px_var(--app-shadow)] hover:brightness-110",
+          "bg-background-card w-full justify-start rounded-[8px] text-white shadow-[0_8px_20px_var(--app-shadow)] hover:brightness-110 active:brightness-90",
         virtCard:
-          "tw-bg-gradient-virt-card-border h-auto w-full justify-start overflow-hidden rounded-[12px] p-px text-left whitespace-normal hover:brightness-105",
+          "tw-bg-gradient-virt-card-border h-auto w-full justify-start overflow-hidden rounded-[12px] p-px text-left whitespace-normal hover:brightness-105 active:brightness-90",
         accouuntVirt: "flex-col gap-1 rounded-[6px] p-0 justify-start",
       },
       menuState: {
         active:
-          "border-none tw-bg-gradient-bottom-nav text-app-highlight-foreground shadow-[var(--shadow-nav-active)] [&_svg_*]:fill-current",
+          "border-none tw-bg-gradient-bottom-nav text-app-highlight-foreground shadow-[var(--shadow-nav-active)] active:brightness-95 [&_svg_*]:fill-current",
         default:
-          "border-white/18 bg-app-icon-panel text-app-nav-idle shadow-[var(--shadow-surface-soft)] [&_svg_*]:fill-current",
+          "border-white/18 bg-app-icon-panel text-app-nav-idle shadow-[var(--shadow-surface-soft)] active:brightness-90 [&_svg_*]:fill-current",
         none: "bg-transparant border-none",
       },
       size: {
