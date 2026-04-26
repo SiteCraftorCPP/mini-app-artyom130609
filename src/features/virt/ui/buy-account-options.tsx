@@ -16,6 +16,8 @@ import {
 } from "@/shared/constants/text";
 import { formatNumberWithSpaces } from "@/shared/lib/format-numbers";
 
+import { PaymentMethodDialog } from "@/features/payment/payment-method-dialog";
+
 import {
   type BuyAccountModeConfig,
   useBuyAccountOptions,
@@ -46,6 +48,11 @@ export const BuyAccountOptions = ({
     setSelectedOption,
     setServer,
     server,
+    paymentOpen,
+    setPaymentOpen,
+    paymentContext,
+    paymentAmountRub,
+    initData,
   } = useBuyAccountOptions({ onBackStateChange, virt });
 
   const selectedOptionLabel = selectedOption
@@ -147,6 +154,13 @@ export const BuyAccountOptions = ({
           })}
         </div>
       )}
+      <PaymentMethodDialog
+        open={paymentOpen}
+        onOpenChange={setPaymentOpen}
+        initData={initData}
+        amountRub={paymentAmountRub}
+        context={paymentContext}
+      />
     </div>
   );
 };

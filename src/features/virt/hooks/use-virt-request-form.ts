@@ -12,8 +12,8 @@ import { useForm } from "react-hook-form";
 import { DEFAULT } from "@/shared/constants/default";
 import { VIRT_FORM_TEXT } from "@/shared/constants/text";
 import { formatNumberWithSpaces } from "@/shared/lib/format-numbers";
-import { showErrorMessage, showSuccessMessage } from "@/shared/lib/notify";
-import { notifyVirtOrderSuccessFromMiniApp } from "@/shared/lib/telegram-virt-order-notify";
+import { showErrorMessage } from "@/shared/lib/notify";
+import { type PaymentDialogContext } from "@/features/payment/payment-method-dialog";
 
 import {
   type VirtRequestFormValues,
@@ -22,7 +22,7 @@ import {
   createVirtRequestSchema,
 } from "../model";
 
-import { type Virt, useSubmitVirtRequest } from "@/entities/virt";
+import { type Virt } from "@/entities/virt";
 import { useGetPromoCodes } from "@/entities/promo-code";
 
 const getDefaultAmountRub = () => "";
@@ -54,7 +54,9 @@ export const useVirtRequestForm = ({ virt }: UseVirtRequestFormParams) => {
     resolver: zodResolver(createVirtRequestSchema(virt.minAmountRub)),
     defaultValues: getDefaultValues(virt),
   });
-  const submitVirtRequest = useSubmitVirtRequest();
+  const [paymentOpen, setPaymentOpen] = useState(false);
+  const [paymentContext, setPaymentContext] = useState<PaymentDialogContext | null>(null);
+  const [paymentAmountRub, setPaymentAmountRub] = useState(0);
   const amountRubInputRef = useRef(String(getDefaultAmountRub()));
   const amountVirtInputRef = useRef(String(getDefaultAmountVirts()));
   const lastEditedAmountFieldRef = useRef<AmountFieldName>("amountRub");
@@ -152,33 +154,23 @@ export const useVirtRequestForm = ({ virt }: UseVirtRequestFormParams) => {
     [form],
   );
 
-  const submitVirtRequestForm = async (values: VirtRequestFormValues) => {
-    try {
-      const result = await submitVirtRequest.mutateAsync({
-        accountNumber: values.accountNumber,
-        amountRub: Number(values.amountRub),
-        amountVirts: Number(values.amountVirts),
-        id: virt.id,
-        promoCode: values.promoCode ?? "",
-        server: values.server,
-      });
-
-      showSuccessMessage(VIRT_FORM_TEXT.paymentSuccess);
-      void notifyVirtOrderSuccessFromMiniApp(webApp, {
-        orderKind: "virt",
-        orderId: result.orderId,
-        orderNumber: result.orderNumber,
-        game: virt.name,
-        server: values.server,
-        bankAccount: values.accountNumber,
-        amountRub: Number(values.amountRub),
-        virtAmountLabel: formatNumberWithSpaces(values.amountVirts),
-        transferMethod: "Оплата в мини-аппе",
-        promoCode: values.promoCode ?? "",
-      });
-    } catch {
-      showErrorMessage(VIRT_FORM_TEXT.paymentError);
+  const openPaymentAfterValidation = (values: VirtRequestFormValues) => {
+    const ar = Number(values.amountRub);
+    if (!Number.isFinite(ar) || ar <= 0) {
+      showErrorMessage(VIRT_FORM_TEXT.amountRubRequired);
+      return;
     }
+    setPaymentAmountRub(ar);
+    setPaymentContext({
+      orderKind: "virt",
+      game: virt.name,
+      server: values.server,
+      bankAccount: values.accountNumber,
+      virtAmountLabel: formatNumberWithSpaces(String(values.amountVirts)),
+      transferMethod: "Покупка виртов, мини-апп",
+      promoCode: values.promoCode?.trim() ?? "",
+    });
+    setPaymentOpen(true);
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -219,7 +211,7 @@ export const useVirtRequestForm = ({ virt }: UseVirtRequestFormParams) => {
       shouldValidate: true,
     });
 
-    await form.handleSubmit(submitVirtRequestForm)(event);
+    await form.handleSubmit(openPaymentAfterValidation)(event);
   };
 
   return {
@@ -232,9 +224,14 @@ export const useVirtRequestForm = ({ virt }: UseVirtRequestFormParams) => {
     lastEditedForAmount,
     initialAmountRub: getDefaultAmountRub(),
     initialAmountVirts: getDefaultAmountVirts(),
-    isSubmitting: submitVirtRequest.isPending,
+    isSubmitting: false,
     effectiveExchangeRate,
     activePromoCode,
     lockVirtsForPromo,
+    paymentOpen,
+    setPaymentOpen,
+    paymentContext,
+    paymentAmountRub,
+    initData: webApp?.initData?.trim() ?? "",
   };
 };

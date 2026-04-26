@@ -21,6 +21,8 @@ import {
   SelectValue,
 } from "@/shared/ui/select";
 
+import { PaymentMethodDialog } from "@/features/payment/payment-method-dialog";
+
 import { useVirtRequestForm } from "../../hooks";
 
 import {
@@ -50,7 +52,13 @@ export const VirtRequestForm = ({ virt }: VirtRequestFormProps) => {
     activePromoCode,
     lastEditedForAmount,
     lockVirtsForPromo,
+    paymentOpen,
+    setPaymentOpen,
+    paymentContext,
+    paymentAmountRub,
+    initData,
   } = useVirtRequestForm({ virt });
+  const formSubmitting = form.formState.isSubmitting;
 
   return (
     <div className="flex flex-1 flex-col gap-3 px-4 pb-4 h-full">
@@ -197,10 +205,10 @@ export const VirtRequestForm = ({ virt }: VirtRequestFormProps) => {
               type="submit"
               variant="popupSubmit"
               size="popupSubmit"
-              disabled={isSubmitting}
+              disabled={isSubmitting || formSubmitting}
             >
               <AppText tag={TAG.div} variant="heroButton" size="small">
-                {isSubmitting
+                {formSubmitting
                   ? VIRT_FORM_TEXT.submitPending
                   : VIRT_FORM_TEXT.submit}
               </AppText>
@@ -208,6 +216,13 @@ export const VirtRequestForm = ({ virt }: VirtRequestFormProps) => {
           </div>
         </form>
       </Form>
+      <PaymentMethodDialog
+        open={paymentOpen}
+        onOpenChange={setPaymentOpen}
+        initData={initData}
+        amountRub={paymentAmountRub}
+        context={paymentContext}
+      />
     </div>
   );
 };

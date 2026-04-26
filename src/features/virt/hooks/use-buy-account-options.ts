@@ -1,12 +1,8 @@
 import { useWebApp } from "@vkruglikov/react-telegram-web-app";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import {
-  BUY_ACCOUNT_OPTIONS_TEXT,
-  VIRT_FORM_TEXT,
-} from "@/shared/constants/text";
-import { showErrorMessage, showSuccessMessage } from "@/shared/lib/notify";
-import { notifyVirtOrderSuccessFromMiniApp } from "@/shared/lib/telegram-virt-order-notify";
+import type { PaymentDialogContext } from "@/features/payment/payment-method-dialog";
+import { BUY_ACCOUNT_OPTIONS_TEXT } from "@/shared/constants/text";
 
 import SortLevelIcon from "@/assets/icon/sort-level.svg";
 import SortVirtIcon from "@/assets/icon/sort-virt.svg";
@@ -15,7 +11,6 @@ import {
   type AccountPurchaseOption,
   type BuyAccountPurchaseMode,
   type Virt,
-  useSubmitBuyAccountRequest,
 } from "@/entities/virt";
 
 export type BuyAccountModeConfig = {
@@ -35,7 +30,11 @@ export const useBuyAccountOptions = ({
   virt,
 }: UseBuyAccountOptionsParams) => {
   const webApp = useWebApp();
-  const submitBuyAccountRequest = useSubmitBuyAccountRequest();
+  const [paymentOpen, setPaymentOpen] = useState(false);
+  const [paymentContext, setPaymentContext] = useState<PaymentDialogContext | null>(
+    null,
+  );
+  const [paymentAmountRub, setPaymentAmountRub] = useState(0);
   const [selectedMode, setSelectedMode] = useState<BuyAccountModeConfig | null>(
     null,
   );
@@ -84,55 +83,37 @@ export const useBuyAccountOptions = ({
     return () => onBackStateChange?.(null);
   }, [handleBack, onBackStateChange, selectedMode]);
 
-  const handleSubmit = useCallback(async () => {
+  const handleSubmit = useCallback(() => {
     if (!selectedMode || !selectedOption) {
       return;
     }
-
-    try {
-      const result = await submitBuyAccountRequest.mutateAsync({
-        amountRub,
-        id: virt.id,
-        mode: selectedMode.mode,
-        option: selectedOption,
-        server,
-      });
-
-      showSuccessMessage(VIRT_FORM_TEXT.paymentSuccess);
-      void notifyVirtOrderSuccessFromMiniApp(webApp, {
-        orderKind: "account",
-        orderId: result.orderId,
-        orderNumber: result.orderNumber,
-        game: virt.name,
-        server,
-        amountRub,
-        bankAccount: "—",
-        virtAmountLabel: selectedOption.label,
-        transferMethod: `${selectedMode.title}: ${selectedOption.label}`,
-      });
-    } catch {
-      showErrorMessage(VIRT_FORM_TEXT.paymentError);
-    }
-  }, [
-    amountRub,
-    selectedMode,
-    selectedOption,
-    server,
-    submitBuyAccountRequest,
-    virt.id,
-    webApp,
-  ]);
+    setPaymentAmountRub(amountRub);
+    setPaymentContext({
+      orderKind: "account",
+      game: virt.name,
+      server,
+      transferMethod: `${selectedMode.title}: ${selectedOption.label}`,
+      accountMode: selectedMode.title,
+      accountOptionLabel: selectedOption.label,
+    });
+    setPaymentOpen(true);
+  }, [amountRub, selectedMode, selectedOption, server, virt.name]);
 
   return {
     server,
     amountRub,
     handleSubmit,
-    isSubmitting: submitBuyAccountRequest.isPending,
+    isSubmitting: false,
     modeOptions,
     selectMode,
     selectedMode,
     selectedOption,
     setSelectedOption,
     setServer,
+    paymentOpen,
+    setPaymentOpen,
+    paymentContext,
+    paymentAmountRub,
+    initData: webApp?.initData?.trim() ?? "",
   };
 };

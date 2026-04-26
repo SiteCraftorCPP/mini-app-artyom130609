@@ -21,6 +21,23 @@ export const TEXT = {
   },
 };
 
+export const PAYMENT_TEXT = {
+  title: "Выберите метод оплаты",
+  kztBlockTitle: "Тенге (KZT)",
+  kztNote:
+    "Перевод в тенге обрабатывается вручную. Сохраните реквизиты и укажите в комментарии к переводу цель. Уведомление о заказе в бот придёт после ручной проверки оплаты; для мгновенного учёта используйте способы в RUB (СБП / карта).",
+  copyHalyk: "Скопировать Halyk Bank",
+  copyKaspi: "Скопировать Kaspi.kz",
+  kztClose: "Понятно",
+  halykLabel: "Halyk Bank",
+  kaspiLabel: "Kaspi.kz",
+  recipient: "Получатель",
+  methodSbp: "СБП (RUB)",
+  methodMir: "КАРТА РФ (МИР, СБЕРКИДС)",
+  methodCard: "КАРТА РФ #2 (VISA, MASTERCARD)",
+  methodKzt: "Тенге (KZT)",
+} as const;
+
 export const VIRT_FORM_TEXT = {
   accountNumberLabel: "Номер счета",
   accountNumberRequired: "Введите номер счета",

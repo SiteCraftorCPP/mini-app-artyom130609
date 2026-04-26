@@ -37,6 +37,25 @@ import {
 import { addOrUpdateActiveOrder, type AdminOrderRow } from "./orders-store.js";
 import { consumePromoCode, getAllPromoCodes } from "./promo-codes-store.js";
 import { parseRublesAmountFromUserText } from "./money-input.js";
+import {
+  buildPaymentUrl,
+  formatAmountForFk,
+  FREEKASSA_METHOD,
+  isFreeKassaNotifyIp,
+  parseFreeKassaFormBody,
+  readRequestBodyString,
+  signNotification,
+  signPaymentForm,
+} from "./freekassa.js";
+import {
+  buildMerchantOrderId,
+  getPendingPayment,
+  isIntidProcessed,
+  markIntidProcessed,
+  markPendingSent,
+  putPendingPayment,
+  type PendingPaymentOrder,
+} from "./payment-pending-store.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -790,6 +809,71 @@ function readJsonBody<T>(req: import("node:http").IncomingMessage): Promise<T> {
   });
 }
 
+function getClientIp(req: import("node:http").IncomingMessage): string {
+  const ff = req.headers["x-forwarded-for"];
+  if (typeof ff === "string" && ff.length > 0) {
+    return ff.split(",")[0]!.trim();
+  }
+  const ri = req.headers["x-real-ip"];
+  if (typeof ri === "string") {
+    return ri.trim();
+  }
+  return req.socket?.remoteAddress ?? "";
+}
+
+function amountsMatchFreekassa(expected: string, got: string): boolean {
+  const a = parseFloat(String(expected).replace(",", "."));
+  const b = parseFloat(String(got).replace(",", "."));
+  if (!Number.isFinite(a) || !Number.isFinite(b)) {
+    return false;
+  }
+  return Math.abs(a - b) < 0.01;
+}
+
+type PaymentPrepareJson = {
+  initData: string;
+  orderKind: "virt" | "account";
+  method: "sbp" | "mir" | "card_rub";
+  amountRub: number;
+  game?: string;
+  server?: string;
+  bankAccount?: string;
+  virtAmountLabel?: string;
+  transferMethod?: string;
+  promoCode?: string;
+  accountMode?: string;
+  accountOptionLabel?: string;
+};
+
+function fkMethodId(m: PaymentPrepareJson["method"]): number {
+  if (m === "sbp") {
+    return FREEKASSA_METHOD.SBP;
+  }
+  if (m === "mir") {
+    return FREEKASSA_METHOD.MIR;
+  }
+  return FREEKASSA_METHOD.CARD_RUB;
+}
+
+/** GET query + x-www-form-urlencoded body */
+async function collectFreeKassaFormFields(
+  req: import("node:http").IncomingMessage,
+  rawUrl: string,
+): Promise<Record<string, string>> {
+  const u = new URL(rawUrl, "http://x");
+  const o: Record<string, string> = {};
+  u.searchParams.forEach((v, k) => {
+    o[k] = v;
+  });
+  if (req.method === "POST") {
+    const body = await readRequestBodyString(req);
+    if (body.length > 0) {
+      Object.assign(o, parseFreeKassaFormBody(body));
+    }
+  }
+  return o;
+}
+
 const corsNotifyHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
@@ -838,11 +922,199 @@ export function startOrderNotifyHttpServer(
       return;
     }
 
+    if (req.method === "POST" && url === "/notify/payment/prepare") {
+      if (!botToken) {
+        res.writeHead(503, corsNotifyHeaders).end(JSON.stringify({ error: "no bot token" }));
+        return;
+      }
+      const merchantId = process.env.FREEKASSA_MERCHANT_ID?.trim() || "68224";
+      const secret1 = process.env.FREEKASSA_SECRET1?.trim() || process.env.FREEKASSA_SECRET?.trim();
+      if (!secret1) {
+        console.warn("[payment] FREEKASSA_SECRET1 не задан");
+        res.writeHead(503, {
+          "Content-Type": "application/json",
+          ...corsNotifyHeaders,
+        });
+        res.end(JSON.stringify({ error: "freekassa not configured" }));
+        return;
+      }
+      try {
+        const body = await readJsonBody<PaymentPrepareJson>(req);
+        if (typeof body.initData !== "string" || !body.initData.length) {
+          res.writeHead(400, { "Content-Type": "application/json", ...corsNotifyHeaders });
+          res.end(JSON.stringify({ error: "initData" }));
+          return;
+        }
+        if (body.orderKind !== "virt" && body.orderKind !== "account") {
+          res.writeHead(400, { "Content-Type": "application/json", ...corsNotifyHeaders });
+          res.end(JSON.stringify({ error: "orderKind" }));
+          return;
+        }
+        if (body.method !== "sbp" && body.method !== "mir" && body.method !== "card_rub") {
+          res.writeHead(400, { "Content-Type": "application/json", ...corsNotifyHeaders });
+          res.end(JSON.stringify({ error: "method" }));
+          return;
+        }
+        const amountNum = Number(body.amountRub);
+        if (!Number.isFinite(amountNum) || amountNum <= 0) {
+          res.writeHead(400, { "Content-Type": "application/json", ...corsNotifyHeaders });
+          res.end(JSON.stringify({ error: "amount" }));
+          return;
+        }
+        const telegramUserId = getTelegramUserIdFromWebAppInitData(body.initData, botToken);
+        if (telegramUserId === null) {
+          res.writeHead(401, { "Content-Type": "application/json", ...corsNotifyHeaders });
+          res.end(JSON.stringify({ error: "bad initData" }));
+          return;
+        }
+        const orderId = `o-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+        const suffix = Date.now().toString(36).toUpperCase().slice(-6);
+        const orderNumber = `#${suffix}`;
+        const merchantOrderId = buildMerchantOrderId();
+        const oa = formatAmountForFk(amountNum);
+        const sign = signPaymentForm(merchantId, oa, secret1, "RUB", merchantOrderId);
+        const i = fkMethodId(body.method);
+        const payUrl = buildPaymentUrl({
+          m: merchantId,
+          oa,
+          o: merchantOrderId,
+          currency: "RUB",
+          s: sign,
+          i,
+        });
+        const kind = parseOrderKind(body.orderKind) ?? "virt";
+        const transfer =
+          body.transferMethod?.trim() ||
+          (kind === "account" && body.accountOptionLabel
+            ? `Аккаунт: ${body.accountMode ?? ""} ${body.accountOptionLabel}`.trim()
+            : "Оплата FreeKassa");
+        const payload: PendingPaymentOrder = {
+          amountExpected: oa,
+          sent: false,
+          telegramUserId,
+          orderId,
+          orderNumber,
+          orderKind: kind,
+          game: body.game,
+          server: body.server,
+          bankAccount: body.bankAccount,
+          amountRub: amountNum,
+          virtAmountLabel: body.virtAmountLabel,
+          transferMethod: transfer,
+          promoCode: body.promoCode?.trim() || undefined,
+        };
+        putPendingPayment(merchantOrderId, payload);
+        res.writeHead(200, { "Content-Type": "application/json", ...corsNotifyHeaders });
+        res.end(
+          JSON.stringify({
+            payUrl,
+            merchantOrderId,
+            orderId,
+            orderNumber,
+          }),
+        );
+      } catch (e) {
+        console.error("[payment] /notify/payment/prepare", e);
+        res.writeHead(500, { "Content-Type": "application/json", ...corsNotifyHeaders });
+        res.end(JSON.stringify({ error: "server" }));
+      }
+      return;
+    }
+
+    if ((req.method === "GET" || req.method === "POST") && url === "/notify/freekassa") {
+      const secret2 = process.env.FREEKASSA_SECRET2?.trim() || process.env.FREEKASSA_SECRET?.trim();
+      if (!secret2) {
+        res.writeHead(503, corsNotifyHeaders).end("no secret2");
+        return;
+      }
+      const ip = getClientIp(req);
+      const ipOk =
+        process.env.FREEKASSA_SKIP_IP_CHECK === "1" || isFreeKassaNotifyIp(ip);
+      if (!ipOk) {
+        console.warn("[freekassa] IP не в списке:", ip);
+        res.writeHead(403, corsNotifyHeaders).end("forbidden");
+        return;
+      }
+      try {
+        const fields = await collectFreeKassaFormFields(req, req.url ?? "/");
+        const amount = fields.AMOUNT ?? "";
+        const mId = fields.MERCHANT_ID ?? "";
+        const mOrder = fields.MERCHANT_ORDER_ID ?? "";
+        const sign = fields.SIGN ?? "";
+        const intid = fields.intid ?? "";
+        if (!mOrder) {
+          res.writeHead(400, corsNotifyHeaders).end("no order");
+          return;
+        }
+        const mySign = signNotification(mId, amount, secret2, mOrder);
+        if (sign.toLowerCase() !== mySign.toLowerCase()) {
+          console.warn("[freekassa] неверная подпись", mOrder);
+          res.writeHead(400, corsNotifyHeaders).end("sign");
+          return;
+        }
+        if (intid && isIntidProcessed(intid)) {
+          res.writeHead(200, { "Content-Type": "text/plain" }).end("YES");
+          return;
+        }
+        const pending = getPendingPayment(mOrder);
+        if (!pending) {
+          console.warn("[freekassa] нет pending", mOrder);
+          res.writeHead(200, { "Content-Type": "text/plain" }).end("YES");
+          return;
+        }
+        if (pending.sent) {
+          if (intid) {
+            markIntidProcessed(intid);
+          }
+          res.writeHead(200, { "Content-Type": "text/plain" }).end("YES");
+          return;
+        }
+        if (!amountsMatchFreekassa(pending.amountExpected, amount)) {
+          console.warn(
+            "[freekassa] сумма не совпала",
+            mOrder,
+            pending.amountExpected,
+            amount,
+          );
+          res.writeHead(200, { "Content-Type": "text/plain" }).end("NO");
+          return;
+        }
+        if (intid) {
+          markIntidProcessed(intid);
+        }
+        if (pending.promoCode) {
+          consumePromoCode(pending.promoCode);
+        }
+        const ok = parseOrderKind(pending.orderKind) ?? "virt";
+        await sendVirtOrderSuccess(bot, miniAppUrl, {
+          telegramUserId: pending.telegramUserId,
+          orderId: pending.orderId,
+          orderNumber: pending.orderNumber,
+          orderKind: ok,
+          game: pending.game,
+          server: pending.server,
+          bankAccount: pending.bankAccount,
+          amountRub: pending.amountRub,
+          virtAmountLabel: pending.virtAmountLabel,
+          transferMethod: pending.transferMethod,
+          promoCode: pending.promoCode,
+        });
+        markPendingSent(mOrder);
+        res.writeHead(200, { "Content-Type": "text/plain" }).end("YES");
+      } catch (e) {
+        console.error("[freekassa] handler", e);
+        res.writeHead(500, corsNotifyHeaders).end("error");
+      }
+      return;
+    }
+
     if (
       req.method === "OPTIONS" &&
       (url === "/notify/virt-order-webapp" ||
         url === "/notify/sell-virt-webapp" ||
         url === "/notify/virt-order-success" ||
+        url === "/notify/payment/prepare" ||
+        url === "/notify/freekassa" ||
         url === "/notify/referral" ||
         url === "/api/promo-codes")
     ) {
@@ -1013,6 +1285,9 @@ export function startOrderNotifyHttpServer(
       );
       console.log(
         `HTTP мини-апп → продать: POST http://${bind}:${port}/notify/sell-virt-webapp { initData }`,
+      );
+      console.log(
+        `FreeKassa: prepare POST http://${bind}:${port}/notify/payment/prepare; callback GET|POST /notify/freekassa (URL оповещения в ЛК, секрет 2)`,
       );
     }
     if (secret) {

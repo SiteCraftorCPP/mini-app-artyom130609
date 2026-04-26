@@ -1,0 +1,53 @@
+/**
+ * Незавершённый заказ: оплата FreeKassa ещё не подтверждена.
+ * MERCHANT_ORDER_ID = то же, что `o` в pay.fk.money.
+ * Поля как у `VirtOrderSuccessPayload` (без цикла импорта).
+ */
+export type PendingPaymentOrder = {
+  amountExpected: string;
+  sent: boolean;
+  telegramUserId: number;
+  orderNumber: string;
+  orderId: string;
+  orderKind?: "virt" | "account";
+  game?: string;
+  server?: string;
+  bankAccount?: string;
+  amountRub?: number;
+  virtAmountLabel?: string;
+  transferMethod?: string;
+  promoCode?: string;
+};
+
+const byMerchant = new Map<string, PendingPaymentOrder>();
+/** intid FreeKassa — защита от повторных уведомлений */
+const processedIntids = new Set<string>();
+
+export function putPendingPayment(merchantId: string, o: PendingPaymentOrder) {
+  byMerchant.set(merchantId, o);
+}
+
+export function getPendingPayment(merchantId: string): PendingPaymentOrder | undefined {
+  return byMerchant.get(merchantId);
+}
+
+export function isIntidProcessed(intid: string): boolean {
+  return processedIntids.has(intid);
+}
+
+export function markIntidProcessed(intid: string) {
+  processedIntids.add(intid);
+}
+
+export function markPendingSent(merchantId: string) {
+  const p = byMerchant.get(merchantId);
+  if (p) {
+    p.sent = true;
+  }
+}
+
+export function buildMerchantOrderId(): string {
+  const t = Date.now();
+  const r = Math.random().toString(36).slice(2, 10).toUpperCase();
+  return `A${t}${r}`;
+}
