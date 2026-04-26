@@ -1,8 +1,5 @@
 /**
- * custom_emoji_id (длинные числа из ботов с ID). В чате они рисуются через
- * sendMessage + entities: custom_emoji (см. custom-emoji-stickers.ts), не sendSticker.
- * В .env — те же id; в коде бота они попадают в подписи (caption) к фото, не отдельные сообщения.
- * Для обычного .webp (не custom emoji) — file_id: CAAC…
+ * custom_emoji_id: sendMessage/подпись + caption_entities, не sendSticker.
  */
 export const CUSTOM_EMOJI_IDS = {
   dollar: "5283232570660634549",
@@ -11,14 +8,15 @@ export const CUSTOM_EMOJI_IDS = {
   chain: "5260730055880876557",
 } as const;
 
-/** /start: три визуала (доллар → молния → бары), затем текст WELCOME. */
-export const WELCOME_CUSTOM_EMOJI_ORDER = [
-  CUSTOM_EMOJI_IDS.dollar,
-  CUSTOM_EMOJI_IDS.lightning,
-  CUSTOM_EMOJI_IDS.barChart,
+/**
+ * /start, подпись к баннеру: (1) в начале первой строки, (2) в конце второй — вместо 👋 и 👇.
+ */
+export const WELCOME_HAND_POINTER_IDS = [
+  "5402498632739996967",
+  "5231102735817918643",
 ] as const;
 
-/** «О магазине»: все четыре, затем ABOUT_SHOP без дублирующих эмодзи в строках. */
+/** «О магазине»: 🪙 ⚡ 🍑 ⛓ — по одной иконке в начале каждой из 4 строк. */
 export const ABOUT_CUSTOM_EMOJI_ORDER = [
   CUSTOM_EMOJI_IDS.dollar,
   CUSTOM_EMOJI_IDS.lightning,

@@ -16,6 +16,7 @@ import { aboutBackKeyboard, mainMenuInlineKeyboard } from "./keyboards.js";
 import {
   buildCustomEmojiPrefixCaption,
   buildMultilineCustomEmojiLinesCaption,
+  buildWelcomeHandPointerCaption,
   isLikelyCustomEmojiIdString,
   joinCaptionWithBody,
   sendVisualTokensInOrder,
@@ -25,11 +26,7 @@ import {
   getHowStickerFileIdFromEnv,
   getWelcomeStickerFileIdsFromEnv,
 } from "./sticker-env.js";
-import {
-  ABOUT_CUSTOM_EMOJI_ORDER,
-  CUSTOM_EMOJI_IDS,
-  WELCOME_CUSTOM_EMOJI_ORDER,
-} from "./sticker-ids.js";
+import { ABOUT_CUSTOM_EMOJI_ORDER, CUSTOM_EMOJI_IDS, WELCOME_HAND_POINTER_IDS } from "./sticker-ids.js";
 import { installAdminModule } from "./admin.js";
 import {
   pickVirtOrderDetailsFromRecord,
@@ -37,7 +34,14 @@ import {
   sendVirtOrderSuccess,
   startOrderNotifyHttpServer,
 } from "./order-notify.js";
-import { ABOUT_SHOP, ABOUT_SHOP_LINES, VIDEO_CAPTION, WELCOME } from "./texts.js";
+import {
+  ABOUT_SHOP,
+  ABOUT_SHOP_LINES,
+  VIDEO_CAPTION,
+  WELCOME,
+  WELCOME_LINE_1,
+  WELCOME_LINE_2,
+} from "./texts.js";
 import { touchUserUsage } from "./user-usage-store.js";
 import { setReferrer } from "./referrals-store.js";
 
@@ -164,13 +168,20 @@ async function sendWelcome(ctx: Context) {
   await clearReplyKeyboard(ctx);
 
   const markup = mainMenuInlineKeyboard(miniAppUrl);
-  const welcomeTokens: readonly string[] = getWelcomeStickerFileIdsFromEnv() ?? WELCOME_CUSTOM_EMOJI_ORDER;
+  const fromEnv = getWelcomeStickerFileIdsFromEnv();
+  if (fromEnv && fromEnv.length !== 2) {
+    console.warn(
+      "[welcome] WELCOME_STICKER_FILE_IDS: нужно ровно 2 id (рука, указатель) — взяты значения из кода (sticker-ids).",
+    );
+  }
+  const handPointerPair: [string, string] =
+    fromEnv?.length === 2 ? [fromEnv[0]!.trim(), fromEnv[1]!.trim()] : [...WELCOME_HAND_POINTER_IDS];
   const allCustomVisual =
-    welcomeTokens.length > 0 &&
-    welcomeTokens.every((t) => isLikelyCustomEmojiIdString(t.trim()));
+    handPointerPair.length === 2 &&
+    handPointerPair.every((t) => isLikelyCustomEmojiIdString(t));
 
   if (!allCustomVisual) {
-    await sendVisualTokensInOrder(ctx, welcomeTokens);
+    await sendVisualTokensInOrder(ctx, handPointerPair);
     const photoPlain = resolveWelcomePhoto();
     if (photoPlain) {
       const extra = { caption: WELCOME, reply_markup: markup };
@@ -186,8 +197,13 @@ async function sendWelcome(ctx: Context) {
     return;
   }
 
-  const prefix = await buildCustomEmojiPrefixCaption(ctx, welcomeTokens);
-  const withIcons = prefix ? joinCaptionWithBody(prefix, WELCOME, "\n\n") : null;
+  const withIcons = await buildWelcomeHandPointerCaption(
+    ctx,
+    handPointerPair[0],
+    handPointerPair[1],
+    WELCOME_LINE_1,
+    WELCOME_LINE_2,
+  );
   const caption = withIcons?.text ?? WELCOME;
   const capEntities = withIcons?.entities;
 

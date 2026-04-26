@@ -10,7 +10,8 @@ function parseFileIdList(raw: string | undefined): string[] | undefined {
 }
 
 /**
- * Список токенов: custom_emoji_id (цифры) или file_id (CAAC…) для обычного sendSticker.
+ * WELCOME_STICKER_FILE_IDS: ровно 2 id — 1) «рука» в начале 1-й строки, 2) «указатель» в конце 2-й.
+ * Или custom_emoji_id, или file_id (CAAC…).
  */
 export function getWelcomeStickerFileIdsFromEnv(): string[] | undefined {
   return parseFileIdList(process.env.WELCOME_STICKER_FILE_IDS);

@@ -1,12 +1,11 @@
 /**
- * Кастомные иконки в /start (под фото) и в «О магазине» — caption_entities, не отдельные sendSticker/сообщения.
+ * /start: в подписи к баннеру — custom id «рука» в начале 1-й строки, id «указатель» в конце 2-й.
+ * «О магазине» — 4 custom id в начале строк (как 🪙⚡🍑⛓ в макете).
  */
-
-export const WELCOME = [
-  "Добро пожаловать в ARTSHOPVIRTS — магазин виртов и услуг для самых популярных RP-проектов.",
-  "",
-  "Чтобы оформить заказ, нажмите «Открыть магазин» ниже.",
-].join("\n");
+export const WELCOME_LINE_1 =
+  "Добро пожаловать в ARTSHOPVIRTS — магазин виртов и услуг для самых популярных RP-проектов.";
+export const WELCOME_LINE_2 = "Чтобы оформить заказ, нажмите открыть магазин";
+export const WELCOME = [WELCOME_LINE_1, "", WELCOME_LINE_2].join("\n");
 
 /** 4 абзаца «О магазине» — к каждому в подписи своя custom-иконка. */
 export const ABOUT_SHOP_LINES: readonly [string, string, string, string] = [

@@ -126,6 +126,51 @@ export function joinCaptionWithBody(
 }
 
 /**
+ * /start: первая строка = [hand] + line1, вторая = line2 + [pointer] (как 👋 / 👇 в макете).
+ */
+export async function buildWelcomeHandPointerCaption(
+  ctx: Pick<Context, "api" | "chat">,
+  handId: string,
+  pointerId: string,
+  line1Text: string,
+  line2Text: string,
+): Promise<CustomEmojiCaption | null> {
+  const hId = normId(handId);
+  const pId = normId(pointerId);
+  if (!hId || !pId) {
+    return null;
+  }
+  await ensureStickersInCache(ctx, [hId, pId]);
+  const hS = getCachedStickerForRequestedId(hId);
+  const pS = getCachedStickerForRequestedId(pId);
+  if (!hS?.emoji || !pS?.emoji) {
+    console.warn("[custom-emoji] welcome: нет Sticker.emoji для hand/pointer");
+    return null;
+  }
+  const he = hS.emoji as string;
+  const pe = pS.emoji as string;
+  const text = he + line1Text + "\n\n" + line2Text + pe;
+  const offPointer = (he + line1Text + "\n\n" + line2Text).length;
+  return {
+    text,
+    entities: [
+      {
+        type: "custom_emoji",
+        offset: 0,
+        length: he.length,
+        custom_emoji_id: hId,
+      },
+      {
+        type: "custom_emoji",
+        offset: offPointer,
+        length: pe.length,
+        custom_emoji_id: pId,
+      },
+    ],
+  };
+}
+
+/**
  * id[i] + пробел + lineTexts[i] на каждой строке. ids.length === lineTexts.length.
  */
 export async function buildMultilineCustomEmojiLinesCaption(
