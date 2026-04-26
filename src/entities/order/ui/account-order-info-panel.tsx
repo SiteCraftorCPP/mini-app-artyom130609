@@ -35,6 +35,12 @@ export const AccountOrderInfoPanel = ({
           label={ORDER_INFO_TEXT.subject}
           value={order.accountNumber}
         />
+        {order.promoCode ? (
+          <OrderLine
+            label={ORDER_INFO_TEXT.promoCode}
+            value={order.promoCode}
+          />
+        ) : null}
         {showClosedAt ? (
           <OrderLine
             label={ORDER_INFO_TEXT.closedAt}

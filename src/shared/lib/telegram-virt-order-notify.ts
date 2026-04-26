@@ -50,6 +50,8 @@ export type VirtOrderNotifyDetails = {
   virtAmountLabel?: string;
   /** Как доставка / вариант (напр. «По уровню: …») */
   transferMethod?: string;
+  /** Промокод, если был применён */
+  promoCode?: string;
 };
 
 export async function notifyVirtOrderSuccessFromMiniApp(
@@ -94,6 +96,7 @@ export async function notifyVirtOrderSuccessFromMiniApp(
     amountRub,
     virtAmountLabel,
     transferMethod,
+    promoCode,
   } = options;
 
   try {
@@ -118,6 +121,9 @@ export async function notifyVirtOrderSuccessFromMiniApp(
           : {}),
         ...(transferMethod != null && transferMethod !== ""
           ? { transferMethod }
+          : {}),
+        ...(promoCode != null && promoCode !== ""
+          ? { promoCode }
           : {}),
       }),
     });

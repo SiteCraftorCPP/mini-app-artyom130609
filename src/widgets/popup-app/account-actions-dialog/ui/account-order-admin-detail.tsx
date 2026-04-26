@@ -31,6 +31,7 @@ function buildAdminOrderPlainText(order: Order): string {
     `${ORDER_INFO_TEXT.server} ${order.server}`,
     `${ORDER_ADMIN_TEXT.virtAmount} ${order.virtAmountLabel ?? "—"}`,
     `${ORDER_ADMIN_TEXT.transfer} ${order.transferMethod ?? "—"}`,
+    ...(order.promoCode ? [`${ORDER_ADMIN_TEXT.promoCode} ${order.promoCode}`] : []),
     `${ORDER_ADMIN_TEXT.bank} ${bank}`,
     `${ORDER_ADMIN_TEXT.amountRub} ${
       order.amountRub != null ? `${order.amountRub}` : "—"
@@ -90,6 +91,13 @@ export const AccountAdminOrderDetail = ({ order }: AccountAdminOrderDetailProps)
           v={order.transferMethod ?? "—"}
           em
         />
+        {order.promoCode ? (
+          <AdminLine
+            k={ORDER_ADMIN_TEXT.promoCode}
+            v={order.promoCode}
+            em
+          />
+        ) : null}
         <AdminLine k={ORDER_ADMIN_TEXT.bank} v={bank} />
         <AdminLine
           k={ORDER_ADMIN_TEXT.amountRub}

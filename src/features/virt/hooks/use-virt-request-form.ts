@@ -157,6 +157,7 @@ export const useVirtRequestForm = ({ virt }: UseVirtRequestFormParams) => {
         amountRub: Number(values.amountRub),
         virtAmountLabel: formatNumberWithSpaces(values.amountVirts),
         transferMethod: "Оплата в мини-аппе",
+        promoCode: values.promoCode ?? "",
       });
     } catch {
       showErrorMessage(VIRT_FORM_TEXT.paymentError);

@@ -6,6 +6,7 @@ export const ORDER_INFO_TEXT = {
   orderNumber: "Номер заказа:",
   server: "Сервер:",
   subject: "Номер счета/услуга/аккаунт:",
+  promoCode: "Промокод:",
 } as const;
 
 export const ORDER_ADMIN_TEXT = {
@@ -29,6 +30,7 @@ export const ORDER_ADMIN_TEXT = {
   pendingHeader: "Заказы, ожидающие выполнения:",
   title: (orderId: string) => `Детали заказа ${orderId}:`,
   transfer: "Способ передачи:",
+  promoCode: "Промокод:",
   user: "Пользователь:",
   usernameLine: (username: string, userId: string) =>
     `@${username} (${userId})`,
