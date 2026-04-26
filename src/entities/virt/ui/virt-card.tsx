@@ -54,7 +54,7 @@ export const VirtCard = ({
             <img
               src={virt.logo}
               alt=""
-              className="size-full object-cover"
+              className="size-full object-contain"
               width="100%"
               height="100%"
             />
