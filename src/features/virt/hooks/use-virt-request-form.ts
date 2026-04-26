@@ -1,6 +1,12 @@
 import { useWebApp } from "@vkruglikov/react-telegram-web-app";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { type FormEvent, useCallback, useEffect, useRef, useState } from "react";
+import {
+  type FormEvent,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { useForm } from "react-hook-form";
 
 import { DEFAULT } from "@/shared/constants/default";
@@ -55,6 +61,8 @@ export const useVirtRequestForm = ({ virt }: UseVirtRequestFormParams) => {
   const [displayAmountRub, setDisplayAmountRub] = useState(
     getDefaultAmountRub(),
   );
+  const [lastEditedForAmount, setLastEditedForAmount] =
+    useState<AmountFieldName>("amountRub");
 
   useEffect(() => {
     const defaultValues = getDefaultValues(virt);
@@ -63,20 +71,62 @@ export const useVirtRequestForm = ({ virt }: UseVirtRequestFormParams) => {
     amountRubInputRef.current = defaultValues.amountRub;
     amountVirtInputRef.current = defaultValues.amountVirts;
     setDisplayAmountRub(defaultValues.amountRub);
+    setLastEditedForAmount("amountRub");
   }, [form, virt]);
 
   const handleAmountRubInput = useCallback((value: string) => {
     lastEditedAmountFieldRef.current = "amountRub";
+    setLastEditedForAmount("amountRub");
     amountRubInputRef.current = value;
   }, []);
 
   const handleAmountVirtInput = useCallback((value: string) => {
     lastEditedAmountFieldRef.current = "amountVirts";
+    setLastEditedForAmount("amountVirts");
     amountVirtInputRef.current = value;
   }, []);
 
-  const { data: promoCodes = [] } = useGetPromoCodes();
+  const {
+    data: promoCodes = [],
+    refetch: refetchPromoCodes,
+    isFetching: isPromoListFetching,
+  } = useGetPromoCodes();
   const promoCodeValue = form.watch("promoCode");
+  const [promoApplyFeedback, setPromoApplyFeedback] = useState<
+    "idle" | "ok" | "not_found" | "error" | "empty" | "loading"
+  >("idle");
+
+  useEffect(() => {
+    setPromoApplyFeedback("idle");
+  }, [promoCodeValue]);
+
+  const applyPromoCode = useCallback(async () => {
+    const code = (form.getValues("promoCode") ?? "").trim();
+    if (!code) {
+      setPromoApplyFeedback("empty");
+      return;
+    }
+    setPromoApplyFeedback("loading");
+    try {
+      const { data, isError, error } = await refetchPromoCodes();
+      if (isError) {
+        console.warn("[promo] refetch", error);
+        setPromoApplyFeedback("error");
+        return;
+      }
+      const list = data ?? [];
+      const found = list.find(
+        (p) =>
+          p.code.toLowerCase() === code.toLowerCase() &&
+          (p.activationsLeft === null || p.activationsLeft > 0),
+      );
+      setPromoApplyFeedback(found ? "ok" : "not_found");
+    } catch (e) {
+      console.warn("[promo] apply", e);
+      setPromoApplyFeedback("error");
+    }
+  }, [form, refetchPromoCodes]);
+
   const activePromoCode = promoCodes.find(
     (p) =>
       p.code.toLowerCase() === promoCodeValue?.trim().toLowerCase() &&
@@ -201,10 +251,14 @@ export const useVirtRequestForm = ({ virt }: UseVirtRequestFormParams) => {
     handleAmountVirtInput,
     handleAmountsCommit,
     handleSubmit,
+    lastEditedForAmount,
     initialAmountRub: getDefaultAmountRub(),
     initialAmountVirts: getDefaultAmountVirts(),
     isSubmitting: submitVirtRequest.isPending,
     effectiveExchangeRate,
     activePromoCode,
+    applyPromoCode,
+    promoApplyFeedback,
+    isPromoListFetching,
   };
 };

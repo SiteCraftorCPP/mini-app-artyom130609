@@ -15,6 +15,7 @@ function resolveNotifyUrl(): string {
   return "";
 }
 
+
 type WebAppLike = { initData?: string };
 
 function resolveInitData(webApp: WebAppLike | null | undefined): string {

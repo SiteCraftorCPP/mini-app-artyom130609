@@ -22,6 +22,11 @@ export default defineConfig({
   ],
   server: {
     cors: true,
+    /** Для dev: бот с ORDER_NOTIFY на 127.0.0.1:8788 — те же пути, что в nginx на проде */
+    proxy: {
+      "/api": { target: "http://127.0.0.1:8788", changeOrigin: true },
+      "/notify": { target: "http://127.0.0.1:8788", changeOrigin: true },
+    },
     allowedHosts: [
       "*",
       "affably-striving-suricate.cloudpub.ru",

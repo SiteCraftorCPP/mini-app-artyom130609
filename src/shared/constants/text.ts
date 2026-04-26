@@ -38,6 +38,12 @@ export const VIRT_FORM_TEXT = {
   paymentSuccess: "Оплата успешно создана",
   promoCodeLabel: "Промокод",
   promoCodePlaceholder: "Введите промокод",
+  applyPromo: "Применить",
+  promoAppliedOk: (pct: string | number) =>
+    `Промокод применён! Скидка ${pct}%`,
+  promoNotFound: "Промокод не найден или закончились активации",
+  promoNetworkError: "Не удалось проверить промокод. Повторите позже",
+  promoEnterCode: "Введите промокод",
   serverRequired: "Выберите сервер",
   submit: "Оплатить",
   submitPending: "Загрузка...",

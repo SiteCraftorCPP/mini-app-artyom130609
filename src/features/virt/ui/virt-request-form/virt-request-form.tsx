@@ -48,6 +48,10 @@ export const VirtRequestForm = ({ virt }: VirtRequestFormProps) => {
     isSubmitting,
     effectiveExchangeRate,
     activePromoCode,
+    applyPromoCode,
+    promoApplyFeedback,
+    isPromoListFetching,
+    lastEditedForAmount,
   } = useVirtRequestForm({ virt });
 
   return (
@@ -133,6 +137,7 @@ export const VirtRequestForm = ({ virt }: VirtRequestFormProps) => {
             <VirtAmountFields
               control={form.control}
               exchangeRate={effectiveExchangeRate}
+              lastEditedForAmount={lastEditedForAmount}
               initialAmountRub={initialAmountRub}
               initialAmountVirts={initialAmountVirts}
               minAmountRub={virt.minAmountRub}
@@ -157,12 +162,26 @@ export const VirtRequestForm = ({ virt }: VirtRequestFormProps) => {
                     </AppText>
                   </FormLabel>
                   <FormControl>
-                    <Input
-                      {...field}
-                      variant="form"
-                      value={field.value ?? ""}
-                      placeholder={VIRT_FORM_TEXT.promoCodePlaceholder}
-                    />
+                    <div className="flex w-full min-w-0 items-stretch gap-2">
+                      <Input
+                        {...field}
+                        className="min-w-0 flex-1"
+                        variant="form"
+                        value={field.value ?? ""}
+                        placeholder={VIRT_FORM_TEXT.promoCodePlaceholder}
+                      />
+                      <Button
+                        type="button"
+                        variant="default"
+                        className="h-12 shrink-0 rounded-full px-4"
+                        onClick={applyPromoCode}
+                        disabled={isPromoListFetching}
+                      >
+                        <AppText tag={TAG.span} size="small" variant="default">
+                          {VIRT_FORM_TEXT.applyPromo}
+                        </AppText>
+                      </Button>
+                    </div>
                   </FormControl>
                   {activePromoCode && (
                     <AppText
@@ -170,7 +189,36 @@ export const VirtRequestForm = ({ virt }: VirtRequestFormProps) => {
                       className="mt-1 text-[#2ecc71]"
                       size="small"
                     >
-                      Промокод применен! Скидка {activePromoCode.discount}%
+                      {VIRT_FORM_TEXT.promoAppliedOk(
+                        activePromoCode.discount,
+                      )}
+                    </AppText>
+                  )}
+                  {!activePromoCode && promoApplyFeedback === "not_found" && (
+                    <AppText
+                      tag={TAG.div}
+                      className="mt-1 text-red-500/90"
+                      size="small"
+                    >
+                      {VIRT_FORM_TEXT.promoNotFound}
+                    </AppText>
+                  )}
+                  {!activePromoCode && promoApplyFeedback === "error" && (
+                    <AppText
+                      tag={TAG.div}
+                      className="mt-1 text-red-500/90"
+                      size="small"
+                    >
+                      {VIRT_FORM_TEXT.promoNetworkError}
+                    </AppText>
+                  )}
+                  {!activePromoCode && promoApplyFeedback === "empty" && (
+                    <AppText
+                      tag={TAG.div}
+                      className="mt-1 text-amber-500/90"
+                      size="small"
+                    >
+                      {VIRT_FORM_TEXT.promoEnterCode}
                     </AppText>
                   )}
                   <FormMessage
