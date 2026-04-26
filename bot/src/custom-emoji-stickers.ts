@@ -15,8 +15,11 @@ function isLikelyCustomEmojiIdString(s: string): boolean {
   return /^\d{12,}$/.test(s);
 }
 
-/** U+FFFC, ровно 1 UTF-16 code unit; под сущность custom_emoji. */
-const PLACEHOLDER = "\uFFFC";
+/**
+ * Плейсхолдер: печатный «?», 1 UTF-16; сущности custom_emoji рисуют поверх. Не U+FFFC —
+ * Telegram тогда обнуляет текст и пишет 400: text must be non-empty.
+ */
+const PLACEHOLDER = "?";
 
 /**
  * Несколько custom emoji в одной строке (порядок = порядок id).
