@@ -330,7 +330,30 @@ bot.use(async (ctx, next) => {
   return next();
 });
 
+/** Кнопка «Магазин» у поля ввода: для кэша клиента — повторяем на /start (не путать с «Меню» = команды). */
+async function setWebAppMenuButtonForPrivateChat(
+  ctx: Context,
+  chatId: number,
+): Promise<void> {
+  const shopUrl = miniAppUrl.replace(/\/$/, "");
+  try {
+    await ctx.api.setChatMenuButton({
+      chat_id: chatId,
+      menu_button: {
+        type: "web_app",
+        text: BTN_MENU_SHOP,
+        web_app: { url: shopUrl },
+      },
+    });
+  } catch (e) {
+    console.warn("[start] setChatMenuButton (Web App) для чата", chatId, e);
+  }
+}
+
 bot.command("start", async (ctx) => {
+  if (ctx.chat?.type === "private" && ctx.chat.id != null) {
+    await setWebAppMenuButtonForPrivateChat(ctx, ctx.chat.id);
+  }
   if (ctx.chat?.type === "private" && ctx.from?.id != null) {
     touchUserUsage(ctx.from.id);
   }
