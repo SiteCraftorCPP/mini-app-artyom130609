@@ -76,7 +76,7 @@ function mapPrepareError(status: number, body: string): string {
     return "Сессия устарела. Закройте мини-апп и откройте снова из бота.";
   }
   if (body && (body.includes("<!DOCTYPE") || body.includes("<html"))) {
-    return "Ответ не от бота (возможно, нет прокси на /notify/). Уточните настройки сервера.";
+    return "Сервер отдал страницу вместо API: для HTTPS нужен nginx — location /notify/ → 127.0.0.1:8788 (см. deploy/nginx/notify.conf), блок выше try_files /index.html.";
   }
   return `Ошибка оплаты (код ${status}). Попробуйте снова или напишите в поддержку.`;
 }

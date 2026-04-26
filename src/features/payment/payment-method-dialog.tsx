@@ -203,7 +203,7 @@ export function PaymentMethodDialog({
               {step === "kzt" ? (
                 <button
                   type="button"
-                  className="text-app-text-muted border-app-border-soft/80 flex size-8 items-center justify-center rounded-[4px] border bg-black/20 transition hover:brightness-110"
+                  className="text-app-text-muted flex size-8 items-center justify-center rounded-[4px] border-0 bg-white/5 transition hover:bg-white/10 hover:brightness-110"
                   onClick={() => setStep("list")}
                   aria-label={PAYMENT_TEXT.backToMethods}
                 >
@@ -307,7 +307,7 @@ export function PaymentMethodDialog({
                 type="button"
                 size="default"
                 disabled={busy}
-                className={cn(methodBtnClass, "mt-0.5 border-dashed border-white/35")}
+                className={cn(methodBtnClass, "mt-0.5")}
                 onClick={() => setStep("kzt")}
               >
                 {PAYMENT_TEXT.methodKzt}
