@@ -55,7 +55,7 @@ export function getOrderSuccessStickerIdsFromEnv(): {
 
 /**
  * ORDER_SUCCESS_MANAGER_STICKER_IDS: 2 id — (1) в начале «Заказ #… оформлен!»,
- * (2) в конце «…через кнопку ниже» (как у сценария с менеджером, без 3-го id часов).
+ * (2) в конце «…через кнопку ниже» — менеджер, «Продать вирты» (тот же блок текста, без 3-го id).
  */
 export function getOrderSuccessManagerStickerIdsFromEnv(): {
   success: string;

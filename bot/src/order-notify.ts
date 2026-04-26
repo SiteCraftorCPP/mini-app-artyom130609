@@ -213,17 +213,25 @@ export async function sendSellVirtMessage(
   telegramUserId: number,
 ): Promise<void> {
   const orderRef = randomSellOrderRef();
-  const caption = buildSellVirtCaption(orderRef);
+  const parts = getOrderManagerSuccessTextParts(orderRef);
+  const managerIds = getOrderSuccessManagerStickerIdsFromEnv();
+  const withEm = await buildOrderManagerSuccessTwoEmojisCaption(
+    bot.api,
+    managerIds,
+    parts,
+  );
+  let caption: string;
+  let caption_entities: import("@grammyjs/types").MessageEntity[] | undefined;
+  if (withEm) {
+    caption = withEm.text;
+    caption_entities = withEm.entities;
+  } else {
+    caption = buildSellVirtCaption(orderRef);
+  }
   const photo = resolveOrderSuccessPhoto();
   const managerUrl =
     process.env.MANAGER_TELEGRAM_URL?.trim() || "https://t.me/artshopvirts_man";
   const reply_markup = new InlineKeyboard().url(BTN_WRITE_MANAGER, managerUrl);
-
-  const sendTextOnly = async () => {
-    await bot.api.sendMessage(telegramUserId, caption, {
-      reply_markup,
-    });
-  };
 
   if (!photo) {
     console.warn(
@@ -232,18 +240,26 @@ export async function sendSellVirtMessage(
     return;
   }
 
+  const sendPhotoOptions = {
+    caption,
+    reply_markup,
+    ...(caption_entities && caption_entities.length > 0
+      ? { caption_entities }
+      : {}),
+  };
+
   await retrySendPhoto(async () => {
     if (photo.type === "url") {
-      await bot.api.sendPhoto(telegramUserId, photo.url, { caption, reply_markup });
+      await bot.api.sendPhoto(telegramUserId, photo.url, sendPhotoOptions);
     } else {
       const buffer = readFileSync(photo.path);
       await bot.api.sendPhoto(
         telegramUserId,
         new InputFile(buffer, `${Date.now()}_${basename(photo.path)}`),
-        { caption, reply_markup }
+        sendPhotoOptions,
       );
     }
-  }).catch(e => {
+  }).catch((e) => {
     console.error("[sell] Фото так и не отправилось", e);
     throw e;
   });
@@ -375,9 +391,10 @@ function getOrderManagerSuccessTextParts(
  * Кнопка только типа web_app — иначе Telegram показывает обычную ссылку, а не открытие мини-аппа.
  * URL должен совпадать с доменом Mini App в @BotFather.
  */
-function buildOrderDetailsKeyboard(miniAppUrl: string, orderId: string) {
+/** Только раздел «История заказов» без orderId — карточка по id часто пуста до синхронизации. */
+function buildOrderDetailsKeyboard(miniAppUrl: string) {
   const base = miniAppUrl.replace(/\/$/, "");
-  const url = `${base}/profile?open=orderHistory&orderId=${encodeURIComponent(orderId)}`;
+  const url = `${base}/profile?open=orderHistory`;
   return new InlineKeyboard().webApp("🟢 Узнать детали", url);
 }
 
@@ -397,7 +414,7 @@ function resolveVirtOrderCaptionAndKeyboard(
   if (kind === "virt") {
     return {
       caption: buildVirtOrderCaption(payload.orderNumber),
-      reply_markup: buildOrderDetailsKeyboard(miniAppUrl, payload.orderId),
+      reply_markup: buildOrderDetailsKeyboard(miniAppUrl),
     };
   }
 
@@ -412,7 +429,7 @@ function resolveVirtOrderCaptionAndKeyboard(
 
   return {
     caption: buildAccountAppOrderCaption(payload.orderNumber),
-    reply_markup: buildOrderDetailsKeyboard(miniAppUrl, payload.orderId),
+    reply_markup: buildOrderDetailsKeyboard(miniAppUrl),
   };
 }
 
