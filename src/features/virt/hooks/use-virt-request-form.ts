@@ -18,14 +18,14 @@ import {
 
 import { type Virt, useSubmitVirtRequest } from "@/entities/virt";
 
-const getDefaultAmountRub = (virt: Virt) => "";
+const getDefaultAmountRub = () => "";
 
-const getDefaultAmountVirts = (virt: Virt) => "";
+const getDefaultAmountVirts = () => "";
 
 const getDefaultValues = (virt: Virt): VirtRequestFormValues => ({
   accountNumber: virt.accountNumber,
-  amountRub: getDefaultAmountRub(virt),
-  amountVirts: getDefaultAmountVirts(virt),
+  amountRub: getDefaultAmountRub(),
+  amountVirts: getDefaultAmountVirts(),
   promoCode: virt.promoCode,
   server: virt.serverOptions[0] ?? "",
 });
@@ -48,11 +48,11 @@ export const useVirtRequestForm = ({ virt }: UseVirtRequestFormParams) => {
     defaultValues: getDefaultValues(virt),
   });
   const submitVirtRequest = useSubmitVirtRequest();
-  const amountRubInputRef = useRef(String(getDefaultAmountRub(virt)));
-  const amountVirtInputRef = useRef(String(getDefaultAmountVirts(virt)));
+  const amountRubInputRef = useRef(String(getDefaultAmountRub()));
+  const amountVirtInputRef = useRef(String(getDefaultAmountVirts()));
   const lastEditedAmountFieldRef = useRef<AmountFieldName>("amountRub");
   const [displayAmountRub, setDisplayAmountRub] = useState(
-    getDefaultAmountRub(virt),
+    getDefaultAmountRub(),
   );
 
   useEffect(() => {
@@ -161,8 +161,8 @@ export const useVirtRequestForm = ({ virt }: UseVirtRequestFormParams) => {
     handleAmountVirtInput,
     handleAmountsCommit,
     handleSubmit,
-    initialAmountRub: getDefaultAmountRub(virt),
-    initialAmountVirts: getDefaultAmountVirts(virt),
+    initialAmountRub: getDefaultAmountRub(),
+    initialAmountVirts: getDefaultAmountVirts(),
     isSubmitting: submitVirtRequest.isPending,
   };
 };
