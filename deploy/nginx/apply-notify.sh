@@ -38,6 +38,17 @@ echo "$OUT"
 nginx -t
 systemctl reload nginx
 echo "nginx перезагружен."
+# Сразу после reload иногда 405/старая схема; пауза снимает гонку
+sleep 1
 echo
-echo "POST /notify/payment/prepare (ожидается JSON, не 405, не <html>):"
-curl -sS -X POST -H "Content-Type: application/json" -d '{"initData":"x"}' -D- "https://artshopvirts.space/notify/payment/prepare" | head -8 || true
+echo "Проверка POST /notify/payment/prepare (ожидается JSON от бота, не HTML):"
+# Полное тело — иначе бот честно отдаёт {\""error\"":\""orderKind\""} и это не сбой nginx
+curl -sS -X POST -H "Content-Type: application/json" \
+  -d '{"initData":"x","orderKind":"virt","method":"sbp","amountRub":1}' \
+  -o /tmp/artshopvirts-notify-probe.txt \
+  -w "HTTP %{http_code}\n" \
+  "https://artshopvirts.space/notify/payment/prepare" || true
+echo -n "тело: "
+head -c 200 /tmp/artshopvirts-notify-probe.txt || true
+echo
+echo "Ожидаемо: HTTP 401 и error bad initData (фиктивный initData) — прокси и бот отвечают."
