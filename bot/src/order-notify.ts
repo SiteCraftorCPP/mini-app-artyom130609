@@ -483,6 +483,79 @@ async function retrySendPhoto(fn: () => Promise<void>, maxRetries = 10) {
   }
 }
 
+/** Как `resolveBotAdminIdSet` в index.ts — дублируем, чтобы не плодить циклы. */
+function resolveAdminTelegramIdsFromEnv(): number[] {
+  const out: number[] = [];
+  const single = process.env.TELEGRAM_ADMIN_ID?.trim();
+  if (single && /^\d+$/.test(single)) {
+    out.push(Number(single));
+  }
+  const list =
+    process.env.TELEGRAM_ADMIN_IDS?.trim() || process.env.VITE_ADMIN_TELEGRAM_IDS?.trim();
+  if (list) {
+    for (const part of list.split(/[\s,;]+/)) {
+      const s = part.trim();
+      if (/^\d+$/.test(s)) {
+        out.push(Number(s));
+      }
+    }
+  }
+  return [...new Set(out)];
+}
+
+/** Рассылка админам (TELEGRAM_ADMIN_ID / TELEGRAM_ADMIN_IDS) о новом оформлении заказа. */
+export async function notifyAdminsNewOrder(
+  bot: Bot,
+  payload: VirtOrderSuccessPayload,
+): Promise<void> {
+  const admins = resolveAdminTelegramIdsFromEnv();
+  if (admins.length === 0) {
+    return;
+  }
+  const kind =
+    payload.orderKind === "account" ? "покупка аккаунта" : "покупка виртов";
+  const lines: string[] = [
+    "🆕 Новый заказ",
+    "",
+    `Тип: ${kind}`,
+    `Номер: ${payload.orderNumber}`,
+    `ID: ${payload.orderId}`,
+  ];
+  if (payload.game) {
+    lines.push(`Игра: ${payload.game}`);
+  }
+  if (payload.server) {
+    lines.push(`Сервер: ${payload.server}`);
+  }
+  if (payload.amountRub != null && Number.isFinite(payload.amountRub)) {
+    lines.push(`Сумма: ${payload.amountRub} ₽`);
+  }
+  if (payload.virtAmountLabel) {
+    lines.push(`Вирты: ${payload.virtAmountLabel}`);
+  }
+  if (payload.bankAccount) {
+    lines.push(`Счёт: ${payload.bankAccount}`);
+  }
+  if (payload.transferMethod) {
+    lines.push(`Оформление: ${payload.transferMethod}`);
+  }
+  if (payload.promoCode) {
+    lines.push(`Промо: ${payload.promoCode}`);
+  }
+  lines.push("", `Покупатель (Telegram id): ${payload.telegramUserId}`);
+
+  const text = lines.join("\n");
+  for (const aid of admins) {
+    try {
+      await bot.api.sendMessage(aid, text, {
+        link_preview_options: { is_disabled: true },
+      });
+    } catch (e) {
+      console.warn(`[admin-notify] не удалось отправить админу ${aid}:`, e);
+    }
+  }
+}
+
 export async function sendVirtOrderSuccess(
   bot: Bot,
   miniAppUrl: string,
@@ -494,6 +567,11 @@ export async function sendVirtOrderSuccess(
     orderId: payload.orderId,
     orderKind: payload.orderKind ?? "virt",
   });
+  try {
+    await notifyAdminsNewOrder(bot, payload);
+  } catch (e) {
+    console.error("[virt-order] notifyAdminsNewOrder:", e);
+  }
   const { reply_markup } = resolveVirtOrderCaptionAndKeyboard(payload, miniAppUrl);
   const orderKind: OrderKindForSuccessParts = payload.orderKind === "account" ? "account" : "virt";
   const isAccountManagerMode =
