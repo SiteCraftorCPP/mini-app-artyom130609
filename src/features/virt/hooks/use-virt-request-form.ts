@@ -86,46 +86,8 @@ export const useVirtRequestForm = ({ virt }: UseVirtRequestFormParams) => {
     amountVirtInputRef.current = value;
   }, []);
 
-  const {
-    data: promoCodes = [],
-    refetch: refetchPromoCodes,
-    isFetching: isPromoListFetching,
-  } = useGetPromoCodes({ enabled: false });
+  const { data: promoCodes = [] } = useGetPromoCodes();
   const promoCodeValue = form.watch("promoCode");
-  const [promoApplyFeedback, setPromoApplyFeedback] = useState<
-    "idle" | "ok" | "not_found" | "error" | "empty" | "loading"
-  >("idle");
-
-  useEffect(() => {
-    setPromoApplyFeedback("idle");
-  }, [promoCodeValue]);
-
-  const applyPromoCode = useCallback(async () => {
-    const code = (form.getValues("promoCode") ?? "").trim();
-    if (!code) {
-      setPromoApplyFeedback("empty");
-      return;
-    }
-    setPromoApplyFeedback("loading");
-    try {
-      const { data, isError, error } = await refetchPromoCodes();
-      if (isError) {
-        console.warn("[promo] refetch", error);
-        setPromoApplyFeedback("error");
-        return;
-      }
-      const list = data ?? [];
-      const found = list.find(
-        (p) =>
-          p.code === code &&
-          (p.activationsLeft === null || p.activationsLeft > 0),
-      );
-      setPromoApplyFeedback(found ? "ok" : "not_found");
-    } catch (e) {
-      console.warn("[promo] apply", e);
-      setPromoApplyFeedback("error");
-    }
-  }, [form, refetchPromoCodes]);
 
   const activePromoCode = promoCodes.find(
     (p) =>
@@ -273,9 +235,6 @@ export const useVirtRequestForm = ({ virt }: UseVirtRequestFormParams) => {
     isSubmitting: submitVirtRequest.isPending,
     effectiveExchangeRate,
     activePromoCode,
-    applyPromoCode,
-    promoApplyFeedback,
-    isPromoListFetching,
     lockVirtsForPromo,
   };
 };

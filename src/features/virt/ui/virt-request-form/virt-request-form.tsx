@@ -22,7 +22,6 @@ import {
 } from "@/shared/ui/select";
 
 import { useVirtRequestForm } from "../../hooks";
-import { cn } from "@/shared/utils";
 
 import {
   VIRT_REQUEST_FORM_CLASSNAMES,
@@ -49,9 +48,6 @@ export const VirtRequestForm = ({ virt }: VirtRequestFormProps) => {
     isSubmitting,
     effectiveExchangeRate,
     activePromoCode,
-    applyPromoCode,
-    promoApplyFeedback,
-    isPromoListFetching,
     lastEditedForAmount,
     lockVirtsForPromo,
   } = useVirtRequestForm({ virt });
@@ -165,33 +161,12 @@ export const VirtRequestForm = ({ virt }: VirtRequestFormProps) => {
                     </AppText>
                   </FormLabel>
                   <FormControl>
-                    <div className="flex w-full min-w-0 items-stretch gap-2">
-                      <Input
-                        {...field}
-                        className="min-w-0 flex-1"
-                        variant="form"
-                        value={field.value ?? ""}
-                        placeholder={VIRT_FORM_TEXT.promoCodePlaceholder}
-                      />
-                      <button
-                        type="button"
-                        className={cn(
-                          "inline-flex h-12 shrink-0 items-center justify-center rounded-full border border-app-border-soft bg-app-highlight px-4 text-sm font-medium text-black shadow-none transition-all outline-none",
-                          "hover:brightness-105 focus-visible:ring-[3px] focus-visible:ring-ring/50",
-                          "disabled:pointer-events-none disabled:opacity-50",
-                        )}
-                        onClick={applyPromoCode}
-                        disabled={isPromoListFetching}
-                      >
-                        <AppText
-                          tag={TAG.span}
-                          size="small"
-                          variant="heroButtonBlack"
-                        >
-                          {VIRT_FORM_TEXT.applyPromo}
-                        </AppText>
-                      </button>
-                    </div>
+                    <Input
+                      {...field}
+                      variant="form"
+                      value={field.value ?? ""}
+                      placeholder={VIRT_FORM_TEXT.promoCodePlaceholder}
+                    />
                   </FormControl>
                   {activePromoCode && (
                     <AppText
@@ -202,33 +177,6 @@ export const VirtRequestForm = ({ virt }: VirtRequestFormProps) => {
                       {VIRT_FORM_TEXT.promoAppliedOk(
                         activePromoCode.discount,
                       )}
-                    </AppText>
-                  )}
-                  {!activePromoCode && promoApplyFeedback === "not_found" && (
-                    <AppText
-                      tag={TAG.div}
-                      className="mt-1 text-red-500/90"
-                      size="small"
-                    >
-                      {VIRT_FORM_TEXT.promoNotFound}
-                    </AppText>
-                  )}
-                  {!activePromoCode && promoApplyFeedback === "error" && (
-                    <AppText
-                      tag={TAG.div}
-                      className="mt-1 text-red-500/90"
-                      size="small"
-                    >
-                      {VIRT_FORM_TEXT.promoNetworkError}
-                    </AppText>
-                  )}
-                  {!activePromoCode && promoApplyFeedback === "empty" && (
-                    <AppText
-                      tag={TAG.div}
-                      className="mt-1 text-amber-500/90"
-                      size="small"
-                    >
-                      {VIRT_FORM_TEXT.promoEnterCode}
                     </AppText>
                   )}
                   <FormMessage

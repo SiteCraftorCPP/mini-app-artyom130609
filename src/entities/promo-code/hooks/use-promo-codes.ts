@@ -5,12 +5,12 @@ import { resolvePromoCodesListUrl } from "@/shared/lib/virt-order-endpoints";
 import type { PromoCode } from "../model";
 
 type UseGetPromoCodesOptions = {
-  /** По умолчанию `false` — список запрашивается только вручную (кнопка «Применить»). */
+  /** По умолчанию `true`: список для сопоставления с полем при вводе. */
   enabled?: boolean;
 };
 
 export const useGetPromoCodes = (options: UseGetPromoCodesOptions = {}) => {
-  const { enabled = false } = options;
+  const { enabled = true } = options;
 
   return useQuery({
     queryKey: [QUERY_KEYS.PROMO_CODES.LIST],
