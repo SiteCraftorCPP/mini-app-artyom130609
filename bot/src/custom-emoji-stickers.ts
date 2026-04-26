@@ -2,15 +2,15 @@ import type { Context } from "grammy";
 import type { Sticker } from "@grammyjs/types";
 
 /**
- * custom_emoji: sendMessage+entities. Подстрока = Sticker.emoji из getCustomEmojiStickers, иначе ENTITY_TEXT_INVALID.
- * getCustomEmojiStickers+sendSticker с file_id custom_emoji — 400. CAAC… — sendSticker.
+ * custom_emoji: subtext = Sticker.emoji (getCustomEmojiStickers). sendSticker+file_id custom_emoji = 400.
+ * CAAC…: sendSticker. В подписях: caption_entities, в тексте: entities.
  */
 
 function normId(id: string): string {
   return String(id).trim();
 }
 
-function isLikelyCustomEmojiIdString(s: string): boolean {
+export function isLikelyCustomEmojiIdString(s: string): boolean {
   return /^\d{12,}$/.test(s);
 }
 
@@ -67,38 +67,37 @@ async function ensureStickersInCache(
   }
 }
 
-export async function sendCustomEmojisInMessage(
-  ctx: Pick<Context, "api" | "chat">,
-  customEmojiIds: readonly string[],
-): Promise<boolean> {
-  const chatId = ctx.chat?.id;
-  if (chatId === undefined || customEmojiIds.length === 0) {
-    return false;
-  }
-  const ids = customEmojiIds.map(normId).filter(Boolean);
-  if (ids.length === 0) return false;
-
-  await ensureStickersInCache(ctx, ids);
-
-  for (const id of ids) {
-    const s = getCachedStickerForRequestedId(id);
-    if (!s?.emoji || s.emoji.length === 0) {
-      console.warn(
-        "[custom-emoji] нет Sticker.emoji из API; проверьте custom_emoji_id, id=",
-        id,
-      );
-      return false;
-    }
-  }
-
-  let fullText = "";
-  const entities: Array<{
+export type CustomEmojiCaption = {
+  text: string;
+  entities: Array<{
     type: "custom_emoji";
     offset: number;
     length: number;
     custom_emoji_id: string;
-  }> = [];
+  }>;
+};
 
+/**
+ * Склейка базовых эмодзи подряд (как в приветствии) — дальше joinCaptionWithBody(…, WELCOME).
+ */
+export async function buildCustomEmojiPrefixCaption(
+  ctx: Pick<Context, "api" | "chat">,
+  customEmojiIds: readonly string[],
+): Promise<CustomEmojiCaption | null> {
+  const ids = customEmojiIds.map(normId).filter(Boolean);
+  if (ids.length === 0) {
+    return null;
+  }
+  await ensureStickersInCache(ctx, ids);
+  for (const id of ids) {
+    const s = getCachedStickerForRequestedId(id);
+    if (!s?.emoji || s.emoji.length === 0) {
+      console.warn("[custom-emoji] нет Sticker.emoji, id=", id);
+      return null;
+    }
+  }
+  let fullText = "";
+  const entities: CustomEmojiCaption["entities"] = [];
   for (const custom_emoji_id of ids) {
     const s = getCachedStickerForRequestedId(custom_emoji_id)!;
     const part = s.emoji as string;
@@ -112,9 +111,80 @@ export async function sendCustomEmojisInMessage(
       custom_emoji_id,
     });
   }
+  return { text: fullText, entities };
+}
 
+export function joinCaptionWithBody(
+  prefix: CustomEmojiCaption,
+  body: string,
+  gap: string = "\n\n",
+): CustomEmojiCaption {
+  return {
+    text: prefix.text + gap + body,
+    entities: prefix.entities,
+  };
+}
+
+/**
+ * id[i] + пробел + lineTexts[i] на каждой строке. ids.length === lineTexts.length.
+ */
+export async function buildMultilineCustomEmojiLinesCaption(
+  ctx: Pick<Context, "api" | "chat">,
+  customEmojiIds: readonly string[],
+  lineTexts: readonly string[],
+): Promise<CustomEmojiCaption | null> {
+  if (customEmojiIds.length === 0 || lineTexts.length === 0) {
+    return null;
+  }
+  if (customEmojiIds.length !== lineTexts.length) {
+    console.warn(
+      "[custom-emoji] multiline: число id и строк не совпало",
+      customEmojiIds.length,
+      lineTexts.length,
+    );
+    return null;
+  }
+  const ids = customEmojiIds.map(normId);
+  await ensureStickersInCache(ctx, ids);
+  for (const id of ids) {
+    const s = getCachedStickerForRequestedId(id);
+    if (!s?.emoji || s.emoji.length === 0) {
+      console.warn("[custom-emoji] multiline: нет emoji, id=", id);
+      return null;
+    }
+  }
+  const entities: CustomEmojiCaption["entities"] = [];
+  let fullText = "";
+  const n = ids.length;
+  for (let i = 0; i < n; i++) {
+    const custom_emoji_id = ids[i]!;
+    const s = getCachedStickerForRequestedId(custom_emoji_id)!;
+    const em = s.emoji as string;
+    const offset = fullText.length;
+    const length = em.length;
+    entities.push({ type: "custom_emoji", offset, length, custom_emoji_id });
+    fullText += em + " " + lineTexts[i];
+    if (i < n - 1) {
+      fullText += "\n";
+    }
+  }
+  return { text: fullText, entities };
+}
+
+export async function sendCustomEmojisInMessage(
+  ctx: Pick<Context, "api" | "chat">,
+  customEmojiIds: readonly string[],
+): Promise<boolean> {
+  const chatId = ctx.chat?.id;
+  if (chatId === undefined || customEmojiIds.length === 0) {
+    return false;
+  }
+  const cap = await buildCustomEmojiPrefixCaption(ctx, customEmojiIds);
+  if (!cap) {
+    return false;
+  }
   try {
-    await ctx.api.sendMessage(chatId, fullText, { entities });
+    await ctx.api.sendMessage(chatId, cap.text, { entities: cap.entities });
     return true;
   } catch (e) {
     console.warn("[custom-emoji] sendMessage(entities) failed", e);

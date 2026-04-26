@@ -13,7 +13,13 @@ process.on("uncaughtException", (error) => {
 });
 
 import { aboutBackKeyboard, mainMenuInlineKeyboard } from "./keyboards.js";
-import { sendVisualTokensInOrder } from "./custom-emoji-stickers.js";
+import {
+  buildCustomEmojiPrefixCaption,
+  buildMultilineCustomEmojiLinesCaption,
+  isLikelyCustomEmojiIdString,
+  joinCaptionWithBody,
+  sendVisualTokensInOrder,
+} from "./custom-emoji-stickers.js";
 import {
   getAboutStickerFileIdsFromEnv,
   getHowStickerFileIdFromEnv,
@@ -31,7 +37,7 @@ import {
   sendVirtOrderSuccess,
   startOrderNotifyHttpServer,
 } from "./order-notify.js";
-import { ABOUT_SHOP, VIDEO_CAPTION, WELCOME } from "./texts.js";
+import { ABOUT_SHOP, ABOUT_SHOP_LINES, VIDEO_CAPTION, WELCOME } from "./texts.js";
 import { touchUserUsage } from "./user-usage-store.js";
 import { setReferrer } from "./referrals-store.js";
 
@@ -154,49 +160,61 @@ async function clearReplyKeyboard(ctx: Context) {
   }
 }
 
-async function sendWelcomeStickersBlock(ctx: Context): Promise<boolean> {
-  const fromEnv = getWelcomeStickerFileIdsFromEnv();
-  const tokens: readonly string[] = fromEnv?.length
-    ? fromEnv
-    : WELCOME_CUSTOM_EMOJI_ORDER;
-  const ok = await sendVisualTokensInOrder(ctx, tokens);
-  if (!ok) {
-    console.warn(
-      "[welcome] визуалы не отправились (custom_emoji / sendSticker) — см. WELCOME_STICKER_FILE_IDS или баннер",
-    );
-  }
-  return ok;
-}
-
 async function sendWelcome(ctx: Context) {
   await clearReplyKeyboard(ctx);
 
   const markup = mainMenuInlineKeyboard(miniAppUrl);
-  if (await sendWelcomeStickersBlock(ctx)) {
-    await ctx.reply(WELCOME, { reply_markup: markup });
+  const welcomeTokens: readonly string[] = getWelcomeStickerFileIdsFromEnv() ?? WELCOME_CUSTOM_EMOJI_ORDER;
+  const allCustomVisual =
+    welcomeTokens.length > 0 &&
+    welcomeTokens.every((t) => isLikelyCustomEmojiIdString(t.trim()));
+
+  if (!allCustomVisual) {
+    await sendVisualTokensInOrder(ctx, welcomeTokens);
+    const photoPlain = resolveWelcomePhoto();
+    if (photoPlain) {
+      const extra = { caption: WELCOME, reply_markup: markup };
+      if (photoPlain.type === "url") {
+        await ctx.replyWithPhoto(photoPlain.url, extra);
+      } else {
+        const buffer = readFileSync(photoPlain.path);
+        await ctx.replyWithPhoto(new InputFile(buffer, basename(photoPlain.path)), extra);
+      }
+    } else {
+      await ctx.reply(WELCOME, { reply_markup: markup });
+    }
     return;
   }
+
+  const prefix = await buildCustomEmojiPrefixCaption(ctx, welcomeTokens);
+  const withIcons = prefix ? joinCaptionWithBody(prefix, WELCOME, "\n\n") : null;
+  const caption = withIcons?.text ?? WELCOME;
+  const capEntities = withIcons?.entities;
 
   const photo = resolveWelcomePhoto();
-
-  if (!photo) {
-    console.warn(
-      "Баннер не найден: задайте WELCOME_PHOTO_URL или положите файл (см. WELCOME_PHOTO_PATH / bot/images/welcome.jpg).",
-    );
-    await ctx.reply(WELCOME, { reply_markup: markup });
-    return;
-  }
-
-  const extra = {
-    caption: WELCOME,
-    reply_markup: markup,
-  };
-
-  if (photo.type === "url") {
-    await ctx.replyWithPhoto(photo.url, extra);
+  if (photo) {
+    if (photo.type === "url") {
+      await ctx.replyWithPhoto(photo.url, {
+        caption,
+        reply_markup: markup,
+        ...(capEntities && capEntities.length > 0 ? { caption_entities: capEntities } : {}),
+      });
+    } else {
+      const buffer = readFileSync(photo.path);
+      await ctx.replyWithPhoto(new InputFile(buffer, basename(photo.path)), {
+        caption,
+        reply_markup: markup,
+        ...(capEntities && capEntities.length > 0 ? { caption_entities: capEntities } : {}),
+      });
+    }
   } else {
-    const buffer = readFileSync(photo.path);
-    await ctx.replyWithPhoto(new InputFile(buffer, basename(photo.path)), extra);
+    console.warn(
+      "Баннер не найден: WELCOME_PHOTO_URL / WELCOME_PHOTO_PATH — иконки в одном сообщении с текстом.",
+    );
+    await ctx.reply(caption, {
+      reply_markup: markup,
+      ...(capEntities && capEntities.length > 0 ? { entities: capEntities } : {}),
+    });
   }
 }
 
@@ -302,8 +320,7 @@ bot.command("start", async (ctx) => {
 installAdminModule(bot, BOT_ADMIN_IDS);
 
 async function sendHowToVideo(ctx: Context) {
-  const howToken = getHowStickerFileIdFromEnv() ?? CUSTOM_EMOJI_IDS.lightning;
-  await sendVisualTokensInOrder(ctx, [howToken]);
+  const howToken = (getHowStickerFileIdFromEnv() ?? CUSTOM_EMOJI_IDS.lightning).trim();
   const path = resolveInstructionVideoPath();
   if (!path) {
     await ctx.reply(
@@ -311,9 +328,17 @@ async function sendHowToVideo(ctx: Context) {
     );
     return;
   }
-  await ctx.replyWithVideo(new InputFile(path), {
-    caption: VIDEO_CAPTION,
-  });
+  if (isLikelyCustomEmojiIdString(howToken)) {
+    const pr = await buildCustomEmojiPrefixCaption(ctx, [howToken]);
+    const cap = pr ? joinCaptionWithBody(pr, VIDEO_CAPTION, "\n\n") : null;
+    await ctx.replyWithVideo(new InputFile(path), {
+      caption: cap?.text ?? VIDEO_CAPTION,
+      ...(cap && cap.entities.length > 0 ? { caption_entities: cap.entities } : {}),
+    });
+  } else {
+    await sendVisualTokensInOrder(ctx, [howToken]);
+    await ctx.replyWithVideo(new InputFile(path), { caption: VIDEO_CAPTION });
+  }
 }
 
 bot.callbackQuery("menu:how", async (ctx) => {
@@ -327,10 +352,26 @@ bot.callbackQuery("menu:about", async (ctx) => {
   const aboutTokens: readonly string[] = aboutFromEnv?.length
     ? aboutFromEnv
     : ABOUT_CUSTOM_EMOJI_ORDER;
+  const allCustom =
+    aboutTokens.length > 0 &&
+    aboutTokens.every((t) => isLikelyCustomEmojiIdString(t.trim()));
+
+  if (allCustom) {
+    const cap = await buildMultilineCustomEmojiLinesCaption(
+      ctx,
+      aboutTokens,
+      ABOUT_SHOP_LINES,
+    );
+    if (cap) {
+      await ctx.reply(cap.text, {
+        reply_markup: aboutBackKeyboard(),
+        entities: cap.entities,
+      });
+      return;
+    }
+  }
   await sendVisualTokensInOrder(ctx, aboutTokens);
-  await ctx.reply(ABOUT_SHOP, {
-    reply_markup: aboutBackKeyboard(),
-  });
+  await ctx.reply(ABOUT_SHOP, { reply_markup: aboutBackKeyboard() });
 });
 
 bot.callbackQuery("about:back", async (ctx) => {

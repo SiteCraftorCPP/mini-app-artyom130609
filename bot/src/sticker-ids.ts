@@ -1,7 +1,8 @@
 /**
  * custom_emoji_id (длинные числа из ботов с ID). В чате они рисуются через
  * sendMessage + entities: custom_emoji (см. custom-emoji-stickers.ts), не sendSticker.
- * Для обычного .webp-стикера (не custom emoji) в .env — file_id: CAAC…
+ * В .env — те же id; в коде бота они попадают в подписи (caption) к фото, не отдельные сообщения.
+ * Для обычного .webp (не custom emoji) — file_id: CAAC…
  */
 export const CUSTOM_EMOJI_IDS = {
   dollar: "5283232570660634549",

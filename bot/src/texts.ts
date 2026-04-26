@@ -1,27 +1,39 @@
-/** Тексты как в ТЗ. В «О магазине» визуалы — отдельные стикеры (custom_emoji_id → getCustomEmojiStickers), не строки ниже. */
+/**
+ * Кастомные иконки в /start (под фото) и в «О магазине» — caption_entities, не отдельные sendSticker/сообщения.
+ */
 
 export const WELCOME = [
-  "👋 Добро пожаловать в ARTSHOPVIRTS — магазин виртов и услуг для самых популярных RP-проектов.",
+  "Добро пожаловать в ARTSHOPVIRTS — магазин виртов и услуг для самых популярных RP-проектов.",
   "",
-  "Чтобы оформить заказ, нажмите открыть магазин 👇",
+  "Чтобы оформить заказ, нажмите «Открыть магазин» ниже.",
 ].join("\n");
 
-export const ABOUT_SHOP = [
+/** 4 абзаца «О магазине» — к каждому в подписи своя custom-иконка. */
+export const ABOUT_SHOP_LINES: readonly [string, string, string, string] = [
   "Продаём и скупаем вирты во всех RP-проектах, а также предоставляем полный спектр услуг.",
-  "",
   "Гарантируем возврат средств в случае блокировки аккаунта, связанной с нашим магазином.",
-  "",
   "Работаем с 2024 года: более 1500 клиентов и 780 отзывов.",
+  [
+    "Наши официальные ссылки:",
+    "",
+    "Telegram канал: @artshopvirts_channel",
+    "",
+    "Отзывы: https://t.me/artshopvirts_channel/85",
+    "",
+    "Менеджер: @artshopvirts_man",
+    "",
+    "MEDIA-сотрудничество: @artshopvirts_media",
+  ].join("\n"),
+];
+
+export const ABOUT_SHOP = [
+  ABOUT_SHOP_LINES[0],
   "",
-  "Наши официальные ссылки:",
+  ABOUT_SHOP_LINES[1],
   "",
-  "Telegram канал: @artshopvirts_channel",
+  ABOUT_SHOP_LINES[2],
   "",
-  "Отзывы: https://t.me/artshopvirts_channel/85",
-  "",
-  "Менеджер: @artshopvirts_man",
-  "",
-  "MEDIA-сотрудничество: @artshopvirts_media",
+  ABOUT_SHOP_LINES[3],
 ].join("\n");
 
 export const BTN_OPEN_SHOP = "🟢 Открыть магазин";
