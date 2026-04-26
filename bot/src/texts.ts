@@ -14,13 +14,9 @@ export const ABOUT_SHOP_LINES: readonly [string, string, string, string] = [
   "Работаем с 2024 года: более 1500 клиентов и 780 отзывов.",
   [
     "Наши официальные ссылки:",
-    "",
     "Telegram канал: @artshopvirts_channel",
-    "",
     "Отзывы: https://t.me/artshopvirts_channel/85",
-    "",
     "Менеджер: @artshopvirts_man",
-    "",
     "MEDIA-сотрудничество: @artshopvirts_media",
   ].join("\n"),
 ];

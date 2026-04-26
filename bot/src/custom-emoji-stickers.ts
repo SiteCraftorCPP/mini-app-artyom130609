@@ -210,7 +210,7 @@ export async function buildMultilineCustomEmojiLinesCaption(
     entities.push({ type: "custom_emoji", offset, length, custom_emoji_id });
     fullText += em + " " + lineTexts[i];
     if (i < n - 1) {
-      fullText += "\n";
+      fullText += "\n\n";
     }
   }
   return { text: fullText, entities };
