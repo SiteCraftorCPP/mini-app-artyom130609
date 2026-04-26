@@ -25,6 +25,14 @@ export const ORDER_SUCCESS_CUSTOM_EMOJI_IDS = {
   pointer: "5231102735817918643",
 } as const;
 
+/**
+ * Заказ + ACCOUNT_ORDER_TEMPLATE=manager: галочка в 1-й строке, указатель в конце последней.
+ */
+export const ORDER_SUCCESS_MANAGER_CUSTOM_EMOJI_IDS = {
+  success: "5233307140667492238",
+  pointer: "5231102735817918643",
+} as const;
+
 /** «О магазине»: 🪙 ⚡ 🍑 ⛓ — по одной иконке в начале каждой из 4 строк. */
 export const ABOUT_CUSTOM_EMOJI_ORDER = [
   CUSTOM_EMOJI_IDS.dollar,

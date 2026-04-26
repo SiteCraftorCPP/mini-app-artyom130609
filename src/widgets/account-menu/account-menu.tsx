@@ -18,15 +18,17 @@ import { AccountActionsDialog } from "../popup-app/account-actions-dialog";
 
 import { ACCOUNT_POPUP_MENU_ITEMS, type AccountPopupMenuItem } from "./model";
 
+type ProfileDeepLinkAction = "currentOrders" | "orderHistory";
+
 type AccountMenuProps = {
-  /** Ссылка из Telegram: открыть «Актуальные заказы» */
-  openCurrentOrdersFromLink?: boolean;
-  /** Параметр orderId из ссылки бота (WebApp) */
+  /** /profile?open=… из бота — какой раздел раскрыть (актуальные / история) */
+  deepLinkActionId?: ProfileDeepLinkAction | null;
+  /** &orderId=… — сразу карточка заказа */
   orderIdFromLink?: string | null;
 };
 
 export const AccountMenu = ({
-  openCurrentOrdersFromLink = false,
+  deepLinkActionId = null,
   orderIdFromLink = null,
 }: AccountMenuProps) => {
   const isAdmin = useIsTelegramAdmin();
@@ -63,10 +65,10 @@ export const AccountMenu = ({
           <AccountMenuPopupItem
             key={item.actionId}
             defaultOpen={
-              openCurrentOrdersFromLink && item.actionId === "currentOrders"
+              deepLinkActionId != null && item.actionId === deepLinkActionId
             }
             initialOrderIdFromLink={
-              item.actionId === "currentOrders" ? orderIdFromLink : null
+              item.actionId === deepLinkActionId ? orderIdFromLink : null
             }
             item={item}
           />

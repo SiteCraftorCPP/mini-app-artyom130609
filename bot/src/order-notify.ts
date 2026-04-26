@@ -11,10 +11,15 @@ import { InlineKeyboard } from "grammy";
 
 import { getTelegramUserIdFromWebAppInitData } from "./telegram-webapp-init-data.js";
 import {
+  buildOrderManagerSuccessTwoEmojisCaption,
   buildOrderSuccessThreeEmojisCaption,
+  type OrderManagerSuccessTwoEmojisParts,
   type OrderSuccessThreeEmojisParts,
 } from "./custom-emoji-stickers.js";
-import { getOrderSuccessStickerIdsFromEnv } from "./sticker-env.js";
+import {
+  getOrderSuccessManagerStickerIdsFromEnv,
+  getOrderSuccessStickerIdsFromEnv,
+} from "./sticker-env.js";
 import {
   BTN_WRITE_MANAGER,
   BTN_WRITE_REVIEW,
@@ -344,15 +349,26 @@ function getOrderSuccessThreeEmojisTextParts(
   };
 }
 
-/** Покупка аккаунта — связь с менеджером (без webApp-кнопки заказа). */
+/** Покупка аккаунта — связь с менеджером (без webApp-кнопки заказа), без custom_emoji. */
 function buildAccountManagerOrderCaption(orderNumber: string): string {
   const n = formatOrderNumberForCaption(orderNumber);
   return [
     `✅ Заказ ${n} успешно оформлен!`,
     "",
-    "💬 Следующие действия:",
-    "Скопируйте номер заказ и отпишите нашему менеджеру, нажав на кнопку ниже 🔽",
+    "Что нужно сделать:",
+    "Скопируйте номер заказа и напишите менеджеру через кнопку ниже 👇",
   ].join("\n");
+}
+
+function getOrderManagerSuccessTextParts(
+  orderNumber: string,
+): OrderManagerSuccessTwoEmojisParts {
+  const n = formatOrderNumberForCaption(orderNumber);
+  return {
+    line1: `Заказ ${n} успешно оформлен!`,
+    whatToDo: "Что нужно сделать:",
+    lineLast: "Скопируйте номер заказа и напишите менеджеру через кнопку ниже",
+  };
 }
 
 /**
@@ -361,7 +377,7 @@ function buildAccountManagerOrderCaption(orderNumber: string): string {
  */
 function buildOrderDetailsKeyboard(miniAppUrl: string, orderId: string) {
   const base = miniAppUrl.replace(/\/$/, "");
-  const url = `${base}/profile?open=currentOrders&orderId=${encodeURIComponent(orderId)}`;
+  const url = `${base}/profile?open=orderHistory&orderId=${encodeURIComponent(orderId)}`;
   return new InlineKeyboard().webApp("🟢 Узнать детали", url);
 }
 
@@ -442,7 +458,15 @@ export async function sendVirtOrderSuccess(
   let caption_entities: import("@grammyjs/types").MessageEntity[] | undefined;
 
   if (isAccountManagerMode) {
-    caption = buildAccountManagerOrderCaption(payload.orderNumber);
+    const mgrParts = getOrderManagerSuccessTextParts(payload.orderNumber);
+    const mgrIds = getOrderSuccessManagerStickerIdsFromEnv();
+    const withMgr = await buildOrderManagerSuccessTwoEmojisCaption(bot.api, mgrIds, mgrParts);
+    if (withMgr) {
+      caption = withMgr.text;
+      caption_entities = withMgr.entities;
+    } else {
+      caption = buildAccountManagerOrderCaption(payload.orderNumber);
+    }
   } else {
     const parts = getOrderSuccessThreeEmojisTextParts(payload.orderNumber, orderKind);
     const ids = getOrderSuccessStickerIdsFromEnv();

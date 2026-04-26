@@ -1,4 +1,7 @@
-import { ORDER_SUCCESS_CUSTOM_EMOJI_IDS } from "./sticker-ids.js";
+import {
+  ORDER_SUCCESS_CUSTOM_EMOJI_IDS,
+  ORDER_SUCCESS_MANAGER_CUSTOM_EMOJI_IDS,
+} from "./sticker-ids.js";
 
 /** Чтение только в рантайме (после loadEnv в index), не при импорте модуля. */
 
@@ -48,4 +51,24 @@ export function getOrderSuccessStickerIdsFromEnv(): {
     );
   }
   return { ...ORDER_SUCCESS_CUSTOM_EMOJI_IDS };
+}
+
+/**
+ * ORDER_SUCCESS_MANAGER_STICKER_IDS: 2 id — (1) в начале «Заказ #… оформлен!»,
+ * (2) в конце «…через кнопку ниже» (как у сценария с менеджером, без 3-го id часов).
+ */
+export function getOrderSuccessManagerStickerIdsFromEnv(): {
+  success: string;
+  pointer: string;
+} {
+  const list = parseFileIdList(process.env.ORDER_SUCCESS_MANAGER_STICKER_IDS);
+  if (list?.length === 2) {
+    return { success: list[0]!, pointer: list[1]! };
+  }
+  if (list && list.length > 0) {
+    console.warn(
+      "[sticker-env] ORDER_SUCCESS_MANAGER_STICKER_IDS: нужно ровно 2 id — взяты из кода (sticker-ids).",
+    );
+  }
+  return { ...ORDER_SUCCESS_MANAGER_CUSTOM_EMOJI_IDS };
 }

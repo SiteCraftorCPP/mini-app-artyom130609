@@ -26,9 +26,9 @@ export type AccountActionId =
 type AccountActionsDialogProps = {
   actionId: AccountActionId;
   children: ReactNode;
-  /** Открыть диалог сразу (deep link из бота: /profile?open=currentOrders) */
+  /** Deep link: /profile?open=currentOrders|orderHistory&orderId=… */
   defaultOpen?: boolean;
-  /** Deep link: /profile?...&orderId=… — показать карточку этого заказа */
+  /** &orderId=… — сразу деталка (актуальный заказ или запись в истории) */
   initialOrderIdFromLink?: string | null;
 };
 
@@ -39,7 +39,11 @@ export const AccountActionsDialog = ({
   initialOrderIdFromLink = null,
 }: AccountActionsDialogProps) => {
   const action = ACCOUNT_ACTION_DIALOG_TEXT[actionId];
-  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(() =>
+    actionId === "orderHistory" && initialOrderIdFromLink
+      ? initialOrderIdFromLink
+      : null,
+  );
   const [open, setOpen] = useState(defaultOpen);
   const [focusedCurrentOrderId, setFocusedCurrentOrderId] = useState<
     string | null

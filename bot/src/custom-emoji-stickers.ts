@@ -224,6 +224,52 @@ export type OrderSuccessThreeEmojisParts = {
   lastBeforePointer: string;
 };
 
+/** Заказ + менеджер: (1) у «Заказ #… оформлен!», (2) в конце «…через кнопку ниже». */
+export type OrderManagerSuccessTwoEmojisParts = {
+  line1: string;
+  whatToDo: string;
+  lineLast: string;
+};
+
+/**
+ * Фото «заказ + менеджер»: (1) начало 1-й строки, (2) конец последней (указатель).
+ */
+export async function buildOrderManagerSuccessTwoEmojisCaption(
+  api: Context["api"],
+  ids: { success: string; pointer: string },
+  p: OrderManagerSuccessTwoEmojisParts,
+): Promise<CustomEmojiCaption | null> {
+  const sId = normId(ids.success);
+  const pId = normId(ids.pointer);
+  if (!sId || !pId) {
+    return null;
+  }
+  await ensureStickersInCache({ api } as Pick<Context, "api">, [sId, pId]);
+  const s0 = getCachedStickerForRequestedId(sId);
+  const s1 = getCachedStickerForRequestedId(pId);
+  if (!s0?.emoji || !s1?.emoji) {
+    console.warn("[custom-emoji] order-manager: нет Sticker.emoji");
+    return null;
+  }
+  const h1 = s0.emoji as string;
+  const h2 = s1.emoji as string;
+  const text =
+    h1 + "  " + p.line1 + "\n\n" + p.whatToDo + "\n" + p.lineLast + h2;
+  const offPointer = text.length - h2.length;
+  return {
+    text,
+    entities: [
+      { type: "custom_emoji", offset: 0, length: h1.length, custom_emoji_id: sId },
+      {
+        type: "custom_emoji",
+        offset: offPointer,
+        length: h2.length,
+        custom_emoji_id: pId,
+      },
+    ],
+  };
+}
+
 /**
  * Фото «заказ оформлен»): (1) начало 1-й строки, (2) начало строки срока, (3) конец последней.
  */
