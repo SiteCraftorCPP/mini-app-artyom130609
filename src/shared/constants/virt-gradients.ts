@@ -7,4 +7,7 @@ export const VIRT_GRADIENT_CLASSES: Record<VirtGradientToken, string> = {
   purple: "tw-bg-gradient-virt-card-purple",
   red: "tw-bg-gradient-virt-card-red",
   yellow: "tw-bg-gradient-virt-card-yellow",
+  orange: "tw-bg-gradient-virt-card-orange",
+  grey: "tw-bg-gradient-virt-card-grey",
+  gold: "tw-bg-gradient-virt-card-gold",
 };

@@ -79,6 +79,18 @@
   background: var(--gradient-virt-card-dark);
 }
 
+@utility tw-bg-gradient-virt-card-orange {
+  background: var(--gradient-virt-card-orange);
+}
+
+@utility tw-bg-gradient-virt-card-grey {
+  background: var(--gradient-virt-card-grey);
+}
+
+@utility tw-bg-gradient-virt-card-gold {
+  background: var(--gradient-virt-card-gold);
+}
+
 @utility tw-bg-gradient-primary {
   background: var(--gradient-primary);
 }
@@ -245,6 +257,12 @@
   --virt-pink-700: rgba(134, 22, 84, 1);
   --virt-dark-500: rgba(53, 55, 99, 1);
   --virt-dark-700: rgba(23, 19, 33, 1);
+  --virt-orange-500: rgba(255, 102, 0, 1);
+  --virt-orange-700: rgba(204, 82, 0, 1);
+  --virt-grey-500: rgba(160, 160, 160, 1);
+  --virt-grey-700: rgba(100, 100, 100, 1);
+  --virt-gold-500: rgba(255, 215, 0, 1);
+  --virt-gold-700: rgba(204, 172, 0, 1);
   --overlay-dark: rgba(0, 0, 0, 0.08);
   --black-30: rgba(0, 0, 0, 0.3);
   --white-16: rgba(255, 255, 255, 0.16);
@@ -371,6 +389,21 @@
     90deg,
     var(--virt-dark-500) 0%,
     var(--virt-dark-700) 100%
+  );
+  --gradient-virt-card-orange: linear-gradient(
+    90deg,
+    var(--virt-orange-500) 0%,
+    var(--virt-orange-700) 100%
+  );
+  --gradient-virt-card-grey: linear-gradient(
+    90deg,
+    var(--virt-grey-500) 0%,
+    var(--virt-grey-700) 100%
+  );
+  --gradient-virt-card-gold: linear-gradient(
+    90deg,
+    var(--virt-gold-500) 0%,
+    var(--virt-gold-700) 100%
   );
 
   --app-panel-foreground: rgba(19, 22, 35, 1);

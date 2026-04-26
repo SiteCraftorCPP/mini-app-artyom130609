@@ -4,7 +4,10 @@ export type VirtGradientToken =
   | "pink"
   | "purple"
   | "red"
-  | "yellow";
+  | "yellow"
+  | "orange"
+  | "grey"
+  | "gold";
 
 export type AccountPurchaseOption = {
   amountRub: number;
