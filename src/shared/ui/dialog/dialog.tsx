@@ -27,7 +27,7 @@ const dialogContentVariants = cva(
          * Без `bottom: …` в vh, чтобы динамическое dvh/lvh не пересчитывало кадр.
          */
         popup:
-          "top-[min(3.25rem,max(0.25rem,calc(0.065*var(--app-stable-vh-px,100dvh))))] h-[min(720px,calc(0.9*var(--app-stable-vh-px,100dvh)))] max-h-[min(720px,calc(0.9*var(--app-stable-vh-px,100dvh)))] w-[calc(100vw-(var(--popup-viewport-offset)*2))] max-w-md translate-y-0 overflow-hidden rounded-[16px] shadow-[0_24px_60px_var(--app-shadow)]",
+          "top-[min(3.25rem,max(0.25rem,calc(0.065*100dvh)))] bottom-[var(--popup-viewport-offset)] w-[calc(100vw-(var(--popup-viewport-offset)*2))] max-w-md translate-y-0 overflow-hidden rounded-[16px] shadow-[0_24px_60px_var(--app-shadow)]",
         /** Узкий блок по центру экрана (FAQ и т.п.), без растягивания на всю высоту */
         popupCentered:
           "top-1/2 max-h-[min(85vh,560px)] w-[min(100vw-2rem,22rem)] max-w-[22rem] -translate-y-1/2 overflow-hidden rounded-[16px] shadow-[0_24px_60px_var(--app-shadow)]",

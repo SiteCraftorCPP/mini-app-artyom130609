@@ -79,7 +79,7 @@ export const HomeActionDialog = ({
     <PopupApp
       contentClassName="!min-h-0"
       contentBodyClassName={
-        isFormCenteredFlow ? "flex flex-1 flex-col justify-center" : undefined
+        isFormCenteredFlow ? "flex flex-1 flex-col justify-start" : undefined
       }
       dialogVariant="popup"
       open={open}
