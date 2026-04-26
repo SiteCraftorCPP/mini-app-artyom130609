@@ -53,7 +53,7 @@ if (!token) {
   process.exit(1);
 }
 
-const bot = new Bot(token, {
+const bot = new Bot<Context>(token, {
   client: {
     apiRoot: process.env.TELEGRAM_API_ROOT || "https://api.telegram.org",
   },

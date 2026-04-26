@@ -776,7 +776,7 @@ async function clearReplyKeyboard(ctx: Context) {
   }
 }
 
-export function installAdminModule(bot: Bot, adminIds: Set<number>) {
+export function installAdminModule(bot: Bot<Context>, adminIds: Set<number>) {
   const sendBuyerCompleted = (telegramUserId: number, orderNumber: string, isAccount?: boolean, accountData?: string) => {
     void sendOrderCompletedToBuyer(bot, { telegramUserId, orderNumber, isAccount, accountData }).catch(
       (e) => console.error("[order-complete] уведомление покупателю:", e),
@@ -887,7 +887,7 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
     });
   });
 
-  bot.callbackQuery(CB.menu, async (ctx) => {
+  bot.callbackQuery(CB.menu, async (ctx: Context) => {
     const a = await requireAdmin(ctx);
     if (a == null) {
       return;
@@ -907,7 +907,7 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
     });
   });
 
-  bot.callbackQuery(CB.supplies, async (ctx) => {
+  bot.callbackQuery(CB.supplies, async (ctx: Context) => {
     const a = await requireAdmin(ctx);
     if (a == null) return;
     if (ctx.from) {
@@ -929,7 +929,7 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
     }
   });
 
-  bot.callbackQuery("sup:new", async (ctx) => {
+  bot.callbackQuery("sup:new", async (ctx: Context) => {
     const a = await requireAdmin(ctx);
     if (a == null) return;
     if (ctx.from) {
@@ -942,7 +942,7 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
     });
   });
 
-  bot.callbackQuery(CB_SUPPLY_CANCEL, async (ctx) => {
+  bot.callbackQuery(CB_SUPPLY_CANCEL, async (ctx: Context) => {
     const a = await requireAdmin(ctx);
     if (a == null) return;
     if (ctx.from) {
@@ -953,7 +953,7 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
     await a.reply("Операция отменена.", { reply_markup: adminMenuKeyboard() });
   });
 
-  bot.callbackQuery("sup:act", async (ctx) => {
+  bot.callbackQuery("sup:act", async (ctx: Context) => {
     const a = await requireAdmin(ctx);
     if (a == null) return;
     if (ctx.from) {
@@ -971,14 +971,15 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
     }
   });
 
-  bot.callbackQuery(/^sup:v:([^:\s]+)$/, async (ctx) => {
+  bot.callbackQuery(/^sup:v:([^:\s]+)$/, async (ctx: Context) => {
     const a = await requireAdmin(ctx);
     if (a == null) return;
     if (ctx.from) {
       clearAwaitingSupplyCreate(ctx.from.id);
       clearAwaitingSupplyClose(ctx.from.id);
     }
-    const id = ctx.match[1] ?? "";
+    const match = ctx.match;
+    const id = match?.[1] ?? "";
     const supply = getSupplyById(id);
     if (!supply) {
       await ctx.answerCallbackQuery({ text: "Поставка не найдена", show_alert: true });
@@ -996,10 +997,11 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
     }
   });
 
-  bot.callbackQuery(/^sup:fin:([^:\s]+)$/, async (ctx) => {
+  bot.callbackQuery(/^sup:fin:([^:\s]+)$/, async (ctx: Context) => {
     const a = await requireAdmin(ctx);
     if (a == null) return;
-    const id = ctx.match[1] ?? "";
+    const match = ctx.match;
+    const id = match?.[1] ?? "";
     const supply = getSupplyById(id);
     if (!supply || supply.closedAtMs) {
       await ctx.answerCallbackQuery({ text: "Поставка уже закрыта или не найдена", show_alert: true });
@@ -1015,7 +1017,7 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
     });
   });
 
-  bot.callbackQuery(/^sup:his(?::(\d+))?$/, async (ctx) => {
+  bot.callbackQuery(/^sup:his(?::(\d+))?$/, async (ctx: Context) => {
     const a = await requireAdmin(ctx);
     if (a == null) return;
     if (ctx.from) {
@@ -1023,7 +1025,8 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
       clearAwaitingSupplyClose(ctx.from.id);
     }
     await ctx.answerCallbackQuery();
-    const page = parseInt(ctx.match[1] || "0", 10);
+    const match = ctx.match;
+    const page = parseInt(match?.[1] || "0", 10);
     const closed = listClosedSupplies();
     const text = buildSuppliesHistoryText(closed, page);
     const kb = buildSuppliesHistoryKeyboard(closed, page);
@@ -1034,10 +1037,11 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
     }
   });
 
-  bot.callbackQuery(/^sup:h:([^:\s]+)$/, async (ctx) => {
+  bot.callbackQuery(/^sup:h:([^:\s]+)$/, async (ctx: Context) => {
     const a = await requireAdmin(ctx);
     if (a == null) return;
-    const id = ctx.match[1] ?? "";
+    const match = ctx.match;
+    const id = match?.[1] ?? "";
     const supply = getSupplyById(id);
     if (!supply) {
       await ctx.answerCallbackQuery({ text: "Поставка не найдена", show_alert: true });
@@ -1056,7 +1060,7 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
     }
   });
 
-  bot.callbackQuery("sup:st", async (ctx) => {
+  bot.callbackQuery("sup:st", async (ctx: Context) => {
     const a = await requireAdmin(ctx);
     if (a == null) return;
     await ctx.answerCallbackQuery();
@@ -1069,10 +1073,11 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
     }
   });
 
-  bot.callbackQuery(/^sup:s([0-7])$/, async (ctx) => {
+  bot.callbackQuery(/^sup:s([0-7])$/, async (ctx: Context) => {
     const a = await requireAdmin(ctx);
     if (a == null) return;
-    const idx = parseInt(ctx.match[1] ?? "0", 10);
+    const match = ctx.match;
+    const idx = parseInt(match?.[1] ?? "0", 10);
     await ctx.answerCallbackQuery();
     if ([3, 4, 5, 7].includes(idx)) {
       if (ctx.from) awaitingPeriodInputByUserId.set(ctx.from.id, { statType: "supply", periodIndex: idx });
@@ -1094,7 +1099,7 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
     }
   });
 
-  bot.callbackQuery(CB.userStats, async (ctx) => {
+  bot.callbackQuery(CB.userStats, async (ctx: Context) => {
     const a = await requireAdmin(ctx);
     if (a == null) {
       return;
