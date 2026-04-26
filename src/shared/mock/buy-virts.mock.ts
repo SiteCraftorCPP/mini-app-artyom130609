@@ -1,3 +1,4 @@
+import { BLACK_RUSSIA_SERVER_OPTIONS } from "../constants/servers-black-russia";
 import { VIRTS_ICONS } from "../constants/virt-icons";
 
 import type { Virt } from "@/entities/virt";
@@ -10,7 +11,7 @@ export const BUY_VIRTS_MOCK: Virt[] = [
     gradientToken: "red",
     logo: VIRTS_ICONS["black-russia"],
     serverLabel: "Сервер",
-    serverOptions: ["1. №02 Green", "2. №05 Red", "3. №07 Blue"],
+    serverOptions: [...BLACK_RUSSIA_SERVER_OPTIONS],
     accountNumber: "",
     amountRub: 99,
     amountVirts: 0,
