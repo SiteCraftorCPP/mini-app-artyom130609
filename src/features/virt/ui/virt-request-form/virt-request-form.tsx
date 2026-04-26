@@ -51,15 +51,15 @@ export const VirtRequestForm = ({ virt }: VirtRequestFormProps) => {
   } = useVirtRequestForm({ virt });
 
   return (
-    <div className="space-y-3 px-4 pb-4">
-      <VirtCard virt={virt} interactive={false} className="shadow-none" />
+    <div className="flex flex-1 flex-col gap-3 px-4 pb-4 h-full">
+      <VirtCard virt={virt} interactive={false} className="shadow-none shrink-0" />
 
       <Form {...form}>
         <form
           onSubmit={handleSubmit}
-          className="bg-surface-base text-text-inverse m-auto rounded-xl p-3 shadow-[var(--shadow-popup-panel)]"
+          className="bg-surface-base text-text-inverse flex flex-1 flex-col w-full rounded-xl p-4 shadow-[var(--shadow-popup-panel)]"
         >
-          <div className="space-y-3">
+          <div className="flex flex-1 flex-col justify-around gap-2 min-h-[min-content]">
             <FormField
               control={form.control}
               name="server"
@@ -181,7 +181,7 @@ export const VirtRequestForm = ({ virt }: VirtRequestFormProps) => {
             />
           </div>
 
-          <div className="mt-3 flex items-center justify-between gap-3">
+          <div className="mt-3 flex shrink-0 items-center justify-between gap-3">
             <div className="border-app-border-soft tw-bg-gradient-badge-background flex h-7 items-center justify-center rounded-full border px-4 text-white">
               <AppText tag={TAG.div} variant="primaryStrong" size="small">
                 {`${formatNumberWithSpaces(Number(displayAmountRub || 0)) || VIRT_REQUEST_FORM_DEFAULTS.zeroAmountFallback} ${CURRENCY.RUB}`}

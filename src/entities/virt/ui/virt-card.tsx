@@ -54,7 +54,9 @@ export const VirtCard = ({
             <img
               src={virt.logo}
               alt=""
-              className="size-full object-contain"
+              className={cn("size-full object-contain", {
+                "scale-150": virt.slug === "province-rp",
+              })}
               width="100%"
               height="100%"
             />
