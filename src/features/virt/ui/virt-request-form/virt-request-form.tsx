@@ -57,9 +57,9 @@ export const VirtRequestForm = ({ virt }: VirtRequestFormProps) => {
       <Form {...form}>
         <form
           onSubmit={handleSubmit}
-          className="bg-surface-base text-text-inverse flex flex-1 flex-col w-full rounded-xl p-4 shadow-[var(--shadow-popup-panel)]"
+          className="bg-surface-base text-text-inverse flex flex-col w-full rounded-xl p-4 shadow-[var(--shadow-popup-panel)]"
         >
-          <div className="flex flex-1 flex-col justify-around gap-2 min-h-[min-content]">
+          <div className="flex flex-col gap-3">
             <FormField
               control={form.control}
               name="server"
