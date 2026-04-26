@@ -270,6 +270,64 @@ export async function buildOrderManagerSuccessTwoEmojisCaption(
   };
 }
 
+/** Выполнение заказа (фото отзыва): (1) строка «Заказ #… выполнен», (2) вирты / данные аккаунта, (3) отзыв. */
+export type OrderCompletedThreeEmojisParts =
+  | {
+      kind: "virt";
+      line1: string;
+      line2: string;
+      line3: string;
+    }
+  | {
+      kind: "account";
+      line1: string;
+      accountData: string;
+      line3: string;
+    };
+
+export async function buildOrderCompletedThreeEmojisCaption(
+  api: Context["api"],
+  ids: { first: string; second: string; third: string },
+  p: OrderCompletedThreeEmojisParts,
+): Promise<CustomEmojiCaption | null> {
+  const fId = normId(ids.first);
+  const sId = normId(ids.second);
+  const tId = normId(ids.third);
+  const idArr = [fId, sId, tId].filter((x) => x.length > 0);
+  if (idArr.length !== 3) {
+    return null;
+  }
+  await ensureStickersInCache({ api } as Pick<Context, "api">, idArr);
+  const s0 = getCachedStickerForRequestedId(fId);
+  const s1 = getCachedStickerForRequestedId(sId);
+  const s2 = getCachedStickerForRequestedId(tId);
+  if (!s0?.emoji || !s1?.emoji || !s2?.emoji) {
+    console.warn("[custom-emoji] order-completed: нет Sticker.emoji");
+    return null;
+  }
+  const h1 = s0.emoji as string;
+  const h2 = s1.emoji as string;
+  const h3 = s2.emoji as string;
+
+  const middle =
+    p.kind === "virt"
+      ? h2 + " " + p.line2
+      : h2 + " " + "Данные для входа в аккаунт:\n" + p.accountData;
+
+  const text = h1 + "  " + p.line1 + "\n\n" + middle + "\n\n" + h3 + " " + p.line3;
+  const off2 = (h1 + "  " + p.line1 + "\n\n").length;
+  const off3 = (h1 + "  " + p.line1 + "\n\n" + middle + "\n\n").length;
+
+  return {
+    text,
+    entities: [
+      { type: "custom_emoji", offset: 0, length: h1.length, custom_emoji_id: fId },
+      { type: "custom_emoji", offset: off2, length: h2.length, custom_emoji_id: sId },
+      { type: "custom_emoji", offset: off3, length: h3.length, custom_emoji_id: tId },
+    ],
+  };
+}
+
 /**
  * Фото «заказ оформлен»): (1) начало 1-й строки, (2) начало строки срока, (3) конец последней.
  */

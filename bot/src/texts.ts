@@ -76,6 +76,9 @@ export const STATS_HEADER = "💰 Сумма текущих заказов в р
 export const BTN_WRITE_REVIEW = "🟢 Написать отзыв";
 export const REVIEW_POST_URL = "https://t.me/artshopvirts_channel/85";
 
+const ORDER_COMPLETED_LINE_REVIEW =
+  "Напишите отзыв — и к следующему заказу получите 200 000 бонусных виртов!";
+
 export function buildOrderCompletedBuyerCaption(orderNumber: string, isAccount?: boolean, accountData?: string): string {
   const t = orderNumber.trim().replace(/^#+/, "");
   const ref = `#${t}`;
@@ -86,16 +89,21 @@ export function buildOrderCompletedBuyerCaption(orderNumber: string, isAccount?:
       "✅ Данные для входа в аккаунт:",
       accountData,
       "",
-      "🪙 Напишите отзыв — и к следующему заказу получите 200 000 бонусных виртов!",
+      `🪙 ${ORDER_COMPLETED_LINE_REVIEW}`,
     ].join("\n");
   }
   return [
     `✅ Заказ ${ref} успешно выполнен!`,
     "",
-    "💳 Вирты успешно зачислены на ваш банковский счёт.",
+    "✅ Вирты успешно зачислены на ваш банковский счёт.",
     "",
-    "🪙 Напишите отзыв — и к следующему заказу получите 200 000 бонусных виртов!",
+    `🪙 ${ORDER_COMPLETED_LINE_REVIEW}`,
   ].join("\n");
+}
+
+/** Текст строки про отзыв (без ведущего эмодзи) — для caption_entities. */
+export function getOrderCompletedReviewLineText(): string {
+  return ORDER_COMPLETED_LINE_REVIEW;
 }
 export const msgProfitPrompt = (orderId: string) => {
   const t = orderId.trim().replace(/^#+/, "");

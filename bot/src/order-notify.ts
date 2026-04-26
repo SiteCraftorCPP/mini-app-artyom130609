@@ -11,12 +11,14 @@ import { InlineKeyboard } from "grammy";
 
 import { getTelegramUserIdFromWebAppInitData } from "./telegram-webapp-init-data.js";
 import {
+  buildOrderCompletedThreeEmojisCaption,
   buildOrderManagerSuccessTwoEmojisCaption,
   buildOrderSuccessThreeEmojisCaption,
   type OrderManagerSuccessTwoEmojisParts,
   type OrderSuccessThreeEmojisParts,
 } from "./custom-emoji-stickers.js";
 import {
+  getOrderCompletedStickerIdsFromEnv,
   getOrderSuccessManagerStickerIdsFromEnv,
   getOrderSuccessStickerIdsFromEnv,
 } from "./sticker-env.js";
@@ -26,6 +28,7 @@ import {
   REVIEW_POST_URL,
   buildOrderCompletedBuyerCaption,
   buildSellVirtCaption,
+  getOrderCompletedReviewLineText,
 } from "./texts.js";
 import { addOrUpdateActiveOrder, type AdminOrderRow } from "./orders-store.js";
 import { consumePromoCode, getAllPromoCodes } from "./promo-codes-store.js";
@@ -600,6 +603,11 @@ function resolveCompletedOrderReviewPhoto(): OrderSuccessPhoto | null {
   return null;
 }
 
+function formatCompletedOrderRef(orderNumber: string): string {
+  const t = orderNumber.trim().replace(/^#+/, "");
+  return `#${t}`;
+}
+
 /**
  * Сообщение покупателю: заказ выполнен, отзыв, кнопка на пост + фото `photo_3` при наличии.
  */
@@ -607,15 +615,36 @@ export async function sendOrderCompletedToBuyer(
   bot: Bot,
   payload: { telegramUserId: number; orderNumber: string; isAccount?: boolean; accountData?: string },
 ): Promise<void> {
-  const caption = buildOrderCompletedBuyerCaption(payload.orderNumber, payload.isAccount, payload.accountData);
-  const reply_markup = new InlineKeyboard().url(BTN_WRITE_REVIEW, REVIEW_POST_URL);
+  const ref = formatCompletedOrderRef(payload.orderNumber);
+  const line1 = `Заказ ${ref} успешно выполнен!`;
+  const line3 = getOrderCompletedReviewLineText();
+  const ids = getOrderCompletedStickerIdsFromEnv();
+  const useAccountLayout = Boolean(payload.isAccount && payload.accountData?.trim());
 
-  const sendTextOnly = async () => {
-    await bot.api.sendMessage(payload.telegramUserId, caption, {
-      reply_markup,
-      parse_mode: "HTML"
-    });
-  };
+  const withEm = useAccountLayout
+    ? await buildOrderCompletedThreeEmojisCaption(bot.api, ids, {
+        kind: "account",
+        line1,
+        accountData: payload.accountData!.trim(),
+        line3,
+      })
+    : await buildOrderCompletedThreeEmojisCaption(bot.api, ids, {
+        kind: "virt",
+        line1,
+        line2: "Вирты успешно зачислены на ваш банковский счёт.",
+        line3,
+      });
+
+  let caption: string;
+  let caption_entities: import("@grammyjs/types").MessageEntity[] | undefined;
+  if (withEm) {
+    caption = withEm.text;
+    caption_entities = withEm.entities;
+  } else {
+    caption = buildOrderCompletedBuyerCaption(payload.orderNumber, payload.isAccount, payload.accountData);
+  }
+
+  const reply_markup = new InlineKeyboard().url(BTN_WRITE_REVIEW, REVIEW_POST_URL);
 
   const photo = resolveCompletedOrderReviewPhoto();
   if (!photo) {
@@ -623,18 +652,24 @@ export async function sendOrderCompletedToBuyer(
     return;
   }
 
+  const sendPhotoOptions = {
+    caption,
+    reply_markup,
+    ...(caption_entities && caption_entities.length > 0 ? { caption_entities } : {}),
+  };
+
   await retrySendPhoto(async () => {
     if (photo.type === "url") {
-      await bot.api.sendPhoto(payload.telegramUserId, photo.url, { caption, reply_markup, parse_mode: "HTML" });
+      await bot.api.sendPhoto(payload.telegramUserId, photo.url, sendPhotoOptions);
     } else {
       const buffer = readFileSync(photo.path);
       await bot.api.sendPhoto(
         payload.telegramUserId,
         new InputFile(buffer, `${Date.now()}_${basename(photo.path)}`),
-        { caption, reply_markup, parse_mode: "HTML" }
+        sendPhotoOptions,
       );
     }
-  }).catch(e => {
+  }).catch((e) => {
     console.error("[order-complete] Фото так и не отправилось", e);
     throw e;
   });

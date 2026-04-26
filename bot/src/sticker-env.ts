@@ -1,4 +1,5 @@
 import {
+  ORDER_COMPLETED_CUSTOM_EMOJI_IDS,
   ORDER_SUCCESS_CUSTOM_EMOJI_IDS,
   ORDER_SUCCESS_MANAGER_CUSTOM_EMOJI_IDS,
 } from "./sticker-ids.js";
@@ -71,4 +72,25 @@ export function getOrderSuccessManagerStickerIdsFromEnv(): {
     );
   }
   return { ...ORDER_SUCCESS_MANAGER_CUSTOM_EMOJI_IDS };
+}
+
+/**
+ * ORDER_COMPLETED_STICKER_IDS: 3 id — (1) «Заказ #… выполнен»,
+ * (2) «Вирты зачислены…» / «Данные для входа…», (3) «Напишите отзыв…».
+ */
+export function getOrderCompletedStickerIdsFromEnv(): {
+  first: string;
+  second: string;
+  third: string;
+} {
+  const list = parseFileIdList(process.env.ORDER_COMPLETED_STICKER_IDS);
+  if (list?.length === 3) {
+    return { first: list[0]!, second: list[1]!, third: list[2]! };
+  }
+  if (list && list.length > 0) {
+    console.warn(
+      "[sticker-env] ORDER_COMPLETED_STICKER_IDS: нужно ровно 3 id — взяты из кода (sticker-ids).",
+    );
+  }
+  return { ...ORDER_COMPLETED_CUSTOM_EMOJI_IDS };
 }

@@ -33,6 +33,15 @@ export const ORDER_SUCCESS_MANAGER_CUSTOM_EMOJI_IDS = {
   pointer: "5231102735817918643",
 } as const;
 
+/**
+ * Выполнение заказа (фото / отзыв): (1) «Заказ выполнен», (2) вирты / данные, (3) отзыв (как 🪙).
+ */
+export const ORDER_COMPLETED_CUSTOM_EMOJI_IDS = {
+  first: "5208540237524911208",
+  second: "5260726538302660868",
+  third: "5283232570660634549",
+} as const;
+
 /** «О магазине»: 🪙 ⚡ 🍑 ⛓ — по одной иконке в начале каждой из 4 строк. */
 export const ABOUT_CUSTOM_EMOJI_ORDER = [
   CUSTOM_EMOJI_IDS.dollar,
