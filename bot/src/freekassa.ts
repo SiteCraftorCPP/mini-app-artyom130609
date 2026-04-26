@@ -66,6 +66,8 @@ export function buildPaymentUrl(args: {
   p.set("s", args.s);
   p.set("i", String(args.i));
   p.set("lang", "ru");
+  /** Как в официальном примере GET-формы (док-ция FreeKassa, демо-ссылка). */
+  p.set("pay", "PAY");
   return `${PAY_BASE}?${p.toString()}`;
 }
 

@@ -37,6 +37,50 @@ export type PaymentPrepareResult = {
   orderNumber: string;
 };
 
+function mapPrepareError(status: number, body: string): string {
+  let code: string | undefined;
+  try {
+    const j = JSON.parse(body) as { error?: string };
+    code = j?.error;
+  } catch {
+    /* не JSON — nginx/html */
+  }
+  if (code === "freekassa not configured") {
+    return "На сервере не задан FREEKASSA_SECRET1 в .env у бота — попросите администратора.";
+  }
+  if (code === "no bot token") {
+    return "Сервер бота без TELEGRAM_BOT_TOKEN — настройка на стороне хоста.";
+  }
+  if (code === "bad initData") {
+    return "Сессия Telegram недействительна. Закройте магазин и откройте снова из бота.";
+  }
+  if (code === "initData") {
+    return "Нет данных Telegram. Откройте магазин из кнопки в боте, не из браузера.";
+  }
+  if (code === "amount" || code === "method" || code === "orderKind") {
+    return "Проверьте сумму и данные формы, затем снова нажмите «Оплатить».";
+  }
+  if (code === "server") {
+    return "Сервер не смог создать оплату. Попробуйте позже или напишите в поддержку.";
+  }
+  if (status === 404) {
+    return "Запрос не дошёл до бота. Проверьте: nginx проксирует /notify/ на порт с ботом (как /notify/virt-order-webapp).";
+  }
+  if (status === 502 || status === 504) {
+    return "Шлюз не отвечает. Повторите позже.";
+  }
+  if (status === 503) {
+    return "Оплата временно недоступна (сервер: нет настроек FreeKassa или бота).";
+  }
+  if (status === 401) {
+    return "Сессия устарела. Закройте мини-апп и откройте снова из бота.";
+  }
+  if (body && (body.includes("<!DOCTYPE") || body.includes("<html"))) {
+    return "Ответ не от бота (возможно, нет прокси на /notify/). Уточните настройки сервера.";
+  }
+  return `Ошибка оплаты (код ${status}). Попробуйте снова или напишите в поддержку.`;
+}
+
 /**
  * FreeKassa: URL оплаты. Уведомление в бот — только после /notify/freekassa (сервер).
  */
@@ -45,21 +89,39 @@ export async function requestPaymentPrepare(
 ): Promise<PaymentPrepareResult> {
   const base = resolveBaseUrl();
   if (!base) {
-    throw new Error("no base url");
+    throw new Error("Нет адреса API. Проверьте VITE_VIRT_ORDER_NOTIFY_URL при сборке.");
   }
-  const r = await fetch(`${base}/notify/payment/prepare`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
+  let r: Response;
+  try {
+    r = await fetch(`${base}/notify/payment/prepare`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    console.error(LOG, "network", msg);
+    if (msg === "Failed to fetch" || msg.includes("NetworkError")) {
+      throw new Error(
+        "Сеть: не удалось связаться с сервером оплаты. Проверьте интернет и откройте магазин из Telegram ещё раз.",
+      );
+    }
+    throw new Error("Не удалось запросить оплату. Повторите попытку.");
+  }
   const text = await r.text().catch(() => "");
   if (!r.ok) {
-    console.error(LOG, r.status, text);
-    throw new Error(`prepare ${r.status}`);
+    const errMsg = mapPrepareError(r.status, text);
+    console.error(LOG, r.status, text.slice(0, 200));
+    throw new Error(errMsg);
   }
-  const j = JSON.parse(text) as PaymentPrepareResult & { error?: string };
+  let j: PaymentPrepareResult & { error?: string };
+  try {
+    j = JSON.parse(text) as PaymentPrepareResult & { error?: string };
+  } catch {
+    throw new Error("Сервер вернул неверный ответ. Повторите попытку.");
+  }
   if (!j?.payUrl || !j?.orderNumber) {
-    throw new Error("bad response");
+    throw new Error("Сервер не прислал ссылку на оплату. Повторите попытку.");
   }
   return {
     payUrl: j.payUrl,
@@ -69,14 +131,70 @@ export async function requestPaymentPrepare(
   };
 }
 
-export function openPaymentUrl(payUrl: string): void {
+type TgOpenLink = (
+  u: string,
+  o?: { try_instant_view?: boolean; try_browser?: "chrome" | "firefox" | "mozilla" | "opera" | "safari" | "wvb" }
+) => void;
+
+/**
+ * Открывает внешнюю ссылку оплаты. После `await fetch` в Mini App `openLink` иногда молчит — перебираем варианты.
+ * @returns true, если сработал хотя бы один способ
+ */
+export function openPaymentUrl(payUrl: string): boolean {
+  const url = payUrl.trim();
+  if (!/^https?:\/\//i.test(url)) {
+    console.error(LOG, "invalid payUrl scheme");
+    return false;
+  }
+
   const w = window as unknown as {
-    Telegram?: { WebApp?: { openLink: (u: string, o?: { try_instant_view?: boolean }) => void } };
+    Telegram?: { WebApp?: { openLink: TgOpenLink; version?: string } };
   };
   const o = w.Telegram?.WebApp?.openLink;
-  if (o) {
-    o(payUrl, { try_instant_view: false });
-    return;
+
+  if (typeof o === "function") {
+    try {
+      o.call(w.Telegram?.WebApp, url, { try_instant_view: false });
+      return true;
+    } catch (e) {
+      console.warn(LOG, "openLink threw", e);
+    }
+    try {
+      o.call(w.Telegram?.WebApp, url, { try_instant_view: false, try_browser: "chrome" });
+      return true;
+    } catch (e) {
+      console.warn(LOG, "openLink+try_browser threw", e);
+    }
   }
-  window.open(payUrl, "_blank", "noopener,noreferrer");
+
+  try {
+    const a = document.createElement("a");
+    a.href = url;
+    a.target = "_blank";
+    a.rel = "noopener noreferrer";
+    a.style.setProperty("position", "fixed");
+    a.style.setProperty("left", "0");
+    a.style.setProperty("top", "0");
+    a.style.setProperty("opacity", "0");
+    a.style.setProperty("pointer-events", "none");
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    return true;
+  } catch (e) {
+    console.warn(LOG, "anchor click", e);
+  }
+
+  const opened = window.open(url, "_blank", "noopener,noreferrer");
+  if (opened) {
+    return true;
+  }
+
+  try {
+    window.location.assign(url);
+    return true;
+  } catch (e) {
+    console.error(LOG, "location.assign", e);
+  }
+  return false;
 }

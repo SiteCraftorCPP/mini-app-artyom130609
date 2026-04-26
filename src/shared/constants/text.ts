@@ -22,20 +22,23 @@ export const TEXT = {
 };
 
 export const PAYMENT_TEXT = {
-  title: "Выберите метод оплаты",
-  kztBlockTitle: "Тенге (KZT)",
-  kztNote:
-    "Перевод в тенге обрабатывается вручную. Сохраните реквизиты и укажите в комментарии к переводу цель. Уведомление о заказе в бот придёт после ручной проверки оплаты; для мгновенного учёта используйте способы в RUB (СБП / карта).",
+  title: "Оплата",
+  subtitleMethods: "Выберите способ",
+  kztBlockTitle: "Перевод в тенге (KZT)",
+  kztNoteP1: "Счета ниже — для ручного перевода. О заказе в боте сразу не узнает система: подтверждение вручную.",
+  kztNoteP2: "Нужен автоматический учёт — выберите СБП или карту (RUB) на предыдущем экране.",
+  backToMethods: "← К способам оплаты",
+  preparing: "Создаём ссылку…",
   copyHalyk: "Скопировать Halyk Bank",
   copyKaspi: "Скопировать Kaspi.kz",
-  kztClose: "Понятно",
+  kztClose: "Готово",
   halykLabel: "Halyk Bank",
   kaspiLabel: "Kaspi.kz",
   recipient: "Получатель",
   methodSbp: "СБП (RUB)",
   methodMir: "КАРТА РФ (МИР, СБЕРКИДС)",
   methodCard: "КАРТА РФ #2 (VISA, MASTERCARD)",
-  methodKzt: "Тенге (KZT)",
+  methodKzt: "Тенге (KZT) — реквизиты",
 } as const;
 
 export const VIRT_FORM_TEXT = {

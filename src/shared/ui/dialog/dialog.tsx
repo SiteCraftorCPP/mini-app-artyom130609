@@ -85,10 +85,13 @@ export const DialogContent = ({
   children,
   lockBodyScroll = false,
   variant,
+  /** Вложенный диалог (например, оплата) выше полноэкранного магазина, не «под» родителем. */
+  stackOnTop = false,
   ...props
 }: ComponentProps<typeof DialogPrimitive.Content> &
   VariantProps<typeof dialogContentVariants> & {
     lockBodyScroll?: boolean;
+    stackOnTop?: boolean;
   }) => {
   useLockBodyScroll(lockBodyScroll);
 
@@ -100,9 +103,16 @@ export const DialogContent = ({
 
   return (
     <DialogPortal>
-      <DialogOverlay />
+      <DialogOverlay
+        className={stackOnTop ? "z-[200]" : undefined}
+        data-stack-on-top={stackOnTop ? "true" : undefined}
+      />
       <DialogPrimitive.Content
-        className={cn(dialogContentVariants({ variant }), className)}
+        className={cn(
+          dialogContentVariants({ variant }),
+          stackOnTop && "z-[210]",
+          className,
+        )}
         {...props}
         data-tg-dialog-popup={isPopupSurface ? "true" : undefined}
       >
