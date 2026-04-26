@@ -60,6 +60,8 @@ import {
   type SupplyRow,
 } from "./supplies-store.js";
 
+import { addPromoCode, deletePromoCode, getAllPromoCodes } from "./promo-codes-store.js";
+
 const CB = {
   list: "admin:lst",
   menu: "admin:menu",
@@ -68,6 +70,7 @@ const CB = {
   userStats: "admin:ust",
   broadcasts: "admin:bc",
   supplies: "admin:sup",
+  promoMenu: "admin:promo_menu",
 } as const;
 
 const cbView = (id: string) => `admin:v:${id}`;
@@ -121,6 +124,7 @@ function buildOrderDetailHtml(o: AdminOrderRow): string {
     `Количество виртов: <code>${escapeHtml(o.virtAmountLabel)}</code>`,
     `Способ передачи: <code>${escapeHtml(o.transferMethod)}</code>`,
     `Счет в банке: <code>${escapeHtml(o.bankAccount)}</code>`,
+    ...(o.promoCode ? [`Промокод: <code>${escapeHtml(o.promoCode)}</code>`] : []),
     `Сумма заказа в рублях: <b><code>${escapeHtml(amountStr)}</code></b>`,
     ...(typeof o.profitRub === "number"
       ? [
@@ -148,6 +152,7 @@ function buildOrderPlainForCopy(o: AdminOrderRow): string {
     `Количество виртов: ${o.virtAmountLabel}`,
     `Способ передачи: ${o.transferMethod}`,
     `Счет в банке: ${o.bankAccount}`,
+    ...(o.promoCode ? [`Промокод: ${o.promoCode}`] : []),
     `Сумма заказа в рублях: ${o.amountRub.toFixed(2)}`,
     ...(typeof o.profitRub === "number"
       ? [`Чистая прибыль (фикс.): ${o.profitRub.toFixed(2)} RUB`]
@@ -201,7 +206,9 @@ function adminMenuKeyboard() {
     .row()
     .text(BTN_ADMIN_SUPPLIES, CB.supplies)
     .row()
-    .text("🔗 Реферальная система", "ref:menu");
+    .text("🔗 Реферальная система", "ref:menu")
+    .row()
+    .text("🎟 Промокоды", CB.promoMenu);
 }
 
 function formatDateTime(ms: number): string {
@@ -796,6 +803,11 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
   const awaitingRefSearchByUserId = new Set<number>();
   const awaitingRefModTargetByUserId = new Set<number>();
   const awaitingRefModAmountByUserId = new Map<number, { targetId: number }>();
+  const awaitingPromoCreateByUserId = new Map<number, { step: "code" | "discount" | "activations"; draft: { code?: string; discount?: number; activationsLeft?: number | null } }>();
+
+  function clearAwaitingPromoCreate(userId: number) {
+    awaitingPromoCreateByUserId.delete(userId);
+  }
 
   function clearAwaitingBroadcast(userId: number) {
     awaitingBroadcastTextByUserId.delete(userId);
@@ -867,6 +879,7 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
       clearAwaitingSupplyCreate(ctx.from.id);
       clearAwaitingSupplyClose(ctx.from.id);
       clearAwaitingRefActions(ctx.from.id);
+      clearAwaitingPromoCreate(ctx.from.id);
     }
     await clearReplyKeyboard(a);
     await a.reply(BTN_ADMIN_MAIN, {
@@ -1185,6 +1198,176 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
     await a.editMessageText("Рассылка отправлена", { reply_markup: backToAdminKeyboard() });
   });
 
+
+  bot.callbackQuery(CB.promoMenu, async (ctx) => {
+    const a = await requireAdmin(ctx);
+    if (!a) return;
+    if (ctx.from) clearAwaitingPromoCreate(ctx.from.id);
+    await ctx.answerCallbackQuery();
+    
+    const text = "🎟 Промокоды\n\nВыберите действие:";
+    const kb = new InlineKeyboard()
+      .text("➕ Добавить промокод", "promo:add").row()
+      .text("📋 Список промокодов", "promo:list").row()
+      .text("🔙 В админ-панель", CB.menu);
+      
+    try {
+      await a.editMessageText(text, { reply_markup: kb });
+    } catch {
+      await a.reply(text, { reply_markup: kb });
+    }
+  });
+
+  bot.callbackQuery("promo:list", async (ctx) => {
+    const a = await requireAdmin(ctx);
+    if (!a) return;
+    await ctx.answerCallbackQuery();
+    
+    const codes = getAllPromoCodes();
+    let text = "📋 Список активных промокодов:\n\n";
+    if (codes.length === 0) text += "Пока нет промокодов.";
+    
+    const kb = new InlineKeyboard();
+    codes.forEach((c) => {
+      text += `Код: ${c.code}\nСкидка: ${c.discount}%\nОсталось активаций: ${c.activationsLeft === null ? "Бесконечно" : c.activationsLeft}\n\n`;
+      kb.text(`❌ Удалить ${c.code}`, `promo:del:${c.id}`).row();
+    });
+    
+    kb.text("🔙 Назад", CB.promoMenu);
+
+    try {
+      await a.editMessageText(text, { reply_markup: kb });
+    } catch {
+      await a.reply(text, { reply_markup: kb });
+    }
+  });
+
+  bot.callbackQuery(/^promo:del:(.+)$/, async (ctx) => {
+    const a = await requireAdmin(ctx);
+    if (!a) return;
+    const id = ctx.match[1];
+    deletePromoCode(id);
+    await ctx.answerCallbackQuery({ text: "Промокод удален", show_alert: true });
+    
+    // Refresh list
+    const codes = getAllPromoCodes();
+    let text = "📋 Список активных промокодов:\n\n";
+    if (codes.length === 0) text += "Пока нет промокодов.";
+    const kb = new InlineKeyboard();
+    codes.forEach((c) => {
+      text += `Код: ${c.code}\nСкидка: ${c.discount}%\nОсталось активаций: ${c.activationsLeft === null ? "Бесконечно" : c.activationsLeft}\n\n`;
+      kb.text(`❌ Удалить ${c.code}`, `promo:del:${c.id}`).row();
+    });
+    kb.text("🔙 Назад", CB.promoMenu);
+
+    try {
+      await a.editMessageText(text, { reply_markup: kb });
+    } catch {
+      // ignore
+    }
+  });
+
+  bot.callbackQuery("promo:add", async (ctx) => {
+    const a = await requireAdmin(ctx);
+    if (!a) return;
+    if (ctx.from) {
+      awaitingPromoCreateByUserId.set(ctx.from.id, { step: "code", draft: {} });
+    }
+    await ctx.answerCallbackQuery();
+    
+    const text = "Введите текст нового промокода (например, SUMMER24):";
+    const kb = new InlineKeyboard().text("❌ Отмена", CB.promoMenu);
+    try {
+      await a.editMessageText(text, { reply_markup: kb });
+    } catch {
+      await a.reply(text, { reply_markup: kb });
+    }
+  });
+
+  bot.callbackQuery(CB.promoMenu, async (ctx) => {
+    const a = await requireAdmin(ctx);
+    if (!a) return;
+    if (ctx.from) clearAwaitingPromoCreate(ctx.from.id);
+    await ctx.answerCallbackQuery();
+    
+    const text = "🎟 Промокоды\n\nВыберите действие:";
+    const kb = new InlineKeyboard()
+      .text("➕ Добавить промокод", "promo:add").row()
+      .text("📋 Список промокодов", "promo:list").row()
+      .text("🔙 В админ-панель", CB.menu);
+      
+    try {
+      await a.editMessageText(text, { reply_markup: kb });
+    } catch {
+      await a.reply(text, { reply_markup: kb });
+    }
+  });
+
+  bot.callbackQuery("promo:list", async (ctx) => {
+    const a = await requireAdmin(ctx);
+    if (!a) return;
+    await ctx.answerCallbackQuery();
+    
+    const codes = getAllPromoCodes();
+    let text = "📋 Список активных промокодов:\n\n";
+    if (codes.length === 0) text += "Пока нет промокодов.";
+    
+    const kb = new InlineKeyboard();
+    codes.forEach((c) => {
+      text += `Код: ${c.code}\nСкидка: ${c.discount}%\nОсталось активаций: ${c.activationsLeft === null ? "Бесконечно" : c.activationsLeft}\n\n`;
+      kb.text(`❌ Удалить ${c.code}`, `promo:del:${c.id}`).row();
+    });
+    
+    kb.text("🔙 Назад", CB.promoMenu);
+
+    try {
+      await a.editMessageText(text, { reply_markup: kb });
+    } catch {
+      await a.reply(text, { reply_markup: kb });
+    }
+  });
+
+  bot.callbackQuery(/^promo:del:(.+)$/, async (ctx) => {
+    const a = await requireAdmin(ctx);
+    if (!a) return;
+    const id = ctx.match[1];
+    deletePromoCode(id);
+    await ctx.answerCallbackQuery({ text: "Промокод удален", show_alert: true });
+    
+    // Refresh list
+    const codes = getAllPromoCodes();
+    let text = "📋 Список активных промокодов:\n\n";
+    if (codes.length === 0) text += "Пока нет промокодов.";
+    const kb = new InlineKeyboard();
+    codes.forEach((c) => {
+      text += `Код: ${c.code}\nСкидка: ${c.discount}%\nОсталось активаций: ${c.activationsLeft === null ? "Бесконечно" : c.activationsLeft}\n\n`;
+      kb.text(`❌ Удалить ${c.code}`, `promo:del:${c.id}`).row();
+    });
+    kb.text("🔙 Назад", CB.promoMenu);
+
+    try {
+      await a.editMessageText(text, { reply_markup: kb });
+    } catch {
+      // ignore
+    }
+  });
+
+  bot.callbackQuery("promo:add", async (ctx) => {
+    const a = await requireAdmin(ctx);
+    if (!a) return;
+    if (ctx.from) {
+      awaitingPromoCreateByUserId.set(ctx.from.id, { step: "code", draft: {} });
+    }
+    await ctx.answerCallbackQuery();
+    
+    const text = "Введите текст нового промокода (например, SUMMER24):";
+    const kb = new InlineKeyboard().text("❌ Отмена", CB.promoMenu);
+    try {
+      await a.editMessageText(text, { reply_markup: kb });
+    } catch {
+      await a.reply(text, { reply_markup: kb });
+    }
+  });
 
   bot.callbackQuery("ref:menu", async (ctx) => {
     const a = await requireAdmin(ctx);
@@ -1593,7 +1776,7 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
 
   bot.callbackQuery(CB_PROFIT_Q, async (ctx) => {
     const a = await requireAdmin(ctx);
-    if (a == null) {
+    if (!a) {
       return;
     }
     if (ctx.from) {
@@ -1601,6 +1784,10 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
       clearAwaitingAccountData(ctx.from.id);
       clearAwaitingPeriodInput(ctx.from.id);
       clearAwaitingBroadcast(ctx.from.id);
+      clearAwaitingOrderLookup(ctx.from.id);
+      clearAwaitingSupplyCreate(ctx.from.id);
+      clearAwaitingSupplyClose(ctx.from.id);
+      clearAwaitingPromoCreate(ctx.from.id);
     }
     await ctx.answerCallbackQuery();
     const text = [MSG_PROFIT_CANCELLED, "", BTN_ADMIN_MAIN].join("\n");
@@ -1653,6 +1840,41 @@ export function installAdminModule(bot: Bot, adminIds: Set<number>) {
       return;
     }
 
+    const promoCreate = awaitingPromoCreateByUserId.get(ctx.from.id);
+    if (promoCreate) {
+      const text = ctx.message?.text?.trim() || "";
+      if (!text || text.startsWith("/")) return;
+
+      if (promoCreate.step === "code") {
+        promoCreate.draft.code = text;
+        awaitingPromoCreateByUserId.set(ctx.from.id, { step: "discount", draft: promoCreate.draft });
+        await ctx.reply("Введите скидку в процентах (например, 10):", { reply_markup: new InlineKeyboard().text("❌ Отмена", CB.promoMenu) });
+        return;
+      }
+
+      if (promoCreate.step === "discount") {
+        const disc = parseInt(text, 10);
+        if (isNaN(disc) || disc <= 0 || disc > 100) {
+          await ctx.reply("❌ Неверная скидка. Введите число от 1 до 100:", { reply_markup: new InlineKeyboard().text("❌ Отмена", CB.promoMenu) });
+          return;
+        }
+        promoCreate.draft.discount = disc;
+        awaitingPromoCreateByUserId.set(ctx.from.id, { step: "activations", draft: promoCreate.draft });
+        await ctx.reply("Введите количество активаций (просто отправьте 0 или напишите 'бесконечно' для неограниченного использования):", { reply_markup: new InlineKeyboard().text("❌ Отмена", CB.promoMenu) });
+        return;
+      }
+
+      if (promoCreate.step === "activations") {
+        let acts: number | null = parseInt(text, 10);
+        if (isNaN(acts) || acts <= 0 || text.toLowerCase() === "бесконечно" || text.toLowerCase() === "0") {
+          acts = null;
+        }
+        clearAwaitingPromoCreate(ctx.from.id);
+        addPromoCode(promoCreate.draft.code!, promoCreate.draft.discount!, acts);
+        await ctx.reply(`✅ Промокод ${promoCreate.draft.code} со скидкой ${promoCreate.draft.discount}% добавлен!`, { reply_markup: new InlineKeyboard().text("🔙 В меню промокодов", CB.promoMenu) });
+        return;
+      }
+    }
 
     if (awaitingRefSearchByUserId.has(ctx.from.id)) {
       const text = ctx.message?.text?.trim() || "";

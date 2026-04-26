@@ -19,8 +19,8 @@ export type AdminOrderRow = {
   amountRub: number;
   openedAtLine: string;
   closedAtLine?: string;
-  /** Чистая прибыль по заказу (RUB), вводит админ при закрытии. */
   profitRub?: number;
+  promoCode?: string;
 };
 
 const __dirname = dirname(fileURLToPath(import.meta.url));

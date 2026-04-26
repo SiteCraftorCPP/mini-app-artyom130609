@@ -17,7 +17,7 @@ import {
 } from "../model";
 
 import { type Virt, useSubmitVirtRequest } from "@/entities/virt";
-import { useGetPromoCodes, useConsumePromoCode } from "@/entities/promo-code";
+import { useGetPromoCodes } from "@/entities/promo-code";
 
 const getDefaultAmountRub = () => "";
 
@@ -49,7 +49,6 @@ export const useVirtRequestForm = ({ virt }: UseVirtRequestFormParams) => {
     defaultValues: getDefaultValues(virt),
   });
   const submitVirtRequest = useSubmitVirtRequest();
-  const { mutate: consumePromoCode } = useConsumePromoCode();
   const amountRubInputRef = useRef(String(getDefaultAmountRub()));
   const amountVirtInputRef = useRef(String(getDefaultAmountVirts()));
   const lastEditedAmountFieldRef = useRef<AmountFieldName>("amountRub");
@@ -144,9 +143,6 @@ export const useVirtRequestForm = ({ virt }: UseVirtRequestFormParams) => {
       });
 
       showSuccessMessage(VIRT_FORM_TEXT.paymentSuccess);
-      if (values.promoCode) {
-        consumePromoCode(values.promoCode);
-      }
       void notifyVirtOrderSuccessFromMiniApp(webApp, {
         orderKind: "virt",
         orderId: result.orderId,

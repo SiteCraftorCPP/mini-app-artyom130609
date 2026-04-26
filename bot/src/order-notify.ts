@@ -17,10 +17,8 @@ import {
   buildOrderCompletedBuyerCaption,
   buildSellVirtCaption,
 } from "./texts.js";
-import {
-  addOrUpdateActiveOrder,
-  type AdminOrderRow,
-} from "./orders-store.js";
+import { addOrUpdateActiveOrder, type AdminOrderRow } from "./orders-store.js";
+import { consumePromoCode, getAllPromoCodes } from "./promo-codes-store.js";
 import { parseRublesAmountFromUserText } from "./money-input.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -45,6 +43,7 @@ export type VirtOrderSuccessPayload = {
   transferMethod?: string;
   bankAccount?: string;
   amountRub?: number;
+  promoCode?: string;
 };
 
 /**
@@ -286,6 +285,7 @@ async function buildActiveOrderRow(
     transferMethod: payload.transferMethod ?? "—",
     bankAccount: payload.bankAccount ?? "—",
     amountRub: payload.amountRub ?? 0,
+    promoCode: payload.promoCode,
     openedAtLine: formatOpenedAtLine(),
   };
 }
@@ -566,6 +566,7 @@ type NotifyBody = {
   transferMethod?: string;
   bankAccount?: string;
   amountRub?: number;
+  promoCode?: string;
 };
 
 type WebAppNotifyBody = {
@@ -579,6 +580,7 @@ type WebAppNotifyBody = {
   transferMethod?: string;
   bankAccount?: string;
   amountRub?: number;
+  promoCode?: string;
 };
 
 export function pickVirtOrderDetailsFromRecord(
@@ -591,6 +593,7 @@ export function pickVirtOrderDetailsFromRecord(
   | "transferMethod"
   | "bankAccount"
   | "amountRub"
+  | "promoCode"
 > {
   const game = typeof r.game === "string" ? r.game : undefined;
   const server = typeof r.server === "string" ? r.server : undefined;
@@ -609,6 +612,7 @@ export function pickVirtOrderDetailsFromRecord(
       amountRub = n;
     }
   }
+  const promoCode = typeof r.promoCode === "string" ? r.promoCode : undefined;
   return {
     ...(game !== undefined ? { game } : {}),
     ...(server !== undefined ? { server } : {}),
@@ -616,6 +620,7 @@ export function pickVirtOrderDetailsFromRecord(
     ...(transferMethod !== undefined ? { transferMethod } : {}),
     ...(bankAccount !== undefined ? { bankAccount } : {}),
     ...(amountRub !== undefined ? { amountRub } : {}),
+    ...(promoCode !== undefined ? { promoCode } : {}),
   };
 }
 
@@ -679,12 +684,25 @@ export function startOrderNotifyHttpServer(
   const server = createServer(async (req, res) => {
     const url = req.url?.split("?")[0] ?? "";
 
+    if (req.method === "GET" && url === "/api/promo-codes") {
+      try {
+        const codes = getAllPromoCodes();
+        res.writeHead(200, { "Content-Type": "application/json", ...corsNotifyHeaders });
+        res.end(JSON.stringify(codes));
+      } catch (e) {
+        console.error("[promo-codes] /api/promo-codes GET error:", e);
+        res.writeHead(500, corsNotifyHeaders).end("error");
+      }
+      return;
+    }
+
     if (
       req.method === "OPTIONS" &&
       (url === "/notify/virt-order-webapp" ||
         url === "/notify/sell-virt-webapp" ||
         url === "/notify/virt-order-success" ||
-        url === "/notify/referral")
+        url === "/notify/referral" ||
+        url === "/api/promo-codes")
     ) {
       res.writeHead(204, corsNotifyHeaders).end();
       return;
@@ -724,6 +742,9 @@ export function startOrderNotifyHttpServer(
           orderId: body.orderId,
           ...details,
         });
+        if (body.promoCode) {
+          consumePromoCode(body.promoCode);
+        }
         await sendVirtOrderSuccess(bot, miniAppUrl, {
           telegramUserId,
           orderId: body.orderId,
