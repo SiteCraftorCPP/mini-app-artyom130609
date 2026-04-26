@@ -26,10 +26,15 @@ fi
 ln -sf "$NOTIFY_FILE" "$SNIP"
 echo "Symlink: $SNIP -> $NOTIFY_FILE"
 
+# Бэкап НЕ в sites-enabled/ — иначе nginx подхватывает *.bak и падает с duplicate listen
+BACKUP_DIR="${BACKUP_DIR:-/var/backups/nginx-artshopvirts}"
+mkdir -p "$BACKUP_DIR"
+
 if grep -qE 'snippets/artshopvirts-notify|deploy/nginx/notify\.conf' "$CONF"; then
   echo "include уже есть в $CONF — пропускаем вставку"
 else
-  cp -a "$CONF" "${CONF}.bak.$(date +%Y%m%d%H%M%S)"
+  cp -a "$CONF" "${BACKUP_DIR}/artshopvirts.space.$(date +%Y%m%d%H%M%S).bak"
+  echo "Бэкап: ${BACKUP_DIR}/artshopvirts.space…bak"
   N=$(grep -cE 'server_name[[:space:]]+.*artshopvirts' "$CONF" || true)
   if [[ -z "$N" || "$N" -eq 0 ]]; then
     echo "Не найдено server_name с artshopvirts в $CONF" >&2
