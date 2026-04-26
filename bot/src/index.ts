@@ -35,10 +35,10 @@ import {
   startOrderNotifyHttpServer,
 } from "./order-notify.js";
 import {
-  ABOUT_SHOP,
+  ABOUT_SHOP_HTML,
   ABOUT_SHOP_LINES,
   VIDEO_CAPTION,
-  WELCOME,
+  WELCOME_HTML,
   WELCOME_LINE_1,
   WELCOME_LINE_2,
 } from "./texts.js";
@@ -184,7 +184,11 @@ async function sendWelcome(ctx: Context) {
     await sendVisualTokensInOrder(ctx, handPointerPair);
     const photoPlain = resolveWelcomePhoto();
     if (photoPlain) {
-      const extra = { caption: WELCOME, reply_markup: markup };
+      const extra = {
+        caption: WELCOME_HTML,
+        parse_mode: "HTML" as const,
+        reply_markup: markup,
+      };
       if (photoPlain.type === "url") {
         await ctx.replyWithPhoto(photoPlain.url, extra);
       } else {
@@ -192,7 +196,7 @@ async function sendWelcome(ctx: Context) {
         await ctx.replyWithPhoto(new InputFile(buffer, basename(photoPlain.path)), extra);
       }
     } else {
-      await ctx.reply(WELCOME, { reply_markup: markup });
+      await ctx.reply(WELCOME_HTML, { parse_mode: "HTML", reply_markup: markup });
     }
     return;
   }
@@ -204,8 +208,9 @@ async function sendWelcome(ctx: Context) {
     WELCOME_LINE_1,
     WELCOME_LINE_2,
   );
-  const caption = withIcons?.text ?? WELCOME;
+  const caption = withIcons?.text ?? WELCOME_HTML;
   const capEntities = withIcons?.entities;
+  const withEntities = capEntities && capEntities.length > 0;
 
   const photo = resolveWelcomePhoto();
   if (photo) {
@@ -213,14 +218,18 @@ async function sendWelcome(ctx: Context) {
       await ctx.replyWithPhoto(photo.url, {
         caption,
         reply_markup: markup,
-        ...(capEntities && capEntities.length > 0 ? { caption_entities: capEntities } : {}),
+        ...(withEntities
+          ? { caption_entities: capEntities }
+          : { parse_mode: "HTML" as const }),
       });
     } else {
       const buffer = readFileSync(photo.path);
       await ctx.replyWithPhoto(new InputFile(buffer, basename(photo.path)), {
         caption,
         reply_markup: markup,
-        ...(capEntities && capEntities.length > 0 ? { caption_entities: capEntities } : {}),
+        ...(withEntities
+          ? { caption_entities: capEntities }
+          : { parse_mode: "HTML" as const }),
       });
     }
   } else {
@@ -229,7 +238,9 @@ async function sendWelcome(ctx: Context) {
     );
     await ctx.reply(caption, {
       reply_markup: markup,
-      ...(capEntities && capEntities.length > 0 ? { entities: capEntities } : {}),
+      ...(withEntities
+        ? { entities: capEntities }
+        : { parse_mode: "HTML" as const }),
     });
   }
 }
@@ -387,7 +398,7 @@ bot.callbackQuery("menu:about", async (ctx) => {
     }
   }
   await sendVisualTokensInOrder(ctx, aboutTokens);
-  await ctx.reply(ABOUT_SHOP, { reply_markup: aboutBackKeyboard() });
+  await ctx.reply(ABOUT_SHOP_HTML, { parse_mode: "HTML", reply_markup: aboutBackKeyboard() });
 });
 
 bot.callbackQuery("about:back", async (ctx) => {

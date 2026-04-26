@@ -1,5 +1,5 @@
 import type { Context } from "grammy";
-import type { Sticker } from "@grammyjs/types";
+import type { MessageEntity, Sticker } from "@grammyjs/types";
 
 /**
  * custom_emoji: subtext = Sticker.emoji (getCustomEmojiStickers). sendSticker+file_id custom_emoji = 400.
@@ -69,13 +69,12 @@ async function ensureStickersInCache(
 
 export type CustomEmojiCaption = {
   text: string;
-  entities: Array<{
-    type: "custom_emoji";
-    offset: number;
-    length: number;
-    custom_emoji_id: string;
-  }>;
+  entities: MessageEntity[];
 };
+
+function sortEntities(entities: MessageEntity[]): MessageEntity[] {
+  return [...entities].sort((a, b) => a.offset - b.offset);
+}
 
 /**
  * Склейка базовых эмодзи подряд (как в приветствии) — дальше joinCaptionWithBody(…, WELCOME).
@@ -150,24 +149,30 @@ export async function buildWelcomeHandPointerCaption(
   const he = hS.emoji as string;
   const pe = pS.emoji as string;
   const text = he + line1Text + "\n\n" + line2Text + pe;
+  const heLen = he.length;
   const offPointer = (he + line1Text + "\n\n" + line2Text).length;
-  return {
-    text,
-    entities: [
-      {
-        type: "custom_emoji",
-        offset: 0,
-        length: he.length,
-        custom_emoji_id: hId,
-      },
-      {
-        type: "custom_emoji",
-        offset: offPointer,
-        length: pe.length,
-        custom_emoji_id: pId,
-      },
-    ],
-  };
+  const line2Start = heLen + line1Text.length + 2;
+  const brand = "ARTSHOPVIRTS";
+  const brandIdx = line1Text.indexOf(brand);
+  const entities: MessageEntity[] = [
+    {
+      type: "custom_emoji",
+      offset: 0,
+      length: he.length,
+      custom_emoji_id: hId,
+    },
+    {
+      type: "custom_emoji",
+      offset: offPointer,
+      length: pe.length,
+      custom_emoji_id: pId,
+    },
+  ];
+  if (brandIdx >= 0) {
+    entities.push({ type: "bold", offset: heLen + brandIdx, length: brand.length });
+  }
+  entities.push({ type: "bold", offset: line2Start, length: line2Text.length });
+  return { text, entities: sortEntities(entities) };
 }
 
 /**
@@ -198,9 +203,28 @@ export async function buildMultilineCustomEmojiLinesCaption(
       return null;
     }
   }
-  const entities: CustomEmojiCaption["entities"] = [];
+  const entities: MessageEntity[] = [];
   let fullText = "";
   const n = ids.length;
+
+  const aboutFourthBlockBoldSubranges = (fourthLine: string): { start: number; length: number }[] => {
+    const labels = [
+      "Наши официальные ссылки:",
+      "Telegram канал:",
+      "Отзывы:",
+      "Менеджер:",
+      "MEDIA-сотрудничество:",
+    ] as const;
+    const out: { start: number; length: number }[] = [];
+    for (const label of labels) {
+      const idx = fourthLine.indexOf(label);
+      if (idx >= 0) {
+        out.push({ start: idx, length: label.length });
+      }
+    }
+    return out;
+  };
+
   for (let i = 0; i < n; i++) {
     const custom_emoji_id = ids[i]!;
     const s = getCachedStickerForRequestedId(custom_emoji_id)!;
@@ -208,12 +232,21 @@ export async function buildMultilineCustomEmojiLinesCaption(
     const offset = fullText.length;
     const length = em.length;
     entities.push({ type: "custom_emoji", offset, length, custom_emoji_id });
-    fullText += em + " " + lineTexts[i];
+    const line = lineTexts[i]!;
+    const lineTextStart = fullText.length + em.length + 1;
+    fullText += em + " " + line;
+    if (i < 3) {
+      entities.push({ type: "bold", offset: lineTextStart, length: line.length });
+    } else {
+      for (const r of aboutFourthBlockBoldSubranges(line)) {
+        entities.push({ type: "bold", offset: lineTextStart + r.start, length: r.length });
+      }
+    }
     if (i < n - 1) {
       fullText += "\n\n";
     }
   }
-  return { text: fullText, entities };
+  return { text: fullText, entities: sortEntities(entities) };
 }
 
 export type OrderSuccessThreeEmojisParts = {

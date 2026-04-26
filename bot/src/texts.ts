@@ -1,11 +1,17 @@
 /**
- * /start: в подписи к баннеру — custom id «рука» в начале 1-й строки, id «указатель» в конце 2-й.
- * «О магазине» — 4 custom id в начале строк (как 🪙⚡🍑⛓ в макете).
+ * /start: в подписи к баннеру — custom id «рука» / «указатель» + `bold` в entities, либо WELCOME_HTML + parse_mode.
+ * «О магазине» — 4 custom id; жирные строки/подписи ссылок через `bold` в entities, либо ABOUT_SHOP_HTML.
+ * Обычный текст без `parse_mode` / без MessageEntity **не** бывает жирным в Telegram.
  */
 export const WELCOME_LINE_1 =
   "Добро пожаловать в ARTSHOPVIRTS — магазин виртов и услуг для самых популярных RP-проектов.";
 export const WELCOME_LINE_2 = "Чтобы оформить заказ, нажмите открыть магазин";
 export const WELCOME = [WELCOME_LINE_1, "", WELCOME_LINE_2].join("\n");
+
+/** /start: без custom emoji в подписи — `parse_mode: "HTML"`. */
+export const WELCOME_LINE_1_HTML = `Добро пожаловать в <b>ARTSHOPVIRTS</b> — магазин виртов и услуг для самых популярных RP-проектов.`;
+export const WELCOME_LINE_2_HTML = `<b>Чтобы оформить заказ, нажмите открыть магазин</b>`;
+export const WELCOME_HTML = [WELCOME_LINE_1_HTML, "", WELCOME_LINE_2_HTML].join("\n");
 
 /** 4 абзаца «О магазине» — к каждому в подписи своя custom-иконка. */
 export const ABOUT_SHOP_LINES: readonly [string, string, string, string] = [
@@ -29,6 +35,25 @@ export const ABOUT_SHOP = [
   ABOUT_SHOP_LINES[2],
   "",
   ABOUT_SHOP_LINES[3],
+].join("\n");
+
+const ABOUT_SHOP_FOURTH_BLOCK_HTML = [
+  "<b>Наши официальные ссылки:</b>",
+  "<b>Telegram канал:</b> @artshopvirts_channel",
+  "<b>Отзывы:</b> https://t.me/artshopvirts_channel/85",
+  "<b>Менеджер:</b> @artshopvirts_man",
+  "<b>MEDIA-сотрудничество:</b> @artshopvirts_media",
+].join("\n");
+
+/** «О магазине» без custom emoji: `parse_mode: "HTML"`. */
+export const ABOUT_SHOP_HTML = [
+  `<b>${ABOUT_SHOP_LINES[0]}</b>`,
+  "",
+  `<b>${ABOUT_SHOP_LINES[1]}</b>`,
+  "",
+  `<b>${ABOUT_SHOP_LINES[2]}</b>`,
+  "",
+  ABOUT_SHOP_FOURTH_BLOCK_HTML,
 ].join("\n");
 
 export const BTN_OPEN_SHOP = "🟢 Открыть магазин";
