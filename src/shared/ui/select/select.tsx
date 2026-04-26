@@ -15,7 +15,7 @@ export const SelectTrigger = ({
   return (
     <SelectPrimitive.Trigger
       className={cn(
-        "relative flex h-7 w-full items-center rounded-full border border-app-border-soft bg-app-highlight px-4 pr-10 pt-[3px] text-left text-xs text-text-inverse outline-hidden",
+        "relative flex h-12 w-full items-center rounded-[10px] border border-app-border-soft bg-app-highlight px-4 pr-10 pt-[3px] text-left text-[14px] text-text-inverse outline-hidden",
         className,
       )}
       {...props}
