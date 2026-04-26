@@ -48,7 +48,7 @@ export const AccountPromoCodes = () => {
         {isLoading ? (
           <Spinner />
         ) : promoCodes.length === 0 ? (
-          <AppText variant="secondary" size="caption">
+          <AppText variant="default" size="small" className="text-white/60">
             Нет активных промокодов
           </AppText>
         ) : (
@@ -59,10 +59,10 @@ export const AccountPromoCodes = () => {
                 className="bg-background-card flex items-center justify-between rounded-lg p-3 border border-white/10"
               >
                 <div className="flex flex-col">
-                  <AppText variant="primaryStrong" size="caption">
+                  <AppText variant="primaryStrong" size="small">
                     {pc.code}
                   </AppText>
-                  <AppText variant="secondary" size="caption">
+                  <AppText variant="default" size="small" className="text-white/60">
                     Скидка: {pc.discount}% |{" "}
                     {pc.activationsLeft === null
                       ? "Бесконечно"
@@ -71,9 +71,9 @@ export const AccountPromoCodes = () => {
                 </div>
                 <Button
                   type="button"
-                  variant="popupCancel"
-                  size="popupCancel"
-                  className="px-3"
+                  variant="default"
+                  size="sm"
+                  className="px-3 bg-red-500 hover:bg-red-600"
                   onClick={() => deletePromoCode(pc.id)}
                 >
                   Удалить

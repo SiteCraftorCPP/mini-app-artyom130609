@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { QUERY_KEYS } from "@/shared/api/constants";
+import { QUERY_KEYS } from "@/shared/api/constants/queryKeys";
 import type { PromoCode } from "../model";
 
 const LOCAL_STORAGE_KEY = "artshop_promo_codes";

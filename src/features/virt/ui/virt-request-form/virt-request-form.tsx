@@ -168,7 +168,7 @@ export const VirtRequestForm = ({ virt }: VirtRequestFormProps) => {
                     <AppText
                       tag={TAG.div}
                       className="mt-1 text-[#2ecc71]"
-                      size="caption"
+                      size="small"
                     >
                       Промокод применен! Скидка {activePromoCode.discount}%
                     </AppText>
