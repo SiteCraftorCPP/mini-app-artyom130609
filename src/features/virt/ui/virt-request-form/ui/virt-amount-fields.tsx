@@ -93,18 +93,24 @@ export const VirtAmountFields = memo(
                 </AppText>
               </div>
               <FormControl>
-                <Input
-                  variant="form"
-                  type="text"
-                  inputMode="decimal"
-                  enterKeyHint="next"
-                  disableAutoScrollOnFocus
-                  value={amountRubValue}
-                  onChange={handleAmountRubChange}
-                  debounceMs={TIMING.inputDebounceMs}
-                  onDebounce={handleAmountRubDebounce}
-                  placeholder=""
-                />
+                <div className="relative">
+                  <Input
+                    variant="form"
+                    type="text"
+                    inputMode="decimal"
+                    enterKeyHint="next"
+                    disableAutoScrollOnFocus
+                    value={amountRubValue}
+                    onChange={handleAmountRubChange}
+                    debounceMs={TIMING.inputDebounceMs}
+                    onDebounce={handleAmountRubDebounce}
+                    placeholder=""
+                    className="pr-8"
+                  />
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-black/60 font-medium">
+                    ₽
+                  </span>
+                </div>
               </FormControl>
 
               <FormMessage
@@ -135,18 +141,24 @@ export const VirtAmountFields = memo(
                 </div>
               </FormLabel>
               <FormControl>
-                <Input
-                  variant="form"
-                  type="text"
-                  inputMode="numeric"
-                  enterKeyHint="done"
-                  disableAutoScrollOnFocus
-                  value={amountVirtValue}
-                  onChange={handleAmountVirtChange}
-                  debounceMs={TIMING.inputDebounceMs}
-                  onDebounce={handleAmountVirtDebounce}
-                  placeholder=""
-                />
+                <div className="relative">
+                  <Input
+                    variant="form"
+                    type="text"
+                    inputMode="numeric"
+                    enterKeyHint="done"
+                    disableAutoScrollOnFocus
+                    value={amountVirtValue}
+                    onChange={handleAmountVirtChange}
+                    debounceMs={TIMING.inputDebounceMs}
+                    onDebounce={handleAmountVirtDebounce}
+                    placeholder=""
+                    className="pr-10"
+                  />
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-black/60 font-medium">
+                    КК
+                  </span>
+                </div>
               </FormControl>
 
               <FormMessage
