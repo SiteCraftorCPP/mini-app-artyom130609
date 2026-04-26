@@ -172,12 +172,16 @@ export const VirtRequestForm = ({ virt }: VirtRequestFormProps) => {
                       />
                       <Button
                         type="button"
-                        variant="default"
+                        variant="formPlaque"
                         className="h-12 shrink-0 rounded-full px-4"
                         onClick={applyPromoCode}
                         disabled={isPromoListFetching}
                       >
-                        <AppText tag={TAG.span} size="small" variant="default">
+                        <AppText
+                          tag={TAG.span}
+                          size="small"
+                          variant="heroButtonBlack"
+                        >
                           {VIRT_FORM_TEXT.applyPromo}
                         </AppText>
                       </Button>
