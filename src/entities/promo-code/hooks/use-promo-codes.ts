@@ -4,7 +4,14 @@ import { QUERY_KEYS } from "@/shared/api/constants/queryKeys";
 import { resolvePromoCodesListUrl } from "@/shared/lib/virt-order-endpoints";
 import type { PromoCode } from "../model";
 
-export const useGetPromoCodes = () => {
+type UseGetPromoCodesOptions = {
+  /** По умолчанию `false` — список запрашивается только вручную (кнопка «Применить»). */
+  enabled?: boolean;
+};
+
+export const useGetPromoCodes = (options: UseGetPromoCodesOptions = {}) => {
+  const { enabled = false } = options;
+
   return useQuery({
     queryKey: [QUERY_KEYS.PROMO_CODES.LIST],
     queryFn: async (): Promise<PromoCode[]> => {
@@ -18,6 +25,7 @@ export const useGetPromoCodes = () => {
       }
       return (await response.json()) as PromoCode[];
     },
+    enabled,
     retry: 1,
     staleTime: 30_000,
   });

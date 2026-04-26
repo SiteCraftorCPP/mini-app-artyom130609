@@ -64,7 +64,7 @@ export function deletePromoCode(id: string): boolean {
 
 export function consumePromoCode(codeString: string): boolean {
   const codes = loadPromoCodes();
-  const index = codes.findIndex((c) => c.code.toLowerCase() === codeString.toLowerCase());
+  const index = codes.findIndex((c) => c.code === codeString);
   if (index === -1) return false;
 
   const code = codes[index];

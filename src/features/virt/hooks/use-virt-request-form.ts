@@ -90,7 +90,7 @@ export const useVirtRequestForm = ({ virt }: UseVirtRequestFormParams) => {
     data: promoCodes = [],
     refetch: refetchPromoCodes,
     isFetching: isPromoListFetching,
-  } = useGetPromoCodes();
+  } = useGetPromoCodes({ enabled: false });
   const promoCodeValue = form.watch("promoCode");
   const [promoApplyFeedback, setPromoApplyFeedback] = useState<
     "idle" | "ok" | "not_found" | "error" | "empty" | "loading"
@@ -117,7 +117,7 @@ export const useVirtRequestForm = ({ virt }: UseVirtRequestFormParams) => {
       const list = data ?? [];
       const found = list.find(
         (p) =>
-          p.code.toLowerCase() === code.toLowerCase() &&
+          p.code === code &&
           (p.activationsLeft === null || p.activationsLeft > 0),
       );
       setPromoApplyFeedback(found ? "ok" : "not_found");
@@ -129,7 +129,7 @@ export const useVirtRequestForm = ({ virt }: UseVirtRequestFormParams) => {
 
   const activePromoCode = promoCodes.find(
     (p) =>
-      p.code.toLowerCase() === promoCodeValue?.trim().toLowerCase() &&
+      p.code === (promoCodeValue ?? "").trim() &&
       (p.activationsLeft === null || p.activationsLeft > 0),
   );
   const discount = activePromoCode ? activePromoCode.discount : 0;
