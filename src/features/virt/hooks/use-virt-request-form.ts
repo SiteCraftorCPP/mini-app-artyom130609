@@ -17,6 +17,7 @@ import {
 } from "../model";
 
 import { type Virt, useSubmitVirtRequest } from "@/entities/virt";
+import { useGetPromoCodes, useConsumePromoCode } from "@/entities/promo-code";
 
 const getDefaultAmountRub = () => "";
 
@@ -48,6 +49,7 @@ export const useVirtRequestForm = ({ virt }: UseVirtRequestFormParams) => {
     defaultValues: getDefaultValues(virt),
   });
   const submitVirtRequest = useSubmitVirtRequest();
+  const { mutate: consumePromoCode } = useConsumePromoCode();
   const amountRubInputRef = useRef(String(getDefaultAmountRub()));
   const amountVirtInputRef = useRef(String(getDefaultAmountVirts()));
   const lastEditedAmountFieldRef = useRef<AmountFieldName>("amountRub");
@@ -73,6 +75,44 @@ export const useVirtRequestForm = ({ virt }: UseVirtRequestFormParams) => {
     lastEditedAmountFieldRef.current = "amountVirts";
     amountVirtInputRef.current = value;
   }, []);
+
+  const { data: promoCodes = [] } = useGetPromoCodes();
+  const promoCodeValue = form.watch("promoCode");
+  const activePromoCode = promoCodes.find(
+    (p) =>
+      p.code.toLowerCase() === promoCodeValue?.trim().toLowerCase() &&
+      (p.activationsLeft === null || p.activationsLeft > 0),
+  );
+  const discount = activePromoCode ? activePromoCode.discount : 0;
+  const effectiveExchangeRate = virt.exchangeRate * (1 - discount / 100);
+
+  useEffect(() => {
+    if (!amountVirtInputRef.current && !amountRubInputRef.current) return;
+    
+    const amountRub =
+      lastEditedAmountFieldRef.current === "amountVirts"
+        ? calculateAmountRub(
+            amountVirtInputRef.current,
+            getVirtExchangeRate({ ...virt, exchangeRate: effectiveExchangeRate }),
+          )
+        : amountRubInputRef.current;
+    
+    const amountVirts =
+      lastEditedAmountFieldRef.current === "amountRub"
+        ? calculateAmountVirts(
+            amountRubInputRef.current,
+            getVirtExchangeRate({ ...virt, exchangeRate: effectiveExchangeRate }),
+          )
+        : amountVirtInputRef.current;
+
+    if (amountRub !== amountRubInputRef.current || amountVirts !== amountVirtInputRef.current) {
+      amountRubInputRef.current = amountRub;
+      amountVirtInputRef.current = amountVirts;
+      form.setValue("amountRub", amountRub, { shouldDirty: true, shouldValidate: true });
+      form.setValue("amountVirts", amountVirts, { shouldDirty: true, shouldValidate: true });
+      setDisplayAmountRub(amountRub);
+    }
+  }, [effectiveExchangeRate, form, virt]);
 
   const handleAmountsCommit = useCallback(
     (amountRub: string, amountVirts: string) => {
@@ -104,6 +144,9 @@ export const useVirtRequestForm = ({ virt }: UseVirtRequestFormParams) => {
       });
 
       showSuccessMessage(VIRT_FORM_TEXT.paymentSuccess);
+      if (values.promoCode) {
+        consumePromoCode(values.promoCode);
+      }
       void notifyVirtOrderSuccessFromMiniApp(webApp, {
         orderKind: "virt",
         orderId: result.orderId,
@@ -127,14 +170,14 @@ export const useVirtRequestForm = ({ virt }: UseVirtRequestFormParams) => {
       lastEditedAmountFieldRef.current === "amountVirts"
         ? calculateAmountRub(
             amountVirtInputRef.current,
-            getVirtExchangeRate(virt),
+            getVirtExchangeRate({ ...virt, exchangeRate: effectiveExchangeRate }),
           )
         : amountRubInputRef.current;
     const amountVirts =
       lastEditedAmountFieldRef.current === "amountRub"
         ? calculateAmountVirts(
             amountRubInputRef.current,
-            getVirtExchangeRate(virt),
+            getVirtExchangeRate({ ...virt, exchangeRate: effectiveExchangeRate }),
           )
         : amountVirtInputRef.current;
 
@@ -164,5 +207,7 @@ export const useVirtRequestForm = ({ virt }: UseVirtRequestFormParams) => {
     initialAmountRub: getDefaultAmountRub(),
     initialAmountVirts: getDefaultAmountVirts(),
     isSubmitting: submitVirtRequest.isPending,
+    effectiveExchangeRate,
+    activePromoCode,
   };
 };

@@ -51,7 +51,12 @@ export const AccountMenu = ({
       icon: <SortLevel className="text-white" />,
       label: ACCOUNT_PAGE_TEXT.menu.orderPeriodStats,
     };
-    return [current, statsItem, lookupItem, history, periodStatsItem];
+    const promoCodesItem: AccountPopupMenuItem = {
+      actionId: "promoCodes",
+      icon: <IdIcon className="text-white" />, // reusing IdIcon or similar
+      label: ACCOUNT_PAGE_TEXT.menu.promoCodes,
+    };
+    return [current, statsItem, lookupItem, history, periodStatsItem, promoCodesItem];
   }, [isAdmin]);
 
   const referralItem = ACCOUNT_POPUP_MENU_ITEMS[2];

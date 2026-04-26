@@ -82,6 +82,7 @@ export const ACCOUNT_PAGE_TEXT = {
     orderLookup: "🔍 Найти заказ",
     /** Пятая: периоды (день/месяц/год/…), мок-агрегаты до API. */
     orderPeriodStats: "Статистика заказов",
+    promoCodes: "Промокоды",
     faq: "Часто задаваемые вопросы",
     orderHistory: "История заказов",
     referral: "Реферальная система",

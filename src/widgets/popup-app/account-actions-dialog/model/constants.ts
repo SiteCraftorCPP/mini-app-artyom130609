@@ -26,6 +26,10 @@ export const ACCOUNT_ACTION_DIALOG_TEXT: Record<
     content: "",
     title: ACCOUNT_PAGE_TEXT.menu.orderPeriodStats,
   },
+  promoCodes: {
+    content: "",
+    title: ACCOUNT_PAGE_TEXT.menu.promoCodes,
+  },
   referral: {
     content: ACCOUNT_PAGE_TEXT.popup.referral,
     title: ACCOUNT_PAGE_TEXT.menu.referral,

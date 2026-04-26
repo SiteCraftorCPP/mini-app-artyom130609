@@ -46,6 +46,8 @@ export const VirtRequestForm = ({ virt }: VirtRequestFormProps) => {
     initialAmountRub,
     initialAmountVirts,
     isSubmitting,
+    effectiveExchangeRate,
+    activePromoCode,
   } = useVirtRequestForm({ virt });
 
   return (
@@ -130,7 +132,7 @@ export const VirtRequestForm = ({ virt }: VirtRequestFormProps) => {
 
             <VirtAmountFields
               control={form.control}
-              exchangeRate={virt.exchangeRate}
+              exchangeRate={effectiveExchangeRate}
               initialAmountRub={initialAmountRub}
               initialAmountVirts={initialAmountVirts}
               minAmountRub={virt.minAmountRub}
@@ -162,6 +164,15 @@ export const VirtRequestForm = ({ virt }: VirtRequestFormProps) => {
                       placeholder={VIRT_FORM_TEXT.promoCodePlaceholder}
                     />
                   </FormControl>
+                  {activePromoCode && (
+                    <AppText
+                      tag={TAG.div}
+                      className="mt-1 text-[#2ecc71]"
+                      size="caption"
+                    >
+                      Промокод применен! Скидка {activePromoCode.discount}%
+                    </AppText>
+                  )}
                   <FormMessage
                     className={VIRT_REQUEST_FORM_CLASSNAMES.formMessage}
                   />

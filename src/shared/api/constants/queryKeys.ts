@@ -16,4 +16,7 @@ export const QUERY_KEYS = {
     OTHER_SERVICES: "otherServices",
     SELL: "sellVirts",
   },
+  PROMO_CODES: {
+    LIST: "promoCodesList",
+  },
 };
