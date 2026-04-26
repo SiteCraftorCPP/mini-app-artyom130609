@@ -9,19 +9,19 @@ export const WELCOME = [
 export const ABOUT_SHOP = [
   "🪙 Продаём и скупаем вирты во всех RP-проектах, а также предоставляем полный спектр услуг.",
   "",
-  "⚡️Гарантируем возврат средств в случае блокировки аккаунта, связанной с нашим магазином.",
+  "⚡️ Гарантируем возврат средств в случае блокировки аккаунта, связанной с нашим магазином.",
   "",
   "🍑 Работаем с 2024 года: более 1500 клиентов и 780 отзывов.",
   "",
-  "⛓Наши официальные ссылки:",
+  "⛓ Наши официальные ссылки:",
   "",
-  "✈️Telegram канал: @artshopvirts_chanel",
+  "Telegram канал: @artshopvirts_channel",
   "",
-  "⭐️Отзывы: https://t.me/artshopvirts_chanel/85",
+  "Отзывы: https://t.me/artshopvirts_channel/85",
   "",
-  "👥Менеджер: @artshopvirts_man",
+  "Менеджер: @artshopvirts_man",
   "",
-  "🎓Медиа сотрудничество: @artshopvirts_media",
+  "MEDIA-сотрудничество: @artshopvirts_media",
 ].join("\n");
 
 export const BTN_OPEN_SHOP = "🟢 Открыть магазин";
