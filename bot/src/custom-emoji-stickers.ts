@@ -1,29 +1,72 @@
 import type { Context } from "grammy";
+import type { Sticker } from "@grammyjs/types";
 
 /**
- * sendSticker нельзя для «emoji-stickers» (type custom_emoji) — 400: can't send emoji stickers in messages.
- * Такие id из бота с ID = custom_emoji_id → sendMessage + entities: [{ type: "custom_emoji", ... }].
- * Обычные .webp-стикеры: token выглядит как file_id (CAAC…) → sendSticker.
+ * custom_emoji: sendMessage+entities. Подстрока = Sticker.emoji из getCustomEmojiStickers, иначе ENTITY_TEXT_INVALID.
+ * getCustomEmojiStickers+sendSticker с file_id custom_emoji — 400. CAAC… — sendSticker.
  */
 
 function normId(id: string): string {
   return String(id).trim();
 }
 
-/** custom_emoji_id (длинное число-строка), не file_id. */
 function isLikelyCustomEmojiIdString(s: string): boolean {
   return /^\d{12,}$/.test(s);
 }
 
-/**
- * Плейсхолдер: печатный «?», 1 UTF-16; сущности custom_emoji рисуют поверх. Не U+FFFC —
- * Telegram тогда обнуляет текст и пишет 400: text must be non-empty.
- */
-const PLACEHOLDER = "?";
+const stickerByCustomEmojiId = new Map<string, Sticker>();
 
-/**
- * Несколько custom emoji в одной строке (порядок = порядок id).
- */
+function rememberSticker(s: Sticker) {
+  if (!s.custom_emoji_id) return;
+  const k = String(s.custom_emoji_id);
+  stickerByCustomEmojiId.set(k, s);
+}
+
+function getCachedStickerForRequestedId(id: string): Sticker | undefined {
+  if (stickerByCustomEmojiId.has(id)) {
+    return stickerByCustomEmojiId.get(id);
+  }
+  for (const s of stickerByCustomEmojiId.values()) {
+    if (s.custom_emoji_id != null && String(s.custom_emoji_id) === id) {
+      return s;
+    }
+  }
+  return undefined;
+}
+
+async function ensureStickersInCache(
+  ctx: Pick<Context, "api">,
+  ids: readonly string[],
+): Promise<void> {
+  const unique = [...new Set(ids)];
+  const missing = unique.filter((id) => getCachedStickerForRequestedId(id) === undefined);
+  if (missing.length === 0) {
+    return;
+  }
+  try {
+    const list = await ctx.api.getCustomEmojiStickers(missing);
+    for (const s of list) {
+      rememberSticker(s);
+    }
+  } catch (e) {
+    console.warn("[custom-emoji] getCustomEmojiStickers (batch)", e);
+  }
+  for (const id of missing) {
+    if (getCachedStickerForRequestedId(id) !== undefined) {
+      continue;
+    }
+    try {
+      const [one] = await ctx.api.getCustomEmojiStickers([id]);
+      if (one) {
+        rememberSticker(one);
+        stickerByCustomEmojiId.set(id, one);
+      }
+    } catch (e) {
+      console.warn("[custom-emoji] getCustomEmojiStickers (one)", id, e);
+    }
+  }
+}
+
 export async function sendCustomEmojisInMessage(
   ctx: Pick<Context, "api" | "chat">,
   customEmojiIds: readonly string[],
@@ -35,16 +78,43 @@ export async function sendCustomEmojisInMessage(
   const ids = customEmojiIds.map(normId).filter(Boolean);
   if (ids.length === 0) return false;
 
-  const text = PLACEHOLDER.repeat(ids.length);
-  const entities = ids.map((custom_emoji_id, i) => ({
-    type: "custom_emoji" as const,
-    offset: i,
-    length: 1,
-    custom_emoji_id,
-  }));
+  await ensureStickersInCache(ctx, ids);
+
+  for (const id of ids) {
+    const s = getCachedStickerForRequestedId(id);
+    if (!s?.emoji || s.emoji.length === 0) {
+      console.warn(
+        "[custom-emoji] нет Sticker.emoji из API; проверьте custom_emoji_id, id=",
+        id,
+      );
+      return false;
+    }
+  }
+
+  let fullText = "";
+  const entities: Array<{
+    type: "custom_emoji";
+    offset: number;
+    length: number;
+    custom_emoji_id: string;
+  }> = [];
+
+  for (const custom_emoji_id of ids) {
+    const s = getCachedStickerForRequestedId(custom_emoji_id)!;
+    const part = s.emoji as string;
+    const offset = fullText.length;
+    const length = part.length;
+    fullText += part;
+    entities.push({
+      type: "custom_emoji",
+      offset,
+      length,
+      custom_emoji_id,
+    });
+  }
 
   try {
-    await ctx.api.sendMessage(chatId, text, { entities });
+    await ctx.api.sendMessage(chatId, fullText, { entities });
     return true;
   } catch (e) {
     console.warn("[custom-emoji] sendMessage(entities) failed", e);
@@ -90,10 +160,6 @@ function buildSegments(tokens: readonly string[]): Seg[] {
   return segs;
 }
 
-/**
- * Список токенов слева направо: длинные цифры = custom_emoji (одно или несколько подряд — одно сообщение);
- * иначе = file_id для обычного sendSticker.
- */
 export async function sendVisualTokensInOrder(
   ctx: Pick<Context, "api" | "chat">,
   tokens: readonly string[],
