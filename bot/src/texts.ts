@@ -130,6 +130,102 @@ export function buildOrderCompletedBuyerCaption(orderNumber: string, isAccount?:
 export function getOrderCompletedReviewLineText(): string {
   return ORDER_COMPLETED_LINE_REVIEW;
 }
+
+function escHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+function refFromOrderInput(orderNumber: string): string {
+  const t = orderNumber.trim().replace(/^#+/, "");
+  return `#${t}`;
+}
+
+/** Без custom emoji, с `parse_mode: "HTML"`. */
+export function buildVirtOrderCaptionHtml(orderNumber: string): string {
+  const n = escHtml(refFromOrderInput(orderNumber));
+  return [
+    `✅  <b>Заказ</b> <b>${n}</b> <b>успешно оформлен!</b>`,
+    "",
+    `🕔 <b>Срок выдачи:</b> от 5 минут до 24 часов`,
+    "(среднее время — ~20 минут)",
+    "",
+    "После зачисления виртов на ваш счёт вы получите уведомление в этом чате.",
+    "",
+    "Чтобы узнать детали заказа, нажмите кнопку ниже 👇",
+  ].join("\n");
+}
+
+export function buildAccountAppOrderCaptionHtml(orderNumber: string): string {
+  const n = escHtml(refFromOrderInput(orderNumber));
+  return [
+    `✅  <b>Заказ</b> <b>${n}</b> <b>успешно оформлен!</b>`,
+    "",
+    `🕔 <b>Срок выдачи:</b> от 5 минут до 24 часов`,
+    "(среднее время — ~20 минут)",
+    "",
+    "Информация по заказу будет отправлена в этот чат.",
+    "",
+    "Чтобы узнать детали заказа, нажмите кнопку ниже 👇",
+  ].join("\n");
+}
+
+export function buildAccountManagerOrderCaptionHtml(orderNumber: string): string {
+  const n = escHtml(refFromOrderInput(orderNumber));
+  return [
+    `✅  <b>Заказ</b> <b>${n}</b> <b>успешно оформлен!</b>`,
+    "",
+    "<b>Что нужно сделать:</b>",
+    "Скопируйте номер заказа и напишите менеджеру через кнопку ниже 👇",
+  ].join("\n");
+}
+
+export function buildOrderCompletedBuyerCaptionHtml(
+  orderNumber: string,
+  isAccount?: boolean,
+  accountData?: string,
+): string {
+  const n = escHtml(refFromOrderInput(orderNumber));
+  if (isAccount && accountData) {
+    return [
+      `✅ <b>Заказ</b> <b>${n}</b> <b>успешно выполнен!</b>`,
+      "",
+      `✅ <b>Данные для входа в аккаунт:</b>`,
+      accountData
+        .split("\n")
+        .map((line) => {
+          const c = line.indexOf(":");
+          if (c > 0) {
+            return `<b>${escHtml(line.slice(0, c + 1))}</b>${escHtml(line.slice(c + 1))}`;
+          }
+          return escHtml(line);
+        })
+        .join("\n"),
+      "",
+      `🪙 <b>Напишите отзыв</b> — и к следующему заказу получите <b>200 000</b> бонусных виртов!`,
+    ].join("\n");
+  }
+  return [
+    `✅ <b>Заказ</b> <b>${n}</b> <b>успешно выполнен!</b>`,
+    "",
+    "✅ <b>Вирты успешно зачислены на ваш банковский счёт.</b>",
+    "",
+    "🪙 <b>Напишите отзыв</b> — и к следующему заказу получите <b>200 000</b> бонусных виртов!",
+  ].join("\n");
+}
+
+export function buildSellVirtCaptionHtml(orderRef: string): string {
+  const t = orderRef.trim();
+  const n = escHtml(t.startsWith("#") ? t : `#${t}`);
+  return [
+    `✅  <b>Заказ</b> <b>${n}</b> <b>успешно оформлен!</b>`,
+    "",
+    "<b>Что нужно сделать:</b>",
+    "Скопируйте номер заказа и напишите менеджеру через кнопку ниже 👇",
+  ].join("\n");
+}
 export const msgProfitPrompt = (orderId: string) => {
   const t = orderId.trim().replace(/^#+/, "");
   return `Введите чистую прибыль за заказ #${t} в RUB:`;

@@ -26,8 +26,11 @@ import {
   BTN_WRITE_MANAGER,
   BTN_WRITE_REVIEW,
   REVIEW_POST_URL,
-  buildOrderCompletedBuyerCaption,
-  buildSellVirtCaption,
+  buildAccountAppOrderCaptionHtml,
+  buildAccountManagerOrderCaptionHtml,
+  buildOrderCompletedBuyerCaptionHtml,
+  buildSellVirtCaptionHtml,
+  buildVirtOrderCaptionHtml,
   getOrderCompletedReviewLineText,
 } from "./texts.js";
 import { addOrUpdateActiveOrder, type AdminOrderRow } from "./orders-store.js";
@@ -229,7 +232,7 @@ export async function sendSellVirtMessage(
     caption = withEm.text;
     caption_entities = withEm.entities;
   } else {
-    caption = buildSellVirtCaption(orderRef);
+    caption = buildSellVirtCaptionHtml(orderRef);
   }
   const photo = resolveOrderSuccessPhoto();
   const managerUrl =
@@ -243,12 +246,11 @@ export async function sendSellVirtMessage(
     return;
   }
 
+  const withCapEntities = caption_entities && caption_entities.length > 0;
   const sendPhotoOptions = {
     caption,
     reply_markup,
-    ...(caption_entities && caption_entities.length > 0
-      ? { caption_entities }
-      : {}),
+    ...(withCapEntities ? { caption_entities } : { parse_mode: "HTML" as const }),
   };
 
   await retrySendPhoto(async () => {
@@ -485,7 +487,7 @@ export async function sendVirtOrderSuccess(
       caption = withMgr.text;
       caption_entities = withMgr.entities;
     } else {
-      caption = buildAccountManagerOrderCaption(payload.orderNumber);
+      caption = buildAccountManagerOrderCaptionHtml(payload.orderNumber);
     }
   } else {
     const parts = getOrderSuccessThreeEmojisTextParts(payload.orderNumber, orderKind);
@@ -497,8 +499,8 @@ export async function sendVirtOrderSuccess(
     } else {
       caption =
         orderKind === "virt"
-          ? buildVirtOrderCaption(payload.orderNumber)
-          : buildAccountAppOrderCaption(payload.orderNumber);
+          ? buildVirtOrderCaptionHtml(payload.orderNumber)
+          : buildAccountAppOrderCaptionHtml(payload.orderNumber);
     }
   }
 
@@ -641,7 +643,11 @@ export async function sendOrderCompletedToBuyer(
     caption = withEm.text;
     caption_entities = withEm.entities;
   } else {
-    caption = buildOrderCompletedBuyerCaption(payload.orderNumber, payload.isAccount, payload.accountData);
+    caption = buildOrderCompletedBuyerCaptionHtml(
+      payload.orderNumber,
+      payload.isAccount,
+      payload.accountData,
+    );
   }
 
   const reply_markup = new InlineKeyboard().url(BTN_WRITE_REVIEW, REVIEW_POST_URL);
@@ -652,10 +658,13 @@ export async function sendOrderCompletedToBuyer(
     return;
   }
 
+  const withOrderDoneCapEntities = caption_entities && caption_entities.length > 0;
   const sendPhotoOptions = {
     caption,
     reply_markup,
-    ...(caption_entities && caption_entities.length > 0 ? { caption_entities } : {}),
+    ...(withOrderDoneCapEntities
+      ? { caption_entities }
+      : { parse_mode: "HTML" as const }),
   };
 
   await retrySendPhoto(async () => {
