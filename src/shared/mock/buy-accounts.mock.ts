@@ -1,4 +1,12 @@
 import { BLACK_RUSSIA_SERVER_OPTIONS } from "../constants/servers-black-russia";
+import { AMAZING_RP_SERVER_OPTIONS } from "../constants/servers-amazing-rp";
+import { ARIZONA_RP_SERVER_OPTIONS } from "../constants/servers-arizona-rp";
+import { GRAND_MOBILE_RP_SERVER_OPTIONS } from "../constants/servers-grand-mobile-rp";
+import { GTA_V_RP_SERVER_OPTIONS } from "../constants/servers-gta-v-rp";
+import { MAJESTIC_RP_SERVER_OPTIONS } from "../constants/servers-majestic-rp";
+import { MATRYOSHKA_RP_SERVER_OPTIONS } from "../constants/servers-matryoshka-rp";
+import { PROVINCE_RP_SERVER_OPTIONS } from "../constants/servers-province-rp";
+import { RADMIR_RP_SERVER_OPTIONS } from "../constants/servers-radmir-rp";
 import { VIRTS_ICONS } from "../constants/virt-icons";
 
 import type { AccountPurchaseOption, Virt } from "@/entities/virt";
@@ -47,7 +55,7 @@ export const BUY_ACCOUNTS_MOCK: Virt[] = [
     gradientToken: "purple",
     logo: VIRTS_ICONS["matryoshka-rp"],
     serverLabel: "Сервер",
-    serverOptions: ["1. №02 Green", "2. №05 Red"],
+    serverOptions: [...MATRYOSHKA_RP_SERVER_OPTIONS],
     accountNumber: "",
     amountRub: 0,
     amountVirts: 0,
@@ -68,7 +76,7 @@ export const BUY_ACCOUNTS_MOCK: Virt[] = [
     gradientToken: "yellow",
     logo: VIRTS_ICONS["gta-v-rp"],
     serverLabel: "Сервер",
-    serverOptions: ["1. №02 Green", "2. №05 Red"],
+    serverOptions: [...GTA_V_RP_SERVER_OPTIONS],
     accountNumber: "",
     amountRub: 0,
     amountVirts: 0,
@@ -89,7 +97,7 @@ export const BUY_ACCOUNTS_MOCK: Virt[] = [
     gradientToken: "pink",
     logo: VIRTS_ICONS["majestic-rp"],
     serverLabel: "Сервер",
-    serverOptions: ["1. №02 Green", "2. №05 Red", "3. №08 White"],
+    serverOptions: [...MAJESTIC_RP_SERVER_OPTIONS],
     accountNumber: "",
     amountRub: 0,
     amountVirts: 0,
@@ -110,7 +118,7 @@ export const BUY_ACCOUNTS_MOCK: Virt[] = [
     gradientToken: "blue",
     logo: VIRTS_ICONS["arizona-rp"],
     serverLabel: "Сервер",
-    serverOptions: ["1. №02 Green", "2. №05 Red", "3. №10 Gold"],
+    serverOptions: [...ARIZONA_RP_SERVER_OPTIONS],
     accountNumber: "",
     amountRub: 0,
     amountVirts: 0,
@@ -131,7 +139,7 @@ export const BUY_ACCOUNTS_MOCK: Virt[] = [
     gradientToken: "orange",
     logo: VIRTS_ICONS["radmir-rp"],
     serverLabel: "Сервер",
-    serverOptions: ["1. №01", "2. №02", "3. №03"],
+    serverOptions: [...RADMIR_RP_SERVER_OPTIONS],
     accountNumber: "",
     amountRub: 0,
     amountVirts: 0,
@@ -152,7 +160,7 @@ export const BUY_ACCOUNTS_MOCK: Virt[] = [
     gradientToken: "grey",
     logo: VIRTS_ICONS["province-rp"],
     serverLabel: "Сервер",
-    serverOptions: ["1. №01", "2. №02", "3. №03"],
+    serverOptions: [...PROVINCE_RP_SERVER_OPTIONS],
     accountNumber: "",
     amountRub: 0,
     amountVirts: 0,
@@ -173,7 +181,7 @@ export const BUY_ACCOUNTS_MOCK: Virt[] = [
     gradientToken: "gold",
     logo: VIRTS_ICONS["amazing-rp"],
     serverLabel: "Сервер",
-    serverOptions: ["1. №01", "2. №02", "3. №03"],
+    serverOptions: [...AMAZING_RP_SERVER_OPTIONS],
     accountNumber: "",
     amountRub: 0,
     amountVirts: 0,
@@ -194,7 +202,7 @@ export const BUY_ACCOUNTS_MOCK: Virt[] = [
     gradientToken: "dark",
     logo: VIRTS_ICONS["grand-mobile-rp"],
     serverLabel: "Сервер",
-    serverOptions: ["1. №02 Green", "2. №05 Red"],
+    serverOptions: [...GRAND_MOBILE_RP_SERVER_OPTIONS],
     accountNumber: "",
     amountRub: 0,
     amountVirts: 0,
