@@ -29,10 +29,10 @@ const inputVariants = {
   },
   form: {
     input:
-      "h-full w-full rounded-[10px] bg-transparent px-4 text-[14px] leading-[100%] font-normal text-black transition-colors placeholder:text-[14px] placeholder:font-normal placeholder:text-white/60 focus-visible:outline-hidden disabled:cursor-not-allowed disabled:opacity-50 ",
-    outer: "flex h-12 w-full items-center justify-center rounded-[10px]",
+      "h-full w-full rounded-full bg-transparent px-4 text-[14px] leading-[100%] font-normal text-black transition-colors placeholder:text-[14px] placeholder:font-normal placeholder:text-white/60 focus-visible:outline-hidden disabled:cursor-not-allowed disabled:opacity-50 ",
+    outer: "flex h-12 w-full items-center justify-center rounded-full",
     surface:
-      "border-app-border-soft bg-app-highlight flex h-12 w-full rounded-[10px] border",
+      "border-app-border-soft bg-app-highlight flex h-12 w-full rounded-full border",
   },
 } as const;
 
