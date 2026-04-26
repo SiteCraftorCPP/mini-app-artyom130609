@@ -1,6 +1,7 @@
 /**
- * custom_emoji_id (как в боте с ID), не file_id.
- * Разрешение в file_id: getCustomEmojiStickers → sendSticker (см. custom-emoji-stickers.ts).
+ * custom_emoji_id (часто то, что отдают «боты с ID»), не file_id.
+ * sendSticker требует file_id — в проде надежнее задать WELCOME_STICKER_FILE_IDS и т.д. в .env.
+ * Иначе: getCustomEmojiStickers (см. custom-emoji-stickers.ts); при пустом ответе смотрите лог.
  */
 export const CUSTOM_EMOJI_IDS = {
   dollar: "5283232570660634549",

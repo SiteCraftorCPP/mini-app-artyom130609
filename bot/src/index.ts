@@ -13,7 +13,15 @@ process.on("uncaughtException", (error) => {
 });
 
 import { aboutBackKeyboard, mainMenuInlineKeyboard } from "./keyboards.js";
-import { sendCustomEmojiStickersInOrder } from "./custom-emoji-stickers.js";
+import {
+  sendCustomEmojiStickersInOrder,
+  sendStickerFileIdsInOrder,
+} from "./custom-emoji-stickers.js";
+import {
+  getAboutStickerFileIdsFromEnv,
+  getHowStickerFileIdFromEnv,
+  getWelcomeStickerFileIdsFromEnv,
+} from "./sticker-env.js";
 import {
   ABOUT_CUSTOM_EMOJI_ORDER,
   CUSTOM_EMOJI_IDS,
@@ -150,10 +158,14 @@ async function clearReplyKeyboard(ctx: Context) {
 }
 
 async function sendWelcomeStickersBlock(ctx: Context): Promise<boolean> {
+  const fromEnv = getWelcomeStickerFileIdsFromEnv();
+  if (fromEnv?.length) {
+    return sendStickerFileIdsInOrder(ctx, fromEnv);
+  }
   const ok = await sendCustomEmojiStickersInOrder(ctx, WELCOME_CUSTOM_EMOJI_ORDER);
   if (!ok) {
     console.warn(
-      "[welcome] custom-emoji стикеры не отправились (getCustomEmojiStickers / сеть) — фото или текст",
+      "[welcome] стикеры не отправились (getCustomEmojiStickers) — укажите WELCOME_STICKER_FILE_IDS (file_id) в .env или баннер",
     );
   }
   return ok;
@@ -293,8 +305,10 @@ bot.command("start", async (ctx) => {
 installAdminModule(bot, BOT_ADMIN_IDS);
 
 async function sendHowToVideo(ctx: Context) {
-  const chatId = ctx.chat?.id;
-  if (chatId !== undefined) {
+  const howFile = getHowStickerFileIdFromEnv();
+  if (howFile) {
+    await sendStickerFileIdsInOrder(ctx, [howFile]);
+  } else {
     await sendCustomEmojiStickersInOrder(ctx, [CUSTOM_EMOJI_IDS.lightning]);
   }
   const path = resolveInstructionVideoPath();
@@ -316,7 +330,12 @@ bot.callbackQuery("menu:how", async (ctx) => {
 
 bot.callbackQuery("menu:about", async (ctx) => {
   await ctx.answerCallbackQuery();
-  await sendCustomEmojiStickersInOrder(ctx, ABOUT_CUSTOM_EMOJI_ORDER);
+  const aboutFromEnv = getAboutStickerFileIdsFromEnv();
+  if (aboutFromEnv?.length) {
+    await sendStickerFileIdsInOrder(ctx, aboutFromEnv);
+  } else {
+    await sendCustomEmojiStickersInOrder(ctx, ABOUT_CUSTOM_EMOJI_ORDER);
+  }
   await ctx.reply(ABOUT_SHOP, {
     reply_markup: aboutBackKeyboard(),
   });
