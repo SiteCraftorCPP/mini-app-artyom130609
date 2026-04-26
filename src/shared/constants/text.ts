@@ -26,7 +26,7 @@ export const VIRT_FORM_TEXT = {
   accountNumberRequired: "Введите номер счета",
   amountRubLabel: "Сумма в рублях",
   amountRubRequired: "Введите сумму в рублях",
-  amountVirtsHint: `${DEFAULT.MIN_AMOUNT_VIRT_LABEL}= ${DEFAULT.MIN_AMOUNT_VIRT_FULL_LABEL}`,
+  amountVirtsHint: `1кк= 1,000,000`,
   amountVirtsLabel: "Сумма в виртах",
   amountVirtsRequired: "Введите сумму в виртах",
   exchangeRateHint: `${DEFAULT.MIN_AMOUNT_VIRT_LABEL} - ${DEFAULT.MIN_AMOUNT_RUB} руб`,

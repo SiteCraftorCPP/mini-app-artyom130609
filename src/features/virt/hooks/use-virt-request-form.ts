@@ -18,18 +18,9 @@ import {
 
 import { type Virt, useSubmitVirtRequest } from "@/entities/virt";
 
-const getDefaultAmountRub = (virt: Virt) => String(virt.minAmountRub || 100);
+const getDefaultAmountRub = (virt: Virt) => "";
 
-const getDefaultAmountVirts = (virt: Virt) => {
-  if (virt.amountVirts) {
-    return String(virt.amountVirts);
-  }
-
-  return calculateAmountVirts(getDefaultAmountRub(virt), {
-    amountRub: virt.exchangeRate,
-    amountVirts: DEFAULT.MIN_AMOUNT_VIRT,
-  });
-};
+const getDefaultAmountVirts = (virt: Virt) => "";
 
 const getDefaultValues = (virt: Virt): VirtRequestFormValues => ({
   accountNumber: virt.accountNumber,

@@ -32,7 +32,13 @@ const parseAmountWithSuffix = (value: string) => {
     );
   }
 
-  return Number(normalizedValue.replace(/[^\d.]/g, ""));
+  // Treat all numbers as millions (KK) by default if no suffix is provided
+  const parsedNumber = Number(normalizedValue.replace(/[^\d.]/g, ""));
+  if (Number.isFinite(parsedNumber) && parsedNumber > 0 && !normalizedValue.endsWith("k") && !normalizedValue.endsWith("к") && !normalizedValue.endsWith("m") && !normalizedValue.endsWith("м")) {
+     return parsedNumber * 1_000_000;
+  }
+
+  return parsedNumber;
 };
 
 const normalizeAmount = (value: string) => {

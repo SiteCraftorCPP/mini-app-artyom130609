@@ -103,6 +103,7 @@ export const VirtAmountFields = memo(
                   onChange={handleAmountRubChange}
                   debounceMs={TIMING.inputDebounceMs}
                   onDebounce={handleAmountRubDebounce}
+                  placeholder=""
                 />
               </FormControl>
 
@@ -144,6 +145,7 @@ export const VirtAmountFields = memo(
                   onChange={handleAmountVirtChange}
                   debounceMs={TIMING.inputDebounceMs}
                   onDebounce={handleAmountVirtDebounce}
+                  placeholder=""
                 />
               </FormControl>
 
