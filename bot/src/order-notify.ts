@@ -11,6 +11,11 @@ import { InlineKeyboard } from "grammy";
 
 import { getTelegramUserIdFromWebAppInitData } from "./telegram-webapp-init-data.js";
 import {
+  buildOrderSuccessThreeEmojisCaption,
+  type OrderSuccessThreeEmojisParts,
+} from "./custom-emoji-stickers.js";
+import { getOrderSuccessStickerIdsFromEnv } from "./sticker-env.js";
+import {
   BTN_WRITE_MANAGER,
   BTN_WRITE_REVIEW,
   REVIEW_POST_URL,
@@ -320,6 +325,25 @@ function buildAccountAppOrderCaption(orderNumber: string): string {
   ].join("\n");
 }
 
+type OrderKindForSuccessParts = "virt" | "account";
+
+function getOrderSuccessThreeEmojisTextParts(
+  orderNumber: string,
+  kind: OrderKindForSuccessParts,
+): OrderSuccessThreeEmojisParts {
+  const n = formatOrderNumberForCaption(orderNumber);
+  return {
+    line1: `Заказ ${n} успешно оформлен!`,
+    delivery: "Срок выдачи: от 5 минут до 24 часов",
+    paren: "(среднее время — ~20 минут)",
+    body:
+      kind === "virt"
+        ? "После зачисления виртов на ваш счёт вы получите уведомление в этом чате."
+        : "Информация по заказу будет отправлена в этот чат.",
+    lastBeforePointer: "Чтобы узнать детали заказа, нажмите кнопку ниже",
+  };
+}
+
 /** Покупка аккаунта — связь с менеджером (без webApp-кнопки заказа). */
 function buildAccountManagerOrderCaption(orderNumber: string): string {
   const n = formatOrderNumberForCaption(orderNumber);
@@ -409,18 +433,32 @@ export async function sendVirtOrderSuccess(
     orderId: payload.orderId,
     orderKind: payload.orderKind ?? "virt",
   });
-  const { caption, reply_markup } = resolveVirtOrderCaptionAndKeyboard(
-    payload,
-    miniAppUrl,
-  );
-  const photo = resolveOrderSuccessPhoto();
+  const { reply_markup } = resolveVirtOrderCaptionAndKeyboard(payload, miniAppUrl);
+  const orderKind: OrderKindForSuccessParts = payload.orderKind === "account" ? "account" : "virt";
+  const isAccountManagerMode =
+    orderKind === "account" && process.env.ACCOUNT_ORDER_TEMPLATE?.trim().toLowerCase() === "manager";
 
-  const sendTextOnly = async () => {
-    await bot.api.sendMessage(payload.telegramUserId, caption, {
-      reply_markup,
-      parse_mode: "HTML"
-    });
-  };
+  let caption: string;
+  let caption_entities: import("@grammyjs/types").MessageEntity[] | undefined;
+
+  if (isAccountManagerMode) {
+    caption = buildAccountManagerOrderCaption(payload.orderNumber);
+  } else {
+    const parts = getOrderSuccessThreeEmojisTextParts(payload.orderNumber, orderKind);
+    const ids = getOrderSuccessStickerIdsFromEnv();
+    const withEntities = await buildOrderSuccessThreeEmojisCaption(bot.api, ids, parts);
+    if (withEntities) {
+      caption = withEntities.text;
+      caption_entities = withEntities.entities;
+    } else {
+      caption =
+        orderKind === "virt"
+          ? buildVirtOrderCaption(payload.orderNumber)
+          : buildAccountAppOrderCaption(payload.orderNumber);
+    }
+  }
+
+  const photo = resolveOrderSuccessPhoto();
 
   if (!photo) {
     console.warn(
@@ -428,21 +466,27 @@ export async function sendVirtOrderSuccess(
     );
     return;
   }
-  
+
+  const sendPhotoOptions = {
+    caption,
+    reply_markup,
+    ...(caption_entities && caption_entities.length > 0 ? { caption_entities } : { parse_mode: "HTML" as const }),
+  };
+
   await retrySendPhoto(async () => {
       if (photo.type === "url") {
         console.info("[virt-order] sendPhoto по URL", photo.url.slice(0, 72));
-        await bot.api.sendPhoto(payload.telegramUserId, photo.url, { caption, reply_markup, parse_mode: "HTML" });
+        await bot.api.sendPhoto(payload.telegramUserId, photo.url, sendPhotoOptions);
       } else {
         console.info("[virt-order] sendPhoto заказа с диска", photo.path);
         const buffer = readFileSync(photo.path);
         await bot.api.sendPhoto(
           payload.telegramUserId,
           new InputFile(buffer, `${Date.now()}_${basename(photo.path)}`),
-          { caption, reply_markup, parse_mode: "HTML" }
+          sendPhotoOptions,
         );
       }
-    }).catch(e => {
+    }).catch((e) => {
       console.error("[virt-order] Фото так и не отправилось", e);
       throw e;
     });

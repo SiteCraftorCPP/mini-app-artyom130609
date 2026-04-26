@@ -16,6 +16,15 @@ export const WELCOME_HAND_POINTER_IDS = [
   "5231102735817918643",
 ] as const;
 
+/**
+ * «Заказ оформлен» (фото): галочка в 1-й строке, часы в 2-й, указатель в конце последней.
+ */
+export const ORDER_SUCCESS_CUSTOM_EMOJI_IDS = {
+  success: "5233307140667492238",
+  clock: "5258419835922030550",
+  pointer: "5231102735817918643",
+} as const;
+
 /** «О магазине»: 🪙 ⚡ 🍑 ⛓ — по одной иконке в начале каждой из 4 строк. */
 export const ABOUT_CUSTOM_EMOJI_ORDER = [
   CUSTOM_EMOJI_IDS.dollar,

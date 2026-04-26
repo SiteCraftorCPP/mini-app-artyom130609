@@ -216,6 +216,59 @@ export async function buildMultilineCustomEmojiLinesCaption(
   return { text: fullText, entities };
 }
 
+export type OrderSuccessThreeEmojisParts = {
+  line1: string;
+  delivery: string;
+  paren: string;
+  body: string;
+  lastBeforePointer: string;
+};
+
+/**
+ * Фото «заказ оформлен»): (1) начало 1-й строки, (2) начало строки срока, (3) конец последней.
+ */
+export async function buildOrderSuccessThreeEmojisCaption(
+  api: Context["api"],
+  ids: { success: string; clock: string; pointer: string },
+  p: OrderSuccessThreeEmojisParts,
+): Promise<CustomEmojiCaption | null> {
+  const sId = normId(ids.success);
+  const cId = normId(ids.clock);
+  const pId = normId(ids.pointer);
+  const idArr = [sId, cId, pId].filter((x) => x.length > 0);
+  if (idArr.length !== 3) {
+    return null;
+  }
+  await ensureStickersInCache({ api } as Pick<Context, "api">, idArr);
+  const a = (i: 0 | 1 | 2) => getCachedStickerForRequestedId(idArr[i]!);
+  const s0 = a(0);
+  const s1 = a(1);
+  const s2 = a(2);
+  if (!s0?.emoji || !s1?.emoji || !s2?.emoji) {
+    console.warn("[custom-emoji] order-success: нет Sticker.emoji");
+    return null;
+  }
+  const h1 = s0.emoji as string;
+  const h2 = s1.emoji as string;
+  const h3 = s2.emoji as string;
+  const text =
+    h1 + "  " + p.line1 +
+    "\n\n" + h2 + " " + p.delivery +
+    "\n" + p.paren +
+    "\n\n" + p.body +
+    "\n\n" + p.lastBeforePointer + h3;
+  const off2 = (h1 + "  " + p.line1 + "\n\n").length;
+  const off3 = text.length - h3.length;
+  return {
+    text,
+    entities: [
+      { type: "custom_emoji", offset: 0, length: h1.length, custom_emoji_id: sId },
+      { type: "custom_emoji", offset: off2, length: h2.length, custom_emoji_id: cId },
+      { type: "custom_emoji", offset: off3, length: h3.length, custom_emoji_id: pId },
+    ],
+  };
+}
+
 export async function sendCustomEmojisInMessage(
   ctx: Pick<Context, "api" | "chat">,
   customEmojiIds: readonly string[],
