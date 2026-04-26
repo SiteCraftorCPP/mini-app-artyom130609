@@ -1,17 +1,12 @@
 /**
- * /start: в подписи к баннеру — custom id «рука» / «указатель» + `bold` в entities, либо WELCOME_HTML + parse_mode.
- * «О магазине» — 4 custom id; жирные строки/подписи ссылок через `bold` в entities, либо ABOUT_SHOP_HTML.
+ * /start: custom emoji + жирный весь остальной текст (entities), либо WELCOME_HTML + parse_mode.
+ * «О магазине» — 4 custom id; то же, либо ABOUT_SHOP_HTML.
  * Обычный текст без `parse_mode` / без MessageEntity **не** бывает жирным в Telegram.
  */
 export const WELCOME_LINE_1 =
   "Добро пожаловать в ARTSHOPVIRTS — магазин виртов и услуг для самых популярных RP-проектов.";
 export const WELCOME_LINE_2 = "Чтобы оформить заказ, нажмите открыть магазин";
 export const WELCOME = [WELCOME_LINE_1, "", WELCOME_LINE_2].join("\n");
-
-/** /start: без custom emoji в подписи — `parse_mode: "HTML"`. */
-export const WELCOME_LINE_1_HTML = `Добро пожаловать в <b>ARTSHOPVIRTS</b> — магазин виртов и услуг для самых популярных RP-проектов.`;
-export const WELCOME_LINE_2_HTML = `<b>Чтобы оформить заказ, нажмите открыть магазин</b>`;
-export const WELCOME_HTML = [WELCOME_LINE_1_HTML, "", WELCOME_LINE_2_HTML].join("\n");
 
 /** 4 абзаца «О магазине» — к каждому в подписи своя custom-иконка. */
 export const ABOUT_SHOP_LINES: readonly [string, string, string, string] = [
@@ -37,26 +32,9 @@ export const ABOUT_SHOP = [
   ABOUT_SHOP_LINES[3],
 ].join("\n");
 
-const ABOUT_SHOP_FOURTH_BLOCK_HTML = [
-  "<b>Наши официальные ссылки:</b>",
-  "<b>Telegram канал:</b> @artshopvirts_channel",
-  "<b>Отзывы:</b> https://t.me/artshopvirts_channel/85",
-  "<b>Менеджер:</b> @artshopvirts_man",
-  "<b>MEDIA-сотрудничество:</b> @artshopvirts_media",
-].join("\n");
-
-/** «О магазине» без custom emoji: `parse_mode: "HTML"`. */
-export const ABOUT_SHOP_HTML = [
-  `<b>${ABOUT_SHOP_LINES[0]}</b>`,
-  "",
-  `<b>${ABOUT_SHOP_LINES[1]}</b>`,
-  "",
-  `<b>${ABOUT_SHOP_LINES[2]}</b>`,
-  "",
-  ABOUT_SHOP_FOURTH_BLOCK_HTML,
-].join("\n");
-
 export const BTN_OPEN_SHOP = "🟢 Открыть магазин";
+/** Кнопка в поле ввода (setChatMenuButton → Web App) — тот же URL, что у MINI_APP_URL. */
+export const BTN_MENU_SHOP = "Магазин";
 export const BTN_HOW_TO_ORDER = "🔴 Как оформить заказ";
 export const BTN_ABOUT = "🔵 О магазине";
 export const BTN_BACK = "Назад";
@@ -138,6 +116,12 @@ function escHtml(s: string): string {
     .replace(/>/g, "&gt;");
 }
 
+/** /start: без custom emoji в подписи — `parse_mode: "HTML"`, весь текст жирный. */
+export const WELCOME_HTML = `<b>${escHtml(WELCOME)}</b>`;
+
+/** «О магазине» без custom emoji: `parse_mode: "HTML"`, весь текст жирный. */
+export const ABOUT_SHOP_HTML = `<b>${escHtml(ABOUT_SHOP)}</b>`;
+
 function refFromOrderInput(orderNumber: string): string {
   const t = orderNumber.trim().replace(/^#+/, "");
   return `#${t}`;
@@ -145,11 +129,15 @@ function refFromOrderInput(orderNumber: string): string {
 
 /** Без custom emoji, с `parse_mode: "HTML"`. */
 export function buildVirtOrderCaptionHtml(orderNumber: string): string {
-  const n = escHtml(refFromOrderInput(orderNumber));
+  return `<b>${escHtml(plainVirtOrderCaption(orderNumber))}</b>`;
+}
+
+function plainVirtOrderCaption(orderNumber: string): string {
+  const ref = refFromOrderInput(orderNumber);
   return [
-    `✅  <b>Заказ</b> <b>${n}</b> <b>успешно оформлен!</b>`,
+    `✅ Заказ ${ref} успешно оформлен!`,
     "",
-    `🕔 <b>Срок выдачи:</b> от 5 минут до 24 часов`,
+    "🕔 Срок выдачи: от 5 минут до 24 часов",
     "(среднее время — ~20 минут)",
     "",
     "После зачисления виртов на ваш счёт вы получите уведомление в этом чате.",
@@ -159,11 +147,15 @@ export function buildVirtOrderCaptionHtml(orderNumber: string): string {
 }
 
 export function buildAccountAppOrderCaptionHtml(orderNumber: string): string {
-  const n = escHtml(refFromOrderInput(orderNumber));
+  return `<b>${escHtml(plainAccountAppOrderCaption(orderNumber))}</b>`;
+}
+
+function plainAccountAppOrderCaption(orderNumber: string): string {
+  const ref = refFromOrderInput(orderNumber);
   return [
-    `✅  <b>Заказ</b> <b>${n}</b> <b>успешно оформлен!</b>`,
+    `✅ Заказ ${ref} успешно оформлен!`,
     "",
-    `🕔 <b>Срок выдачи:</b> от 5 минут до 24 часов`,
+    "🕔 Срок выдачи: от 5 минут до 24 часов",
     "(среднее время — ~20 минут)",
     "",
     "Информация по заказу будет отправлена в этот чат.",
@@ -173,11 +165,15 @@ export function buildAccountAppOrderCaptionHtml(orderNumber: string): string {
 }
 
 export function buildAccountManagerOrderCaptionHtml(orderNumber: string): string {
-  const n = escHtml(refFromOrderInput(orderNumber));
+  return `<b>${escHtml(plainAccountManagerOrderCaption(orderNumber))}</b>`;
+}
+
+function plainAccountManagerOrderCaption(orderNumber: string): string {
+  const ref = refFromOrderInput(orderNumber);
   return [
-    `✅  <b>Заказ</b> <b>${n}</b> <b>успешно оформлен!</b>`,
+    `✅ Заказ ${ref} успешно оформлен!`,
     "",
-    "<b>Что нужно сделать:</b>",
+    "Что нужно сделать:",
     "Скопируйте номер заказа и напишите менеджеру через кнопку ниже 👇",
   ].join("\n");
 }
@@ -187,44 +183,11 @@ export function buildOrderCompletedBuyerCaptionHtml(
   isAccount?: boolean,
   accountData?: string,
 ): string {
-  const n = escHtml(refFromOrderInput(orderNumber));
-  if (isAccount && accountData) {
-    return [
-      `✅ <b>Заказ</b> <b>${n}</b> <b>успешно выполнен!</b>`,
-      "",
-      `✅ <b>Данные для входа в аккаунт:</b>`,
-      accountData
-        .split("\n")
-        .map((line) => {
-          const c = line.indexOf(":");
-          if (c > 0) {
-            return `<b>${escHtml(line.slice(0, c + 1))}</b>${escHtml(line.slice(c + 1))}`;
-          }
-          return escHtml(line);
-        })
-        .join("\n"),
-      "",
-      `🪙 <b>Напишите отзыв</b> — и к следующему заказу получите <b>200 000</b> бонусных виртов!`,
-    ].join("\n");
-  }
-  return [
-    `✅ <b>Заказ</b> <b>${n}</b> <b>успешно выполнен!</b>`,
-    "",
-    "✅ <b>Вирты успешно зачислены на ваш банковский счёт.</b>",
-    "",
-    "🪙 <b>Напишите отзыв</b> — и к следующему заказу получите <b>200 000</b> бонусных виртов!",
-  ].join("\n");
+  return `<b>${escHtml(buildOrderCompletedBuyerCaption(orderNumber, isAccount, accountData))}</b>`;
 }
 
 export function buildSellVirtCaptionHtml(orderRef: string): string {
-  const t = orderRef.trim();
-  const n = escHtml(t.startsWith("#") ? t : `#${t}`);
-  return [
-    `✅  <b>Заказ</b> <b>${n}</b> <b>успешно оформлен!</b>`,
-    "",
-    "<b>Что нужно сделать:</b>",
-    "Скопируйте номер заказа и напишите менеджеру через кнопку ниже 👇",
-  ].join("\n");
+  return `<b>${escHtml(buildSellVirtCaption(orderRef))}</b>`;
 }
 export const msgProfitPrompt = (orderId: string) => {
   const t = orderId.trim().replace(/^#+/, "");
@@ -256,6 +219,9 @@ export const STAT_PERIOD_TITLES = [
 ] as const;
 
 export const VIDEO_CAPTION = "Ознакомление: как оформить заказ";
+
+/** Подпись к видео «Как оформить заказ» без custom_emoji: весь текст жирный. */
+export const VIDEO_CAPTION_HTML = `<b>${escHtml(VIDEO_CAPTION)}</b>`;
 
 /**
  * Подпись инлайн-кнопки (без @никнейма — он только в URL: MANAGER_TELEGRAM_URL / t.me/artshopvirts_man).

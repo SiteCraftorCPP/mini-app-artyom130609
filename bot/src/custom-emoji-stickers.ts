@@ -1,15 +1,7 @@
 import type { Context } from "grammy";
 import type { MessageEntity, Sticker } from "@grammyjs/types";
 
-import {
-  boldRangeDataHeaderInLine,
-  boldRangeDeliveryLabel,
-  boldRangesAccountDataLabels,
-  boldRangesOrderOformlenInLine1,
-  boldRangesOrderVypolnenInLine1,
-  boldRangesReviewLine,
-  sortEntities,
-} from "./caption-bold-helpers.js";
+import { captionEntitiesAllBoldExcludingCustomEmoji } from "./caption-bold-helpers.js";
 
 /**
  * custom_emoji: subtext = Sticker.emoji (getCustomEmojiStickers). sendSticker+file_id custom_emoji = 400.
@@ -124,9 +116,10 @@ export function joinCaptionWithBody(
   body: string,
   gap: string = "\n\n",
 ): CustomEmojiCaption {
+  const text = prefix.text + gap + body;
   return {
-    text: prefix.text + gap + body,
-    entities: prefix.entities,
+    text,
+    entities: captionEntitiesAllBoldExcludingCustomEmoji(text, prefix.entities),
   };
 }
 
@@ -157,9 +150,6 @@ export async function buildWelcomeHandPointerCaption(
   const text = he + line1Text + "\n\n" + line2Text + pe;
   const heLen = he.length;
   const offPointer = (he + line1Text + "\n\n" + line2Text).length;
-  const line2Start = heLen + line1Text.length + 2;
-  const brand = "ARTSHOPVIRTS";
-  const brandIdx = line1Text.indexOf(brand);
   const entities: MessageEntity[] = [
     {
       type: "custom_emoji",
@@ -174,11 +164,7 @@ export async function buildWelcomeHandPointerCaption(
       custom_emoji_id: pId,
     },
   ];
-  if (brandIdx >= 0) {
-    entities.push({ type: "bold", offset: heLen + brandIdx, length: brand.length });
-  }
-  entities.push({ type: "bold", offset: line2Start, length: line2Text.length });
-  return { text, entities: sortEntities(entities) };
+  return { text, entities: captionEntitiesAllBoldExcludingCustomEmoji(text, entities) };
 }
 
 /**
@@ -213,24 +199,6 @@ export async function buildMultilineCustomEmojiLinesCaption(
   let fullText = "";
   const n = ids.length;
 
-  const aboutFourthBlockBoldSubranges = (fourthLine: string): { start: number; length: number }[] => {
-    const labels = [
-      "Наши официальные ссылки:",
-      "Telegram канал:",
-      "Отзывы:",
-      "Менеджер:",
-      "MEDIA-сотрудничество:",
-    ] as const;
-    const out: { start: number; length: number }[] = [];
-    for (const label of labels) {
-      const idx = fourthLine.indexOf(label);
-      if (idx >= 0) {
-        out.push({ start: idx, length: label.length });
-      }
-    }
-    return out;
-  };
-
   for (let i = 0; i < n; i++) {
     const custom_emoji_id = ids[i]!;
     const s = getCachedStickerForRequestedId(custom_emoji_id)!;
@@ -239,20 +207,15 @@ export async function buildMultilineCustomEmojiLinesCaption(
     const length = em.length;
     entities.push({ type: "custom_emoji", offset, length, custom_emoji_id });
     const line = lineTexts[i]!;
-    const lineTextStart = fullText.length + em.length + 1;
     fullText += em + " " + line;
-    if (i < 3) {
-      entities.push({ type: "bold", offset: lineTextStart, length: line.length });
-    } else {
-      for (const r of aboutFourthBlockBoldSubranges(line)) {
-        entities.push({ type: "bold", offset: lineTextStart + r.start, length: r.length });
-      }
-    }
     if (i < n - 1) {
       fullText += "\n\n";
     }
   }
-  return { text: fullText, entities: sortEntities(entities) };
+  return {
+    text: fullText,
+    entities: captionEntitiesAllBoldExcludingCustomEmoji(fullText, entities),
+  };
 }
 
 export type OrderSuccessThreeEmojisParts = {
@@ -295,8 +258,6 @@ export async function buildOrderManagerSuccessTwoEmojisCaption(
   const text =
     h1 + "  " + p.line1 + "\n\n" + p.whatToDo + "\n" + p.lineLast + h2;
   const offPointer = text.length - h2.length;
-  const startLine1 = h1.length + 2;
-  const startWhatToDo = h1 + "  " + p.line1 + "\n\n";
   const entities: MessageEntity[] = [
     { type: "custom_emoji", offset: 0, length: h1.length, custom_emoji_id: sId },
     {
@@ -305,10 +266,8 @@ export async function buildOrderManagerSuccessTwoEmojisCaption(
       length: h2.length,
       custom_emoji_id: pId,
     },
-    ...boldRangesOrderOformlenInLine1(p.line1, startLine1),
-    { type: "bold", offset: startWhatToDo.length, length: p.whatToDo.length },
   ];
-  return { text, entities: sortEntities(entities) };
+  return { text, entities: captionEntitiesAllBoldExcludingCustomEmoji(text, entities) };
 }
 
 /** Выполнение заказа (фото отзыва): (1) строка «Заказ #… выполнен», (2) вирты / данные аккаунта, (3) отзыв. */
@@ -358,29 +317,14 @@ export async function buildOrderCompletedThreeEmojisCaption(
   const text = h1 + "  " + p.line1 + "\n\n" + middle + "\n\n" + h3 + " " + p.line3;
   const off2 = (h1 + "  " + p.line1 + "\n\n").length;
   const off3 = (h1 + "  " + p.line1 + "\n\n" + middle + "\n\n").length;
-  const startLine1 = h1.length + 2;
-  const startLine2 = off2 + h2.length + 1;
-  const startLine3 = off3 + h3.length + 1;
 
   const entities: MessageEntity[] = [
     { type: "custom_emoji", offset: 0, length: h1.length, custom_emoji_id: fId },
     { type: "custom_emoji", offset: off2, length: h2.length, custom_emoji_id: sId },
     { type: "custom_emoji", offset: off3, length: h3.length, custom_emoji_id: tId },
-    ...boldRangesOrderVypolnenInLine1(p.line1, startLine1),
   ];
 
-  if (p.kind === "virt") {
-    entities.push({ type: "bold", offset: startLine2, length: p.line2.length });
-  } else {
-    const hdr = boldRangeDataHeaderInLine("Данные для входа в аккаунт:", off2 + h2.length + 1);
-    if (hdr) entities.push(hdr);
-    const dataStart = off2 + h2.length + 1 + "Данные для входа в аккаунт:\n".length;
-    entities.push(...boldRangesAccountDataLabels(p.accountData, dataStart));
-  }
-
-  entities.push(...boldRangesReviewLine(p.line3, startLine3));
-
-  return { text, entities: sortEntities(entities) };
+  return { text, entities: captionEntitiesAllBoldExcludingCustomEmoji(text, entities) };
 }
 
 /**
@@ -418,17 +362,12 @@ export async function buildOrderSuccessThreeEmojisCaption(
     "\n\n" + p.lastBeforePointer + h3;
   const off2 = (h1 + "  " + p.line1 + "\n\n").length;
   const off3 = text.length - h3.length;
-  const startLine1 = h1.length + 2;
-  const startDelivery = off2 + h2.length + 1;
-  const brDelivery = boldRangeDeliveryLabel(p.delivery, startDelivery);
   const entities: MessageEntity[] = [
     { type: "custom_emoji", offset: 0, length: h1.length, custom_emoji_id: sId },
     { type: "custom_emoji", offset: off2, length: h2.length, custom_emoji_id: cId },
     { type: "custom_emoji", offset: off3, length: h3.length, custom_emoji_id: pId },
-    ...boldRangesOrderOformlenInLine1(p.line1, startLine1),
   ];
-  if (brDelivery) entities.push(brDelivery);
-  return { text, entities: sortEntities(entities) };
+  return { text, entities: captionEntitiesAllBoldExcludingCustomEmoji(text, entities) };
 }
 
 export async function sendCustomEmojisInMessage(

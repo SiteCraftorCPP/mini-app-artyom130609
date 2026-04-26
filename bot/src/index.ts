@@ -37,13 +37,16 @@ import {
 import {
   ABOUT_SHOP_HTML,
   ABOUT_SHOP_LINES,
+  BTN_MENU_SHOP,
   VIDEO_CAPTION,
+  VIDEO_CAPTION_HTML,
   WELCOME_HTML,
   WELCOME_LINE_1,
   WELCOME_LINE_2,
 } from "./texts.js";
 import { touchUserUsage } from "./user-usage-store.js";
 import { setReferrer } from "./referrals-store.js";
+import { captionEntitiesAllBoldExcludingCustomEmoji } from "./caption-bold-helpers.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -210,7 +213,11 @@ async function sendWelcome(ctx: Context) {
   );
   const caption = withIcons?.text ?? WELCOME_HTML;
   const capEntities = withIcons?.entities;
-  const withEntities = capEntities && capEntities.length > 0;
+  const capEntitiesFinal =
+    capEntities && capEntities.length > 0
+      ? captionEntitiesAllBoldExcludingCustomEmoji(caption, capEntities)
+      : undefined;
+  const withEntities = Boolean(capEntities?.length);
 
   const photo = resolveWelcomePhoto();
   if (photo) {
@@ -219,7 +226,7 @@ async function sendWelcome(ctx: Context) {
         caption,
         reply_markup: markup,
         ...(withEntities
-          ? { caption_entities: capEntities }
+          ? { caption_entities: capEntitiesFinal }
           : { parse_mode: "HTML" as const }),
       });
     } else {
@@ -228,7 +235,7 @@ async function sendWelcome(ctx: Context) {
         caption,
         reply_markup: markup,
         ...(withEntities
-          ? { caption_entities: capEntities }
+          ? { caption_entities: capEntitiesFinal }
           : { parse_mode: "HTML" as const }),
       });
     }
@@ -239,7 +246,7 @@ async function sendWelcome(ctx: Context) {
     await ctx.reply(caption, {
       reply_markup: markup,
       ...(withEntities
-        ? { entities: capEntities }
+        ? { entities: capEntitiesFinal }
         : { parse_mode: "HTML" as const }),
     });
   }
@@ -358,13 +365,27 @@ async function sendHowToVideo(ctx: Context) {
   if (isLikelyCustomEmojiIdString(howToken)) {
     const pr = await buildCustomEmojiPrefixCaption(ctx, [howToken]);
     const cap = pr ? joinCaptionWithBody(pr, VIDEO_CAPTION, "\n\n") : null;
-    await ctx.replyWithVideo(new InputFile(path), {
-      caption: cap?.text ?? VIDEO_CAPTION,
-      ...(cap && cap.entities.length > 0 ? { caption_entities: cap.entities } : {}),
-    });
+    if (!cap) {
+      await ctx.replyWithVideo(new InputFile(path), {
+        caption: VIDEO_CAPTION_HTML,
+        parse_mode: "HTML" as const,
+      });
+    } else {
+      const videoEntities = captionEntitiesAllBoldExcludingCustomEmoji(
+        cap.text,
+        cap.entities,
+      );
+      await ctx.replyWithVideo(new InputFile(path), {
+        caption: cap.text,
+        caption_entities: videoEntities,
+      });
+    }
   } else {
     await sendVisualTokensInOrder(ctx, [howToken]);
-    await ctx.replyWithVideo(new InputFile(path), { caption: VIDEO_CAPTION });
+    await ctx.replyWithVideo(new InputFile(path), {
+      caption: VIDEO_CAPTION_HTML,
+      parse_mode: "HTML" as const,
+    });
   }
 }
 
@@ -392,7 +413,7 @@ bot.callbackQuery("menu:about", async (ctx) => {
     if (cap) {
       await ctx.reply(cap.text, {
         reply_markup: aboutBackKeyboard(),
-        entities: cap.entities,
+        entities: captionEntitiesAllBoldExcludingCustomEmoji(cap.text, cap.entities),
       });
       return;
     }
@@ -488,8 +509,21 @@ bot.catch((err) => {
 startOrderNotifyHttpServer(bot, miniAppUrl);
 
 await bot.start({
-  onStart: (botInfo) => {
+  onStart: async (botInfo) => {
     console.log(`Бот @${botInfo.username} запущен (long polling)`);
     console.log(`Mini App URL: ${miniAppUrl}`);
+    const shopUrl = miniAppUrl.replace(/\/$/, "");
+    try {
+      await bot.api.setChatMenuButton({
+        menu_button: {
+          type: "web_app",
+          text: BTN_MENU_SHOP,
+          web_app: { url: shopUrl },
+        },
+      });
+      console.log(`Кнопка «${BTN_MENU_SHOP}» в поле ввода (Web App) установлена.`);
+    } catch (e) {
+      console.warn("setChatMenuButton (кнопка магазина в поле ввода) не удался:", e);
+    }
   },
 });

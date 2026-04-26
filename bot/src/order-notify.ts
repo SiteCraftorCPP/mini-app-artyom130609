@@ -10,6 +10,7 @@ import { InputFile } from "grammy";
 import { InlineKeyboard } from "grammy";
 
 import { getTelegramUserIdFromWebAppInitData } from "./telegram-webapp-init-data.js";
+import { captionEntitiesAllBoldExcludingCustomEmoji } from "./caption-bold-helpers.js";
 import {
   buildOrderCompletedThreeEmojisCaption,
   buildOrderManagerSuccessTwoEmojisCaption,
@@ -230,7 +231,10 @@ export async function sendSellVirtMessage(
   let caption_entities: import("@grammyjs/types").MessageEntity[] | undefined;
   if (withEm) {
     caption = withEm.text;
-    caption_entities = withEm.entities;
+    caption_entities = captionEntitiesAllBoldExcludingCustomEmoji(
+      withEm.text,
+      withEm.entities,
+    );
   } else {
     caption = buildSellVirtCaptionHtml(orderRef);
   }
@@ -485,7 +489,10 @@ export async function sendVirtOrderSuccess(
     const withMgr = await buildOrderManagerSuccessTwoEmojisCaption(bot.api, mgrIds, mgrParts);
     if (withMgr) {
       caption = withMgr.text;
-      caption_entities = withMgr.entities;
+      caption_entities = captionEntitiesAllBoldExcludingCustomEmoji(
+        withMgr.text,
+        withMgr.entities,
+      );
     } else {
       caption = buildAccountManagerOrderCaptionHtml(payload.orderNumber);
     }
@@ -495,7 +502,10 @@ export async function sendVirtOrderSuccess(
     const withEntities = await buildOrderSuccessThreeEmojisCaption(bot.api, ids, parts);
     if (withEntities) {
       caption = withEntities.text;
-      caption_entities = withEntities.entities;
+      caption_entities = captionEntitiesAllBoldExcludingCustomEmoji(
+        withEntities.text,
+        withEntities.entities,
+      );
     } else {
       caption =
         orderKind === "virt"
@@ -641,7 +651,10 @@ export async function sendOrderCompletedToBuyer(
   let caption_entities: import("@grammyjs/types").MessageEntity[] | undefined;
   if (withEm) {
     caption = withEm.text;
-    caption_entities = withEm.entities;
+    caption_entities = captionEntitiesAllBoldExcludingCustomEmoji(
+      withEm.text,
+      withEm.entities,
+    );
   } else {
     caption = buildOrderCompletedBuyerCaptionHtml(
       payload.orderNumber,
