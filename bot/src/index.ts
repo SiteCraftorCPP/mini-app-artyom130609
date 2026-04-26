@@ -13,7 +13,12 @@ process.on("uncaughtException", (error) => {
 });
 
 import { aboutBackKeyboard, mainMenuInlineKeyboard } from "./keyboards.js";
-import { STICKER_IDS } from "./sticker-ids.js";
+import { sendCustomEmojiStickersInOrder } from "./custom-emoji-stickers.js";
+import {
+  ABOUT_CUSTOM_EMOJI_ORDER,
+  CUSTOM_EMOJI_IDS,
+  WELCOME_CUSTOM_EMOJI_ORDER,
+} from "./sticker-ids.js";
 import { installAdminModule } from "./admin.js";
 import {
   pickVirtOrderDetailsFromRecord,
@@ -145,27 +150,13 @@ async function clearReplyKeyboard(ctx: Context) {
 }
 
 async function sendWelcomeStickersBlock(ctx: Context): Promise<boolean> {
-  const chatId = ctx.chat?.id;
-  if (chatId === undefined) {
-    return false;
-  }
-  const ids: string[] = [
-    STICKER_IDS.welcome1,
-    STICKER_IDS.welcome2,
-    STICKER_IDS.openShop,
-  ];
-  try {
-    for (const id of ids) {
-      await ctx.api.sendSticker(chatId, id);
-    }
-    return true;
-  } catch (e) {
+  const ok = await sendCustomEmojiStickersInOrder(ctx, WELCOME_CUSTOM_EMOJI_ORDER);
+  if (!ok) {
     console.warn(
-      "[welcome] sendSticker failed (проверьте file_id в sticker-ids.ts), fallback — фото или текст",
-      e,
+      "[welcome] custom-emoji стикеры не отправились (getCustomEmojiStickers / сеть) — фото или текст",
     );
-    return false;
   }
+  return ok;
 }
 
 async function sendWelcome(ctx: Context) {
@@ -304,11 +295,7 @@ installAdminModule(bot, BOT_ADMIN_IDS);
 async function sendHowToVideo(ctx: Context) {
   const chatId = ctx.chat?.id;
   if (chatId !== undefined) {
-    try {
-      await ctx.api.sendSticker(chatId, STICKER_IDS.howToOrder);
-    } catch (e) {
-      console.warn("[how] sendSticker (красный)", e);
-    }
+    await sendCustomEmojiStickersInOrder(ctx, [CUSTOM_EMOJI_IDS.lightning]);
   }
   const path = resolveInstructionVideoPath();
   if (!path) {
@@ -329,14 +316,7 @@ bot.callbackQuery("menu:how", async (ctx) => {
 
 bot.callbackQuery("menu:about", async (ctx) => {
   await ctx.answerCallbackQuery();
-  const chatId = ctx.chat?.id;
-  if (chatId !== undefined) {
-    try {
-      await ctx.api.sendSticker(chatId, STICKER_IDS.aboutShop);
-    } catch (e) {
-      console.warn("[about] sendSticker (синий)", e);
-    }
-  }
+  await sendCustomEmojiStickersInOrder(ctx, ABOUT_CUSTOM_EMOJI_ORDER);
   await ctx.reply(ABOUT_SHOP, {
     reply_markup: aboutBackKeyboard(),
   });
@@ -344,14 +324,6 @@ bot.callbackQuery("menu:about", async (ctx) => {
 
 bot.callbackQuery("about:back", async (ctx) => {
   await ctx.answerCallbackQuery();
-  const chatId = ctx.chat?.id;
-  if (chatId !== undefined) {
-    try {
-      await ctx.api.sendSticker(chatId, STICKER_IDS.back);
-    } catch (e) {
-      console.warn("[about:back] sendSticker", e);
-    }
-  }
   try {
     await ctx.deleteMessage();
   } catch {

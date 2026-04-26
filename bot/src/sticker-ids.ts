@@ -1,16 +1,25 @@
 /**
- * file_id стикеров (из @Stickers / переслать боту и взять из getUpdates).
- * Порядок: welcome (2) → визуалы 🟢🔴🔵 → «Назад».
+ * custom_emoji_id (как в боте с ID), не file_id.
+ * Разрешение в file_id: getCustomEmojiStickers → sendSticker (см. custom-emoji-stickers.ts).
  */
-export const STICKER_IDS = {
-  welcome1: "5402498632739996967",
-  welcome2: "5231102735817918643",
-  /** К инлайну «🟢 Открыть магазин» (декор в чате, опционально). */
-  openShop: "5283232570660634549",
-  /** Перед видео «Как оформить заказ». */
-  howToOrder: "5323761960829862762",
-  /** Перед текстом «О магазине». */
-  aboutShop: "5258330865674494479",
-  /** После кнопки «Назад» из «О магазине». */
-  back: "5260730055880876557",
+export const CUSTOM_EMOJI_IDS = {
+  dollar: "5283232570660634549",
+  lightning: "5323761960829862762",
+  barChart: "5258330865674494479",
+  chain: "5260730055880876557",
 } as const;
+
+/** /start: три визуала (доллар → молния → бары), затем текст WELCOME. */
+export const WELCOME_CUSTOM_EMOJI_ORDER = [
+  CUSTOM_EMOJI_IDS.dollar,
+  CUSTOM_EMOJI_IDS.lightning,
+  CUSTOM_EMOJI_IDS.barChart,
+] as const;
+
+/** «О магазине»: все четыре, затем ABOUT_SHOP без дублирующих эмодзи в строках. */
+export const ABOUT_CUSTOM_EMOJI_ORDER = [
+  CUSTOM_EMOJI_IDS.dollar,
+  CUSTOM_EMOJI_IDS.lightning,
+  CUSTOM_EMOJI_IDS.barChart,
+  CUSTOM_EMOJI_IDS.chain,
+] as const;
