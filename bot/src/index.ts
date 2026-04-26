@@ -13,10 +13,7 @@ process.on("uncaughtException", (error) => {
 });
 
 import { aboutBackKeyboard, mainMenuInlineKeyboard } from "./keyboards.js";
-import {
-  sendCustomEmojiStickersInOrder,
-  sendStickerFileIdsInOrder,
-} from "./custom-emoji-stickers.js";
+import { sendVisualTokensInOrder } from "./custom-emoji-stickers.js";
 import {
   getAboutStickerFileIdsFromEnv,
   getHowStickerFileIdFromEnv,
@@ -159,13 +156,13 @@ async function clearReplyKeyboard(ctx: Context) {
 
 async function sendWelcomeStickersBlock(ctx: Context): Promise<boolean> {
   const fromEnv = getWelcomeStickerFileIdsFromEnv();
-  if (fromEnv?.length) {
-    return sendStickerFileIdsInOrder(ctx, fromEnv);
-  }
-  const ok = await sendCustomEmojiStickersInOrder(ctx, WELCOME_CUSTOM_EMOJI_ORDER);
+  const tokens: readonly string[] = fromEnv?.length
+    ? fromEnv
+    : WELCOME_CUSTOM_EMOJI_ORDER;
+  const ok = await sendVisualTokensInOrder(ctx, tokens);
   if (!ok) {
     console.warn(
-      "[welcome] стикеры не отправились (getCustomEmojiStickers) — укажите WELCOME_STICKER_FILE_IDS (file_id) в .env или баннер",
+      "[welcome] визуалы не отправились (custom_emoji / sendSticker) — см. WELCOME_STICKER_FILE_IDS или баннер",
     );
   }
   return ok;
@@ -305,12 +302,8 @@ bot.command("start", async (ctx) => {
 installAdminModule(bot, BOT_ADMIN_IDS);
 
 async function sendHowToVideo(ctx: Context) {
-  const howFile = getHowStickerFileIdFromEnv();
-  if (howFile) {
-    await sendStickerFileIdsInOrder(ctx, [howFile]);
-  } else {
-    await sendCustomEmojiStickersInOrder(ctx, [CUSTOM_EMOJI_IDS.lightning]);
-  }
+  const howToken = getHowStickerFileIdFromEnv() ?? CUSTOM_EMOJI_IDS.lightning;
+  await sendVisualTokensInOrder(ctx, [howToken]);
   const path = resolveInstructionVideoPath();
   if (!path) {
     await ctx.reply(
@@ -331,11 +324,10 @@ bot.callbackQuery("menu:how", async (ctx) => {
 bot.callbackQuery("menu:about", async (ctx) => {
   await ctx.answerCallbackQuery();
   const aboutFromEnv = getAboutStickerFileIdsFromEnv();
-  if (aboutFromEnv?.length) {
-    await sendStickerFileIdsInOrder(ctx, aboutFromEnv);
-  } else {
-    await sendCustomEmojiStickersInOrder(ctx, ABOUT_CUSTOM_EMOJI_ORDER);
-  }
+  const aboutTokens: readonly string[] = aboutFromEnv?.length
+    ? aboutFromEnv
+    : ABOUT_CUSTOM_EMOJI_ORDER;
+  await sendVisualTokensInOrder(ctx, aboutTokens);
   await ctx.reply(ABOUT_SHOP, {
     reply_markup: aboutBackKeyboard(),
   });

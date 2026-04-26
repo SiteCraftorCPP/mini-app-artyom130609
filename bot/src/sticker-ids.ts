@@ -1,7 +1,7 @@
 /**
- * custom_emoji_id (часто то, что отдают «боты с ID»), не file_id.
- * sendSticker требует file_id — в проде надежнее задать WELCOME_STICKER_FILE_IDS и т.д. в .env.
- * Иначе: getCustomEmojiStickers (см. custom-emoji-stickers.ts); при пустом ответе смотрите лог.
+ * custom_emoji_id (длинные числа из ботов с ID). В чате они рисуются через
+ * sendMessage + entities: custom_emoji (см. custom-emoji-stickers.ts), не sendSticker.
+ * Для обычного .webp-стикера (не custom emoji) в .env — file_id: CAAC…
  */
 export const CUSTOM_EMOJI_IDS = {
   dollar: "5283232570660634549",

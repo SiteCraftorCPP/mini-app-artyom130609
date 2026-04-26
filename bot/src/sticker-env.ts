@@ -9,7 +9,9 @@ function parseFileIdList(raw: string | undefined): string[] | undefined {
   return list.length > 0 ? list : undefined;
 }
 
-/** Прямые file_id для sendSticker (как в ответе Telegram, обычно начинаются с CAAC…). Надёжнее, чем custom_emoji_id. */
+/**
+ * Список токенов: custom_emoji_id (цифры) или file_id (CAAC…) для обычного sendSticker.
+ */
 export function getWelcomeStickerFileIdsFromEnv(): string[] | undefined {
   return parseFileIdList(process.env.WELCOME_STICKER_FILE_IDS);
 }
