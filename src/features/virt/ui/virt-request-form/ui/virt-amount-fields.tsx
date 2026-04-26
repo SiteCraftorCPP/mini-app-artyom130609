@@ -23,6 +23,7 @@ type VirtAmountFieldsProps = {
   control: Control<VirtRequestFormValues>;
   exchangeRate: number;
   lastEditedForAmount: "amountRub" | "amountVirts";
+  lockVirtsForPromo: boolean;
   initialAmountRub: string;
   initialAmountVirts: string;
   minAmountRub: number;
@@ -36,6 +37,7 @@ export const VirtAmountFields = memo(
     control,
     exchangeRate,
     lastEditedForAmount,
+    lockVirtsForPromo,
     initialAmountRub,
     initialAmountVirts,
     minAmountRub,
@@ -53,6 +55,7 @@ export const VirtAmountFields = memo(
     } = useVirtAmountFields({
       exchangeRate,
       lastEditedForAmount,
+      lockVirtsForPromo,
       initialAmountRub,
       initialAmountVirts,
       onAmountRubInput,

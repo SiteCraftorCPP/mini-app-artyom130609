@@ -22,6 +22,7 @@ import {
 } from "@/shared/ui/select";
 
 import { useVirtRequestForm } from "../../hooks";
+import { cn } from "@/shared/utils";
 
 import {
   VIRT_REQUEST_FORM_CLASSNAMES,
@@ -52,6 +53,7 @@ export const VirtRequestForm = ({ virt }: VirtRequestFormProps) => {
     promoApplyFeedback,
     isPromoListFetching,
     lastEditedForAmount,
+    lockVirtsForPromo,
   } = useVirtRequestForm({ virt });
 
   return (
@@ -138,6 +140,7 @@ export const VirtRequestForm = ({ virt }: VirtRequestFormProps) => {
               control={form.control}
               exchangeRate={effectiveExchangeRate}
               lastEditedForAmount={lastEditedForAmount}
+              lockVirtsForPromo={lockVirtsForPromo}
               initialAmountRub={initialAmountRub}
               initialAmountVirts={initialAmountVirts}
               minAmountRub={virt.minAmountRub}
@@ -170,10 +173,13 @@ export const VirtRequestForm = ({ virt }: VirtRequestFormProps) => {
                         value={field.value ?? ""}
                         placeholder={VIRT_FORM_TEXT.promoCodePlaceholder}
                       />
-                      <Button
+                      <button
                         type="button"
-                        variant="formPlaque"
-                        className="h-12 shrink-0 rounded-full px-4"
+                        className={cn(
+                          "inline-flex h-12 shrink-0 items-center justify-center rounded-full border border-app-border-soft bg-app-highlight px-4 text-sm font-medium text-black shadow-none transition-all outline-none",
+                          "hover:brightness-105 focus-visible:ring-[3px] focus-visible:ring-ring/50",
+                          "disabled:pointer-events-none disabled:opacity-50",
+                        )}
                         onClick={applyPromoCode}
                         disabled={isPromoListFetching}
                       >
@@ -184,7 +190,7 @@ export const VirtRequestForm = ({ virt }: VirtRequestFormProps) => {
                         >
                           {VIRT_FORM_TEXT.applyPromo}
                         </AppText>
-                      </Button>
+                      </button>
                     </div>
                   </FormControl>
                   {activePromoCode && (

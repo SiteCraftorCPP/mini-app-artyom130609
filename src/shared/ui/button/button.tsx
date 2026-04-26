@@ -24,9 +24,6 @@ const buttonVariants = cva(
           "tw-bg-popup-submit border border-app-border-soft text-white shadow-[0_8px_20px_var(--app-shadow)] hover:brightness-110",
         support:
           "bg-background-card w-full justify-start rounded-[8px] text-white shadow-[0_8px_20px_var(--app-shadow)] hover:brightness-110",
-        /** Как `Input` variant="form" (бирюзовая плашка) */
-        formPlaque:
-          "border border-app-border-soft bg-app-highlight text-black shadow-none hover:brightness-105",
         virtCard:
           "tw-bg-gradient-virt-card-border h-auto w-full justify-start overflow-hidden rounded-[12px] p-px text-left whitespace-normal hover:brightness-105",
         accouuntVirt: "flex-col gap-1 rounded-[6px] p-0 justify-start",

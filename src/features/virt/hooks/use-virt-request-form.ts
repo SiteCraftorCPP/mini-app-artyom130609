@@ -134,25 +134,34 @@ export const useVirtRequestForm = ({ virt }: UseVirtRequestFormParams) => {
   );
   const discount = activePromoCode ? activePromoCode.discount : 0;
   const effectiveExchangeRate = virt.exchangeRate * (1 - discount / 100);
+  /** С промо цена в ₽ снижается при том же количестве КК, а не наоборот. */
+  const lockVirtsForPromo = Boolean(activePromoCode);
 
   useEffect(() => {
     if (!amountVirtInputRef.current && !amountRubInputRef.current) return;
-    
-    const amountRub =
-      lastEditedAmountFieldRef.current === "amountVirts"
-        ? calculateAmountRub(
-            amountVirtInputRef.current,
-            getVirtExchangeRate({ ...virt, exchangeRate: effectiveExchangeRate }),
-          )
-        : amountRubInputRef.current;
-    
-    const amountVirts =
-      lastEditedAmountFieldRef.current === "amountRub"
-        ? calculateAmountVirts(
-            amountRubInputRef.current,
-            getVirtExchangeRate({ ...virt, exchangeRate: effectiveExchangeRate }),
-          )
-        : amountVirtInputRef.current;
+
+    const rateOpts = getVirtExchangeRate({
+      ...virt,
+      exchangeRate: effectiveExchangeRate,
+    });
+
+    let amountRub: string;
+    let amountVirts: string;
+
+    if (lockVirtsForPromo) {
+      amountVirts = amountVirtInputRef.current;
+      amountRub = calculateAmountRub(amountVirts, rateOpts);
+    } else {
+      amountRub =
+        lastEditedAmountFieldRef.current === "amountVirts"
+          ? calculateAmountRub(amountVirtInputRef.current, rateOpts)
+          : amountRubInputRef.current;
+
+      amountVirts =
+        lastEditedAmountFieldRef.current === "amountRub"
+          ? calculateAmountVirts(amountRubInputRef.current, rateOpts)
+          : amountVirtInputRef.current;
+    }
 
     if (amountRub !== amountRubInputRef.current || amountVirts !== amountVirtInputRef.current) {
       amountRubInputRef.current = amountRub;
@@ -161,7 +170,7 @@ export const useVirtRequestForm = ({ virt }: UseVirtRequestFormParams) => {
       form.setValue("amountVirts", amountVirts, { shouldDirty: true, shouldValidate: true });
       setDisplayAmountRub(amountRub);
     }
-  }, [effectiveExchangeRate, form, virt]);
+  }, [effectiveExchangeRate, form, virt, lockVirtsForPromo]);
 
   const handleAmountsCommit = useCallback(
     (amountRub: string, amountVirts: string) => {
@@ -213,20 +222,27 @@ export const useVirtRequestForm = ({ virt }: UseVirtRequestFormParams) => {
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    const amountRub =
-      lastEditedAmountFieldRef.current === "amountVirts"
-        ? calculateAmountRub(
-            amountVirtInputRef.current,
-            getVirtExchangeRate({ ...virt, exchangeRate: effectiveExchangeRate }),
-          )
-        : amountRubInputRef.current;
-    const amountVirts =
-      lastEditedAmountFieldRef.current === "amountRub"
-        ? calculateAmountVirts(
-            amountRubInputRef.current,
-            getVirtExchangeRate({ ...virt, exchangeRate: effectiveExchangeRate }),
-          )
-        : amountVirtInputRef.current;
+    const rateOpts = getVirtExchangeRate({
+      ...virt,
+      exchangeRate: effectiveExchangeRate,
+    });
+
+    let amountRub: string;
+    let amountVirts: string;
+
+    if (lockVirtsForPromo) {
+      amountVirts = amountVirtInputRef.current;
+      amountRub = calculateAmountRub(amountVirts, rateOpts);
+    } else {
+      amountRub =
+        lastEditedAmountFieldRef.current === "amountVirts"
+          ? calculateAmountRub(amountVirtInputRef.current, rateOpts)
+          : amountRubInputRef.current;
+      amountVirts =
+        lastEditedAmountFieldRef.current === "amountRub"
+          ? calculateAmountVirts(amountRubInputRef.current, rateOpts)
+          : amountVirtInputRef.current;
+    }
 
     amountRubInputRef.current = amountRub;
     amountVirtInputRef.current = amountVirts;
@@ -260,5 +276,6 @@ export const useVirtRequestForm = ({ virt }: UseVirtRequestFormParams) => {
     applyPromoCode,
     promoApplyFeedback,
     isPromoListFetching,
+    lockVirtsForPromo,
   };
 };

@@ -15,6 +15,8 @@ const getVirtExchangeRate = (exchangeRate: number) => ({
 type UseVirtAmountFieldsParams = {
   exchangeRate: number;
   lastEditedForAmount: "amountRub" | "amountVirts";
+  /** Промо: КК фиксировано, в ₫ пересчёт при смене курса. */
+  lockVirtsForPromo: boolean;
   initialAmountRub: string;
   initialAmountVirts: string;
   onAmountRubInput: (value: string) => void;
@@ -25,6 +27,7 @@ type UseVirtAmountFieldsParams = {
 export const useVirtAmountFields = ({
   exchangeRate,
   lastEditedForAmount,
+  lockVirtsForPromo,
   initialAmountRub,
   initialAmountVirts,
   onAmountRubInput,
@@ -46,6 +49,20 @@ export const useVirtAmountFields = ({
   // При скидочном курсе (промо) эффективный курс меняется — пересчитываем
   // «вторую» величину, иначе локальный state не совпадёт с формой/итогом.
   useEffect(() => {
+    if (lockVirtsForPromo && amountVirtValue.trim() !== "") {
+      const n = Number(amountVirtValue);
+      if (Number.isNaN(n) || n <= 0) {
+        return;
+      }
+      const rawVirts = String(n * 1_000_000);
+      const nextAmountRub = calculateAmountRub(
+        rawVirts,
+        getVirtExchangeRate(exchangeRate),
+      );
+      setAmountRubValue(nextAmountRub);
+      onAmountsCommit(nextAmountRub, rawVirts);
+      return;
+    }
     if (lastEditedForAmount === "amountRub" && amountRubValue.trim() !== "") {
       const nextAmountVirts = calculateAmountVirts(
         amountRubValue,
@@ -72,7 +89,7 @@ export const useVirtAmountFields = ({
       onAmountsCommit(nextAmountRub, rawVirts);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- намеренно только при смене курса (в т.ч. промо)
-  }, [exchangeRate]);
+  }, [exchangeRate, lockVirtsForPromo]);
 
   const handleAmountRubChange = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
