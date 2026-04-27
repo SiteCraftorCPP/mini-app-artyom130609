@@ -145,8 +145,10 @@ function resolveAboutShopPhoto(): WelcomePhoto | null {
   const fromEnv = process.env.ABOUT_SHOP_PHOTO_PATH?.trim();
   const botRoot = resolve(__dirname, "..");
   const repoRoot = resolve(__dirname, "../..");
+  const fromEnvResolved =
+    fromEnv && (fromEnv.startsWith("/") ? fromEnv : resolve(botRoot, fromEnv));
   const candidates = [
-    fromEnv && resolve(botRoot, fromEnv),
+    fromEnvResolved,
     resolve(botRoot, "images", "photo_4.jpg"),
     resolve(botRoot, "images", "photo_4.png"),
     resolve(repoRoot, "images", "photo_4.jpg"),
