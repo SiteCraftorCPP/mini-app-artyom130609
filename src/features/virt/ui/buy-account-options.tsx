@@ -1,3 +1,5 @@
+import { useState } from "react";
+
 import { AppText, TAG } from "@/ui/app-text";
 import { Button } from "@/ui/button";
 import {
@@ -64,12 +66,57 @@ export const BuyAccountOptions = ({
     ? `${selectedOption.label} - ${formatNumberWithSpaces(selectedOption.amountRub)} ${CURRENCY.RUB}`
     : undefined;
 
+  const [aboutAccountsOpen, setAboutAccountsOpen] = useState(false);
+
   return (
     <div className="flex flex-col gap-4 px-4 pb-6">
       <VirtCard virt={virt} interactive={false} className="shadow-none" />
       {selectedMode ? (
         <div className="flex flex-col gap-3">
           <ModeTitle modeConfig={selectedMode} />
+          <div className="space-y-2">
+            <Button
+              type="button"
+              variant="ghost"
+              className="tw-bg-gradient-account-option hover:brightness-105 h-auto min-h-10 w-full justify-center rounded-md px-4 py-2 text-white"
+              aria-expanded={aboutAccountsOpen}
+              onClick={() => setAboutAccountsOpen((o) => !o)}
+            >
+              <AppText variant="darkCyanStrong" size="popupBody">
+                {BUY_ACCOUNT_OPTIONS_TEXT.aboutAccountsButton}
+              </AppText>
+            </Button>
+            {aboutAccountsOpen ? (
+              <div className="border-app-border-soft rounded-md border bg-black/25 px-3 py-2.5">
+                <AppText
+                  tag={TAG.p}
+                  variant="primaryStrong"
+                  size="small"
+                  className="mb-1.5"
+                >
+                  {BUY_ACCOUNT_OPTIONS_TEXT.aboutAccountsTitle}
+                </AppText>
+                <ul className="list-none space-y-1.5 pl-0 text-left">
+                  <li className="flex gap-2">
+                    <span className="text-white/80" aria-hidden>
+                      –
+                    </span>
+                    <AppText tag={TAG.span} variant="primaryMedium" size="small">
+                      {BUY_ACCOUNT_OPTIONS_TEXT.aboutAccountsBodyLine1}
+                    </AppText>
+                  </li>
+                  <li className="flex gap-2">
+                    <span className="text-white/80" aria-hidden>
+                      –
+                    </span>
+                    <AppText tag={TAG.span} variant="primaryMedium" size="small">
+                      {BUY_ACCOUNT_OPTIONS_TEXT.aboutAccountsBodyLine2}
+                    </AppText>
+                  </li>
+                </ul>
+              </div>
+            ) : null}
+          </div>
           <div className="mb-2 space-y-1">
             <AppText tag={TAG.p} variant="darkStrong" className="mb-1">
               {TEXT.labels.server}
@@ -100,16 +147,10 @@ export const BuyAccountOptions = ({
                   onChange={(e) => setCustomKkStr(e.target.value)}
                   inputMode="decimal"
                   autoComplete="off"
-                  placeholder={BUY_ACCOUNT_OPTIONS_TEXT.customKkPlaceholder}
+                  placeholder={BUY_ACCOUNT_OPTIONS_TEXT.customKkPricingPlaceholder}
                   variant="form"
+                  className="text-sm placeholder:text-[10px] placeholder:leading-snug placeholder:text-white/55 md:placeholder:text-xs"
                 />
-                <AppText
-                  tag={TAG.p}
-                  variant="primaryMedium"
-                  className="text-center text-xs leading-[120%] text-white/70"
-                >
-                  {BUY_ACCOUNT_OPTIONS_TEXT.customKkHint}
-                </AppText>
               </div>
             ) : (
               <Select

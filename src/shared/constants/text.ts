@@ -74,12 +74,16 @@ export const VIRT_SELL_TEXT = {
 } as const;
 
 export const BUY_ACCOUNT_OPTIONS_TEXT = {
+  aboutAccountsBodyLine1: "Аккаунт без привязок",
+  aboutAccountsBodyLine2: "Возможны дополнительные бонусы на аккаунте",
+  aboutAccountsButton: "Об аккаунте",
+  aboutAccountsTitle: "Об аккаунтах:",
   byLevel: "По уровню",
   byVirts: "По виртам",
   byVirtsAmount: "По количеству виртов",
   customKkLabel: "Сколько кк на аккаунте",
-  customKkPlaceholder: "Например, 6",
-  customKkHint: "100 ₽ за каждые 1кк + 100 ₽ за аккаунт",
+  /** Пока поле пустое — как placeholder внутри инпута */
+  customKkPricingPlaceholder: "100р за каждый 1кк + 100р за аккаунт",
 } as const;
 
 export const INFO_PAGE_TEXT = {
