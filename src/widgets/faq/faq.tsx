@@ -76,10 +76,7 @@ export const Faq = ({ items }: FaqProps) => {
             <>
               <DialogHeader className="min-w-0 gap-3 pr-0">
                 <DialogTitle className="sr-only">{active.question}</DialogTitle>
-                <PopupAppHeader
-                  title={active.question}
-                  onBack={() => setDialogOpen(false)}
-                />
+                <PopupAppHeader title={active.question} />
               </DialogHeader>
               <div
                 className={cn(

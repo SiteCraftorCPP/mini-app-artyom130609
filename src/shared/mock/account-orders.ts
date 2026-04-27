@@ -1,16 +1,44 @@
-import { VIRTS_ICONS } from "@/shared/constants/virt-icons";
+import { VIRTS_ICONS, type VirtProjectIconKey } from "@/shared/constants/virt-icons";
 
 import {
   demoBuyerAt,
   demoOrderPublicId,
 } from "@/shared/mock/order-demo-constants";
 
+/** Порядок как в магазине; в моках истории идут по кругу. */
+export const ORDER_MOCK_PROJECT_KEYS: VirtProjectIconKey[] = [
+  "black-russia",
+  "matryoshka-rp",
+  "gta-v-rp",
+  "majestic-rp",
+  "arizona-rp",
+  "radmir-rp",
+  "province-rp",
+  "amazing-rp",
+  "grand-mobile-rp",
+];
+
+const GAME_NAME_BY_PROJECT: Record<VirtProjectIconKey, string> = {
+  "black-russia": "Black Russia",
+  "matryoshka-rp": "Матрешка РП",
+  "gta-v-rp": "GTA V RP",
+  "majestic-rp": "Majestic RP",
+  "arizona-rp": "Arizona RP",
+  "radmir-rp": "Radmir RP",
+  "province-rp": "Province RP",
+  "amazing-rp": "Amazing RP",
+  "grand-mobile-rp": "Grand Mobile RP",
+};
+
 export type AccountOrderMock = {
   accountNumber: string;
   completedAt: string;
   game: string;
   id: string;
+  /** URL иконки, если `projectKey` нет (например, от API). */
   logo: string;
+  /** Ключ проекта — иконка из `VIRTS_ICONS`, как в магазине. */
+  projectKey?: VirtProjectIconKey;
   number: string;
   paidAt: string;
   price: number;
@@ -40,6 +68,7 @@ export const ACCOUNT_CURRENT_ORDERS_MOCK: AccountOrderMock[] = [
     completedAt: "12:20",
     game: "Black Russia",
     id: "current-1",
+    projectKey: "black-russia",
     logo: VIRTS_ICONS["black-russia"],
     number: "Заказ №1",
     paidAt: "12:15",
@@ -72,6 +101,7 @@ export const ACCOUNT_ADMIN_CURRENT_ORDERS_MOCK: AccountOrderMock[] = [
     title: "01.04",
     paidAt: "10:59",
     completedAt: "",
+    projectKey: "black-russia",
     logo: VIRTS_ICONS["black-russia"],
     promoCode: "",
     price: 0,
@@ -83,7 +113,7 @@ export const ACCOUNT_ADMIN_CURRENT_ORDERS_MOCK: AccountOrderMock[] = [
     categoryLabel: "Вирты",
     telegramUsername: "buyer_demo",
     telegramUserId: "500000001",
-    game: "Black Russia",
+    game: "Arizona RP",
     server: "1 (Red)",
     virtAmountLabel: "0.5 кк",
     transferMethod: "card",
@@ -95,7 +125,8 @@ export const ACCOUNT_ADMIN_CURRENT_ORDERS_MOCK: AccountOrderMock[] = [
     title: "02.04",
     paidAt: "14:18",
     completedAt: "",
-    logo: VIRTS_ICONS["black-russia"],
+    projectKey: "arizona-rp",
+    logo: VIRTS_ICONS["arizona-rp"],
     promoCode: "",
     price: 0,
   },
@@ -123,6 +154,7 @@ export const ACCOUNT_ADMIN_ORDER_ARCHIVE_MOCK: AccountOrderMock[] = [
     title: "28.03",
     paidAt: "09:00",
     completedAt: "12:15",
+    projectKey: "black-russia",
     logo: VIRTS_ICONS["black-russia"],
     promoCode: "",
     price: 0,
@@ -135,16 +167,18 @@ export const ACCOUNT_ORDER_HISTORY_MOCK: AccountOrderMock[] = Array.from(
   (_, index) => {
     const b = demoBuyerAt(index + 50);
     const ref = demoOrderPublicId(300 + index);
+    const pk = ORDER_MOCK_PROJECT_KEYS[index % ORDER_MOCK_PROJECT_KEYS.length]!;
     return {
       accountNumber: "1234567890",
       completedAt: "12:20",
-      game: "Black Russia",
+      game: GAME_NAME_BY_PROJECT[pk],
       id: ref,
       publicOrderId: ref,
       number: ref,
       telegramUsername: b.telegramUsername,
       telegramUserId: b.telegramUserId,
-      logo: VIRTS_ICONS["black-russia"],
+      projectKey: pk,
+      logo: VIRTS_ICONS[pk],
       paidAt: "12:15",
       price: 0,
       promoCode: "ARTVS",
@@ -163,6 +197,7 @@ export const ACCOUNT_ADMIN_HISTORY_50_MOCK: AccountOrderMock[] = Array.from(
     const id = demoOrderPublicId(i);
     const isOpen = i % 7 === 0;
     const amountRub = 200 + (i % 10) * 100;
+    const pk = ORDER_MOCK_PROJECT_KEYS[i % ORDER_MOCK_PROJECT_KEYS.length]!;
     return {
       id,
       publicOrderId: id,
@@ -170,7 +205,7 @@ export const ACCOUNT_ADMIN_HISTORY_50_MOCK: AccountOrderMock[] = Array.from(
       categoryLabel: "Вирты",
       telegramUsername: b.telegramUsername,
       telegramUserId: b.telegramUserId,
-      game: "Black Russia",
+      game: GAME_NAME_BY_PROJECT[pk],
       server: `${(i % 3) + 1} (Green)`,
       virtAmountLabel: `${(0.1 + (i % 5) * 0.1).toFixed(1)} кк`,
       transferMethod: i % 2 === 0 ? "bank" : "card",
@@ -185,7 +220,8 @@ export const ACCOUNT_ADMIN_HISTORY_50_MOCK: AccountOrderMock[] = Array.from(
       title: "04.2026",
       paidAt: "09:30",
       completedAt: isOpen ? "" : "12:00",
-      logo: VIRTS_ICONS["black-russia"],
+      projectKey: pk,
+      logo: VIRTS_ICONS[pk],
       promoCode: "",
       price: 0,
     };

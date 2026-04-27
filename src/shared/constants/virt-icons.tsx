@@ -18,4 +18,6 @@ export const VIRTS_ICONS = {
   "radmir-rp": radmir,
   "province-rp": province,
   "amazing-rp": amazing,
-};
+} as const;
+
+export type VirtProjectIconKey = keyof typeof VIRTS_ICONS;
