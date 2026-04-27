@@ -1,5 +1,7 @@
 /**
  * Каталог «Другие услуги» (v1) — дубли в мини-аппе: `src/shared/types/other-services-catalog.ts`
+ *
+ * Два уровня: Раздел (game) → Подраздел (main) → позиции (items). Вложенных subsections нет.
  */
 
 export type OtherServicePaymentMode = "manager" | "info";
@@ -12,19 +14,10 @@ export type OtherServiceItem = {
   paymentInfo?: string;
 };
 
-export type OtherServiceSubsection = {
-  id: string;
-  name: string;
-  /** Вводится в админке; короткий текст под названием в мини-аппе */
-  description?: string;
-  items: OtherServiceItem[];
-};
-
 export type OtherServiceMain = {
   id: string;
   name: string;
-  subsections: OtherServiceSubsection[];
-  /** Товары прямо в разделе (если нет подразделов) */
+  description?: string;
   items: OtherServiceItem[];
 };
 

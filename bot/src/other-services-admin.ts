@@ -2,18 +2,14 @@ import { InlineKeyboard, type Bot, type Context } from "grammy";
 
 import {
   addItemToMain,
-  addItemToSub,
   addMainSection,
-  addSubsection,
   createGame,
   getActiveOtherServicesStorePath,
   getOtherServicesV1,
   removeGame,
   removeItemFromMain,
-  removeItemFromSub,
   removeMainSection,
-  removeSubsection,
-  setSubsectionDescription,
+  setMainDescription,
 } from "./other-services-store.js";
 import { BTN_BACK_TO_ADMIN } from "./texts.js";
 
@@ -24,18 +20,13 @@ const PREFIX = "o!";
 type Wiz =
   | { k: "gameName" }
   | { k: "mainName"; g: number }
-  | { k: "subName"; g: number; m: number }
-  | { k: "subSectionDesc"; g: number; m: number; s: number }
-  | { k: "itemDesc"; g: number; m: number; sub?: number }
-  | { k: "itemInfoText"; g: number; m: number; sub?: number; desc: string; pay: "info" };
+  | { k: "mainPlashText"; g: number; m: number }
+  | { k: "itemDesc"; g: number; m: number }
+  | { k: "itemInfoText"; g: number; m: number; desc: string; pay: "info" };
 
 const wizards = new Map<number, Wiz>();
-const pendingPayMode = new Map<
-  number,
-  { g: number; m: number; sub?: number; desc: string }
->();
+const pendingPayMode = new Map<number, { g: number; m: number; desc: string }>();
 
-/** Сообщения об «других услугах» обрабатываются вторыми; админка должна сразу `next()`. */
 export function hasActiveOtherServicesWizard(userId: number): boolean {
   return wizards.has(userId) || pendingPayMode.has(userId);
 }
@@ -71,12 +62,9 @@ function gameView(gi: number): { text: string; kb: InlineKeyboard } {
   if (!g) {
     return { text: "Нет в списке.", kb: new InlineKeyboard().text("⬅️", `${PREFIX}0`) };
   }
-  const lines = g.mainSections.map((m) => {
-    const n = m.subsections.length
-      ? m.subsections.reduce((a, s) => a + s.items.length, 0)
-      : m.items.length;
-    return `• <b>${esc(m.name)}</b> — ${n} п.`;
-  });
+  const lines = g.mainSections.map(
+    (m) => `• <b>${esc(m.name)}</b> — ${m.items.length} п.`,
+  );
   const text = `<b>${esc(g.name)}</b>\n\n${lines.length ? lines.join("\n") : "Пока нет подразделов."}`;
   const kb = new InlineKeyboard();
   g.mainSections.forEach((m, mi) => {
@@ -96,79 +84,28 @@ function mainView(gi: number, mi: number): { text: string; kb: InlineKeyboard } 
   if (!g || !m) {
     return { text: "Нет.", kb: new InlineKeyboard().text("⬅️", `${PREFIX}g!${gi}`) };
   }
-  const hasSub = m.subsections.length > 0;
-  const hasM = m.items.length > 0;
   let body = `<b>${esc(m.name)}</b>\n${esc(g.name)}\n\n`;
-  if (hasSub) {
-    body += "Вложенные подразделы:\n";
-    m.subsections.forEach((s) => {
-      body += `• ${esc(s.name)} — ${s.items.length} п.\n`;
-    });
-  } else {
-    body += "Позиции (описания):\n";
-    m.items.forEach((it) => {
-      const pm = it.paymentMode === "manager" ? "→ менеджер" : "инфо";
-      body += `• ${esc(it.description.slice(0, 40))} (${pm})\n`;
-    });
-    if (m.items.length === 0) {
-      body += "Пока пусто.\n";
-    }
+  if (m.description?.trim()) {
+    body += `На плашке: ${esc(m.description.trim())}\n\n`;
+  }
+  body += "Позиции (описания):\n";
+  m.items.forEach((it) => {
+    const pm = it.paymentMode === "manager" ? "→ менеджер" : "инфо";
+    body += `• ${esc(it.description.slice(0, 40))} (${pm})\n`;
+  });
+  if (m.items.length === 0) {
+    body += "Пока пусто.\n";
   }
   body += "\n";
   const kb = new InlineKeyboard();
-  if (hasSub) {
-    m.subsections.forEach((s, si) => {
-      kb.text(s.name.slice(0, 32), `${PREFIX}s!${gi}!${mi}!${si}`).row();
-    });
-    kb.text("➕ Добавить подраздел", `${PREFIX}adds!${gi}!${mi}`).row();
-    if (m.subsections.length === 1) {
-      kb.text("➕ ОПИСАНИЕ", `${PREFIX}addis!${gi}!${mi}!0`).row();
-    }
-  } else {
-    if (hasM) {
-      m.items.forEach((it, ii) => {
-        const t = (it.description.slice(0, 16) + (it.description.length > 16 ? "…" : "")) as string;
-        kb.text(t, `${PREFIX}ydim!${gi}!${mi}!${ii}`).row();
-      });
-    }
-    kb.text("➕ ОПИСАНИЕ", `${PREFIX}addim!${gi}!${mi}`).row();
-    if (!hasM) {
-      kb.text("➕ Добавить подраздел", `${PREFIX}adds!${gi}!${mi}`).row();
-    }
-  }
+  m.items.forEach((it, ii) => {
+    const t = (it.description.slice(0, 16) + (it.description.length > 16 ? "…" : "")) as string;
+    kb.text(t, `${PREFIX}ydim!${gi}!${mi}!${ii}`).row();
+  });
+  kb.text("➕ ОПИСАНИЕ", `${PREFIX}addim!${gi}!${mi}`).row();
+  kb.text("Текст на плашке", `${PREFIX}maind!${gi}!${mi}`).row();
   kb.text("🗑 Удалить подраздел", `${PREFIX}ydm!${gi}!${mi}`).row();
   kb.text("⬅️ К разделу", `${PREFIX}g!${gi}`);
-  return { text: body, kb };
-}
-
-function subView(gi: number, mi: number, si: number): { text: string; kb: InlineKeyboard } {
-  const st = getOtherServicesV1();
-  const s = st.games[gi]?.mainSections[mi]?.subsections[si];
-  if (!s) {
-    return { text: "Нет.", kb: new InlineKeyboard().text("⬅️", `${PREFIX}m!${gi}!${mi}`) };
-  }
-  let body = `<b>${esc(s.name)}</b>\n`;
-  if (s.description?.trim()) {
-    body += `${esc(s.description.trim())}\n\n`;
-  } else {
-    body += "\n";
-  }
-  s.items.forEach((it) => {
-    const pm = it.paymentMode === "manager" ? "→ менеджер" : "текст";
-    body += `• ${esc(it.description.slice(0, 50))} (${pm})\n`;
-  });
-  if (s.items.length === 0) {
-    body += "Пока нет позиций.\n";
-  }
-  const kb = new InlineKeyboard();
-  s.items.forEach((it, ii) => {
-    const t = (it.description.slice(0, 16) + (it.description.length > 16 ? "…" : "")) as string;
-    kb.text(t, `${PREFIX}ydis!${gi}!${mi}!${si}!${ii}`).row();
-  });
-  kb.text("➕ ОПИСАНИЕ", `${PREFIX}addis!${gi}!${mi}!${si}`).row();
-  kb.text("Текст на плашке", `${PREFIX}subd!${gi}!${mi}!${si}`).row();
-  kb.text("🗑 Удалить подраздел", `${PREFIX}yds!${gi}!${mi}!${si}`).row();
-  kb.text("⬅️", `${PREFIX}m!${gi}!${mi}`);
   return { text: body, kb };
 }
 
@@ -199,7 +136,6 @@ export function installOtherServicesAdmin(bot: Bot, adminIds: Set<number>) {
     pendingPayMode.delete(uid);
   }
 
-  /** POST new game name */
   bot.callbackQuery(CB_ENTRY, async (ctx) => {
     const a = await requireAd(ctx);
     if (a == null) {
@@ -265,10 +201,10 @@ export function installOtherServicesAdmin(bot: Bot, adminIds: Set<number>) {
     if (a == null) {
       return;
     }
-    const gi = Number(ctx.match![1]!);
     if (ctx.from) {
       clearWiz(ctx.from.id);
     }
+    const gi = Number(ctx.match![1]!);
     await ctx.answerCallbackQuery();
     const { text, kb } = gameView(gi);
     try {
@@ -297,26 +233,6 @@ export function installOtherServicesAdmin(bot: Bot, adminIds: Set<number>) {
     }
   });
 
-  bot.callbackQuery(new RegExp(`^${PREFIX.replace("!", "\\!")}s!([0-9]+)!([0-9]+)!([0-9]+)$`), async (ctx) => {
-    const a = await requireAd(ctx);
-    if (a == null) {
-      return;
-    }
-    if (ctx.from) {
-      clearWiz(ctx.from.id);
-    }
-    const gi = Number(ctx.match![1]!);
-    const mi = Number(ctx.match![2]!);
-    const si = Number(ctx.match![3]!);
-    await ctx.answerCallbackQuery();
-    const { text, kb } = subView(gi, mi, si);
-    try {
-      await a.editMessageText(text, { parse_mode: "HTML", reply_markup: kb });
-    } catch {
-      await a.reply(text, { parse_mode: "HTML", reply_markup: kb });
-    }
-  });
-
   bot.callbackQuery(new RegExp(`^${PREFIX.replace("!", "\\!")}addm!([0-9]+)$`), async (ctx) => {
     const a = await requireAd(ctx);
     if (a == null) {
@@ -330,7 +246,6 @@ export function installOtherServicesAdmin(bot: Bot, adminIds: Set<number>) {
     await a.reply("Введите <b>название подраздела</b>:", { parse_mode: "HTML", reply_markup: kbCancel() });
   });
 
-  /** В корневом разделе: + ОПИСАНИЕ — товар, если ровно один плоский подраздел. */
   bot.callbackQuery(new RegExp(`^${PREFIX.replace("!", "\\!")}addo!([0-9]+)$`), async (ctx) => {
     const a = await requireAd(ctx);
     if (a == null) {
@@ -356,41 +271,11 @@ export function installOtherServicesAdmin(bot: Bot, adminIds: Set<number>) {
       });
       return;
     }
-    const m0 = g.mainSections[0]!;
-    if (m0.subsections.length > 0) {
-      if (m0.subsections.length === 1) {
-        if (ctx.from) {
-          wizards.set(ctx.from.id, { k: "itemDesc", g: gi, m: 0, sub: 0 });
-        }
-        await ctx.answerCallbackQuery();
-        await a.reply("Введите <b>описание позиции</b>:", { parse_mode: "HTML", reply_markup: kbCancel() });
-        return;
-      }
-      await ctx.answerCallbackQuery({
-        text: "Откройте вложенный подраздел в списке.",
-        show_alert: true,
-      });
-      return;
-    }
     if (ctx.from) {
       wizards.set(ctx.from.id, { k: "itemDesc", g: gi, m: 0 });
     }
     await ctx.answerCallbackQuery();
     await a.reply("Введите <b>описание позиции</b>:", { parse_mode: "HTML", reply_markup: kbCancel() });
-  });
-
-  bot.callbackQuery(new RegExp(`^${PREFIX.replace("!", "\\!")}adds!([0-9]+)!([0-9]+)$`), async (ctx) => {
-    const a = await requireAd(ctx);
-    if (a == null) {
-      return;
-    }
-    const gi = Number(ctx.match![1]!);
-    const mi = Number(ctx.match![2]!);
-    if (ctx.from) {
-      wizards.set(ctx.from.id, { k: "subName", g: gi, m: mi });
-    }
-    await ctx.answerCallbackQuery();
-    await a.reply("Введите <b>название подраздела</b>:", { parse_mode: "HTML", reply_markup: kbCancel() });
   });
 
   bot.callbackQuery(new RegExp(`^${PREFIX.replace("!", "\\!")}addim!([0-9]+)!([0-9]+)$`), async (ctx) => {
@@ -407,31 +292,15 @@ export function installOtherServicesAdmin(bot: Bot, adminIds: Set<number>) {
     await a.reply("Введите <b>описание позиции</b>:", { parse_mode: "HTML", reply_markup: kbCancel() });
   });
 
-  bot.callbackQuery(new RegExp(`^${PREFIX.replace("!", "\\!")}addis!([0-9]+)!([0-9]+)!([0-9]+)$`), async (ctx) => {
+  bot.callbackQuery(new RegExp(`^${PREFIX.replace("!", "\\!")}maind!([0-9]+)!([0-9]+)$`), async (ctx) => {
     const a = await requireAd(ctx);
     if (a == null) {
       return;
     }
     const gi = Number(ctx.match![1]!);
     const mi = Number(ctx.match![2]!);
-    const si = Number(ctx.match![3]!);
     if (ctx.from) {
-      wizards.set(ctx.from.id, { k: "itemDesc", g: gi, m: mi, sub: si });
-    }
-    await ctx.answerCallbackQuery();
-    await a.reply("Введите <b>описание позиции</b>:", { parse_mode: "HTML", reply_markup: kbCancel() });
-  });
-
-  bot.callbackQuery(new RegExp(`^${PREFIX.replace("!", "\\!")}subd!([0-9]+)!([0-9]+)!([0-9]+)$`), async (ctx) => {
-    const a = await requireAd(ctx);
-    if (a == null) {
-      return;
-    }
-    const gi = Number(ctx.match![1]!);
-    const mi = Number(ctx.match![2]!);
-    const si = Number(ctx.match![3]!);
-    if (ctx.from) {
-      wizards.set(ctx.from.id, { k: "subSectionDesc", g: gi, m: mi, s: si });
+      wizards.set(ctx.from.id, { k: "mainPlashText", g: gi, m: mi });
     }
     await ctx.answerCallbackQuery();
     await a.reply("Введите <b>текст на плашке</b> (под названием). Пустое — сбросить.", {
@@ -463,29 +332,17 @@ export function installOtherServicesAdmin(bot: Bot, adminIds: Set<number>) {
         await ctx.answerCallbackQuery({ text: "Обновите список", show_alert: true });
         return;
       }
-      if (pend.sub == null) {
-        addItemToMain(g.id, m.id, { description: pend.desc, paymentMode: "manager" });
-      } else {
-        const sub = m.subsections[pend.sub];
-        if (sub) {
-          addItemToSub(g.id, m.id, sub.id, { description: pend.desc, paymentMode: "manager" });
-        }
-      }
+      addItemToMain(g.id, m.id, { description: pend.desc, paymentMode: "manager" });
       clearWiz(uid);
       const gi = pend.g;
       const mi = pend.m;
       await ctx.answerCallbackQuery();
-      if (pend.sub == null) {
-        const { text, kb } = mainView(gi, mi);
-        await a.reply(text, { parse_mode: "HTML", reply_markup: kb });
-      } else {
-        const { text, kb } = subView(gi, mi, pend.sub!);
-        await a.reply(text, { parse_mode: "HTML", reply_markup: kb });
-      }
+      const { text, kb } = mainView(gi, mi);
+      await a.reply(text, { parse_mode: "HTML", reply_markup: kb });
       return;
     }
     if (tag === "1") {
-      wizards.set(uid, { k: "itemInfoText", g: pend.g, m: pend.m, sub: pend.sub, desc: pend.desc, pay: "info" });
+      wizards.set(uid, { k: "itemInfoText", g: pend.g, m: pend.m, desc: pend.desc, pay: "info" });
       pendingPayMode.delete(uid);
       await ctx.answerCallbackQuery();
       await a.reply("Введите <b>текст</b> для карточки:", {
@@ -495,7 +352,6 @@ export function installOtherServicesAdmin(bot: Bot, adminIds: Set<number>) {
     }
   });
 
-  /** Удаление игры */
   bot.callbackQuery(new RegExp(`^${PREFIX.replace("!", "\\!")}ydg!([0-9]+)$`), async (ctx) => {
     const a = await requireAd(ctx);
     if (a == null) {
@@ -525,7 +381,7 @@ export function installOtherServicesAdmin(bot: Bot, adminIds: Set<number>) {
       clearWiz(ctx.from.id);
     }
     await ctx.answerCallbackQuery();
-    await a.reply("✅ Удалено.");
+    await a.reply("Удалено.");
     try {
       await a.reply(buildRootText(), { parse_mode: "HTML", reply_markup: buildRootKb() });
     } catch {
@@ -569,50 +425,7 @@ export function installOtherServicesAdmin(bot: Bot, adminIds: Set<number>) {
       return;
     }
     const { text, kb } = gameView(gi);
-    await a.reply("✅ Подраздел удалён.", { parse_mode: "HTML" });
-    await a.reply(text, { parse_mode: "HTML", reply_markup: kb });
-  });
-
-  bot.callbackQuery(new RegExp(`^${PREFIX.replace("!", "\\!")}yds!([0-9]+)!([0-9]+)!([0-9]+)$`), async (ctx) => {
-    const a = await requireAd(ctx);
-    if (a == null) {
-      return;
-    }
-    const gi = Number(ctx.match![1]!);
-    const mi = Number(ctx.match![2]!);
-    const si = Number(ctx.match![3]!);
-    await ctx.answerCallbackQuery();
-    const kb = new InlineKeyboard()
-      .text("✅ Да, удалить", `${PREFIX}ds!${gi}!${mi}!${si}`)
-      .row()
-      .text("Отмена", `${PREFIX}s!${gi}!${mi}!${si}`);
-    const s = getOtherServicesV1().games[gi]?.mainSections[mi]?.subsections[si];
-    await a.reply(`Подраздел <b>${esc(s?.name ?? "")}</b> — удалить?`, { parse_mode: "HTML", reply_markup: kb });
-  });
-
-  bot.callbackQuery(new RegExp(`^${PREFIX.replace("!", "\\!")}ds!([0-9]+)!([0-9]+)!([0-9]+)$`), async (ctx) => {
-    const a = await requireAd(ctx);
-    if (a == null) {
-      return;
-    }
-    const gi = Number(ctx.match![1]!);
-    const mi = Number(ctx.match![2]!);
-    const si = Number(ctx.match![3]!);
-    const g = getOtherServicesV1().games[gi];
-    const m = g?.mainSections[mi];
-    const s = m?.subsections[si];
-    if (g && m && s) {
-      removeSubsection(g.id, m.id, s.id);
-    }
-    if (ctx.from) {
-      clearWiz(ctx.from.id);
-    }
-    await ctx.answerCallbackQuery();
-    if (!g || !m) {
-      return;
-    }
-    const { text, kb } = mainView(gi, mi);
-    await a.reply("✅ Подраздел удалён.");
+    await a.reply("Подраздел удалён.", { parse_mode: "HTML" });
     await a.reply(text, { parse_mode: "HTML", reply_markup: kb });
   });
 
@@ -660,59 +473,7 @@ export function installOtherServicesAdmin(bot: Bot, adminIds: Set<number>) {
       return;
     }
     const { text, kb } = mainView(gi, mi);
-    await a.reply("✅ Позиция удалена.");
-    await a.reply(text, { parse_mode: "HTML", reply_markup: kb });
-  });
-
-  bot.callbackQuery(new RegExp(`^${PREFIX.replace("!", "\\!")}ydis!([0-9]+)!([0-9]+)!([0-9]+)!([0-9]+)$`), async (ctx) => {
-    const a = await requireAd(ctx);
-    if (a == null) {
-      return;
-    }
-    const gi = Number(ctx.match![1]!);
-    const mi = Number(ctx.match![2]!);
-    const si = Number(ctx.match![3]!);
-    const ii = Number(ctx.match![4]!);
-    await ctx.answerCallbackQuery();
-    const g = getOtherServicesV1().games[gi];
-    const m = g?.mainSections[mi];
-    const sub = m?.subsections[si];
-    const it = sub?.items[ii];
-    if (!it) {
-      return;
-    }
-    const kb = new InlineKeyboard()
-      .text("🗑 Удалить", `${PREFIX}Xis!${gi}!${mi}!${si}!${ii}`)
-      .row()
-      .text("Отмена", `${PREFIX}s!${gi}!${mi}!${si}`);
-    await a.reply(`${esc(it.description.slice(0, 80))}`, { parse_mode: "HTML", reply_markup: kb });
-  });
-
-  bot.callbackQuery(new RegExp(`^${PREFIX.replace("!", "\\!")}Xis!([0-9]+)!([0-9]+)!([0-9]+)!([0-9]+)$`), async (ctx) => {
-    const a = await requireAd(ctx);
-    if (a == null) {
-      return;
-    }
-    const gi = Number(ctx.match![1]!);
-    const mi = Number(ctx.match![2]!);
-    const si = Number(ctx.match![3]!);
-    const ii = Number(ctx.match![4]!);
-    const g = getOtherServicesV1().games[gi];
-    const m = g?.mainSections[mi];
-    const sub = m?.subsections[si];
-    const it = sub?.items[ii];
-    if (g && m && sub && it) {
-      removeItemFromSub(g.id, m.id, sub.id, it.id);
-    }
-    if (ctx.from) {
-      clearWiz(ctx.from.id);
-    }
-    await ctx.answerCallbackQuery();
-    if (!g || !m || !sub) {
-      return;
-    }
-    const { text, kb } = subView(gi, mi, si);
-    await a.reply("✅ Позиция удалена.");
+    await a.reply("Позиция удалена.");
     await a.reply(text, { parse_mode: "HTML", reply_markup: kb });
   });
 
@@ -769,46 +530,20 @@ export function installOtherServicesAdmin(bot: Bot, adminIds: Set<number>) {
       }
       return;
     }
-    if (st0?.k === "subName") {
+    if (st0?.k === "mainPlashText") {
       const { g: gi, m: mi } = st0;
       const game = getOtherServicesV1().games[gi];
       const main = game?.mainSections[mi];
       if (game && main) {
-        const r = addSubsection(game.id, main.id, t);
-        if (r == null) {
-          clearWiz(ctx.from.id);
-          await ctx.reply("Сначала удалите описания (позиции) из раздела.", { parse_mode: "HTML" });
-          return;
-        }
+        setMainDescription(game.id, main.id, t);
       }
       clearWiz(ctx.from.id);
-      const u = getOtherServicesV1();
-      const m = u.games[gi]?.mainSections[mi];
-      const si = m && m.subsections.length > 0 ? m.subsections.length - 1 : 0;
-      if (m && m.subsections[si]) {
-        const { text, kb } = subView(gi, mi, si);
-        await ctx.reply(text, { parse_mode: "HTML", reply_markup: kb });
-        return;
-      }
       const { text, kb } = mainView(gi, mi);
       await ctx.reply(text, { parse_mode: "HTML", reply_markup: kb });
       return;
     }
-    if (st0?.k === "subSectionDesc") {
-      const { g: gi, m: mi, s: si } = st0;
-      const game = getOtherServicesV1().games[gi];
-      const main = game?.mainSections[mi];
-      const sub = main?.subsections[si];
-      if (game && main && sub) {
-        setSubsectionDescription(game.id, main.id, sub.id, t);
-      }
-      clearWiz(ctx.from.id);
-      const { text, kb } = subView(gi, mi, si);
-      await ctx.reply(text, { parse_mode: "HTML", reply_markup: kb });
-      return;
-    }
     if (st0?.k === "itemDesc") {
-      pendingPayMode.set(ctx.from.id, { g: st0.g, m: st0.m, sub: st0.sub, desc: t });
+      pendingPayMode.set(ctx.from.id, { g: st0.g, m: st0.m, desc: t });
       wizards.delete(ctx.from.id);
       const kb = new InlineKeyboard()
         .text("👤 Менеджер", `${PREFIX}pay!0`)
@@ -816,7 +551,7 @@ export function installOtherServicesAdmin(bot: Bot, adminIds: Set<number>) {
         .text("📝 Текст", `${PREFIX}pay!1`)
         .row()
         .text("❌ Отмена", CB_CANCEL);
-      await ctx.reply("Оплата:", { parse_mode: "HTML", reply_markup: kb });
+      await ctx.reply("Оплата / выдача:", { parse_mode: "HTML", reply_markup: kb });
       return;
     }
     if (st0?.k === "itemInfoText") {
@@ -824,26 +559,13 @@ export function installOtherServicesAdmin(bot: Bot, adminIds: Set<number>) {
       const game = getOtherServicesV1().games[st0.g];
       const main = game?.mainSections[st0.m];
       if (game && main) {
-        if (st0.sub == null) {
-          addItemToMain(game.id, main.id, { description: st0.desc, paymentMode: "info", paymentInfo: t });
-        } else {
-          const sub = main.subsections[st0.sub];
-          if (sub) {
-            addItemToSub(game.id, main.id, sub.id, { description: st0.desc, paymentMode: "info", paymentInfo: t });
-          }
-        }
+        addItemToMain(game.id, main.id, { description: st0.desc, paymentMode: "info", paymentInfo: t });
       }
       const gi = st0.g;
       const mi = st0.m;
-      const ssub = st0.sub;
       clearWiz(ctx.from.id);
-      if (ssub == null) {
-        const { text, kb } = mainView(gi, mi);
-        await ctx.reply(text, { parse_mode: "HTML", reply_markup: kb });
-      } else {
-        const { text, kb } = subView(gi, mi, ssub);
-        await ctx.reply(text, { parse_mode: "HTML", reply_markup: kb });
-      }
+      const { text, kb } = mainView(gi, mi);
+      await ctx.reply(text, { parse_mode: "HTML", reply_markup: kb });
       return;
     }
     return next();

@@ -9,17 +9,10 @@ export type OtherServiceItem = {
   paymentInfo?: string;
 };
 
-export type OtherServiceSubsection = {
-  id: string;
-  name: string;
-  description?: string;
-  items: OtherServiceItem[];
-};
-
 export type OtherServiceMain = {
   id: string;
   name: string;
-  subsections: OtherServiceSubsection[];
+  description?: string;
   items: OtherServiceItem[];
 };
 

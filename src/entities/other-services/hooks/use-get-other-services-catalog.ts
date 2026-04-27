@@ -9,7 +9,6 @@ import type {
   OtherServiceItem,
   OtherServiceMain,
   OtherServicesCatalogV1,
-  OtherServiceSubsection,
 } from "@/shared/types/other-services-catalog";
 
 type Params = { enabled?: boolean };
@@ -72,29 +71,45 @@ const LEGACY_LABEL: Record<string, string> = {
   "grand-mobile-rp": "Grand Mobile RP",
 };
 
-function migrateSub(raw: unknown): OtherServiceSubsection {
-  if (!raw || typeof raw !== "object") {
-    return { id: "s0", name: "", items: [] };
+function migrateLegacySubToMain(subRaw: unknown): OtherServiceMain {
+  if (!subRaw || typeof subRaw !== "object") {
+    return { id: "m0", name: "", items: [] };
   }
-  const o = raw as Record<string, unknown>;
-  return {
-    id: typeof o.id === "string" ? o.id : "s0",
-    name: typeof o.name === "string" ? o.name : "",
+  const o = subRaw as Record<string, unknown>;
+  const d = o.description;
+  const description = typeof d === "string" && d.trim() ? d.trim() : undefined;
+  const base: OtherServiceMain = {
+    id: typeof o.id === "string" ? o.id : "m0",
+    name: typeof o.name === "string" ? o.name : "Подраздел",
     items: Array.isArray(o.items) ? o.items.map(migrateItem) : [],
   };
+  if (description) {
+    return { ...base, description };
+  }
+  return base;
 }
 
-function migrateMain(raw: unknown): OtherServiceMain {
+function migrateMainEntry(raw: unknown): OtherServiceMain[] {
   if (!raw || typeof raw !== "object") {
-    return { id: "m0", name: "", subsections: [], items: [] };
+    return [{ id: "m0", name: "", items: [] }];
   }
   const o = raw as Record<string, unknown>;
-  return {
-    id: typeof o.id === "string" ? o.id : "m0",
-    name: typeof o.name === "string" ? o.name : "",
-    subsections: Array.isArray(o.subsections) ? o.subsections.map(migrateSub) : [],
-    items: Array.isArray(o.items) ? o.items.map(migrateItem) : [],
-  };
+  const subsections = Array.isArray(o.subsections) ? o.subsections : [];
+  const baseItems = Array.isArray(o.items) ? o.items.map(migrateItem) : [];
+  const d = o.description;
+  const descM = typeof d === "string" && d.trim() ? d.trim() : undefined;
+  const id = typeof o.id === "string" ? o.id : "m0";
+  const name = typeof o.name === "string" ? o.name : "";
+  if (subsections.length === 0) {
+    const b: OtherServiceMain = { id, name, items: baseItems };
+    return [descM ? { ...b, description: descM } : b];
+  }
+  const fromSubs = subsections.map((s) => migrateLegacySubToMain(s));
+  if (baseItems.length > 0) {
+    const first: OtherServiceMain = { id, name, items: baseItems, ...(descM ? { description: descM } : {}) };
+    return [first, ...fromSubs];
+  }
+  return fromSubs;
 }
 
 function migrateGame(raw: unknown): OtherServiceGame {
@@ -113,7 +128,7 @@ function migrateGame(raw: unknown): OtherServiceGame {
   return {
     id,
     name,
-    mainSections: Array.isArray(o.mainSections) ? o.mainSections.map(migrateMain) : [],
+    mainSections: Array.isArray(o.mainSections) ? o.mainSections.flatMap(migrateMainEntry) : [],
   };
 }
 

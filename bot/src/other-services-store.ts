@@ -8,7 +8,6 @@ import type {
   OtherServiceGame,
   OtherServiceItem,
   OtherServiceMain,
-  OtherServiceSubsection,
   OtherServicesStoreV1,
 } from "./other-services-types.js";
 
@@ -160,30 +159,44 @@ function migrateItem(raw: unknown): OtherServiceItem {
   return { id, description, paymentMode: "manager" };
 }
 
-function migrateSubsection(raw: unknown): OtherServiceSubsection {
-  if (!raw || typeof raw !== "object") {
-    return { id: genId("s"), name: "", items: [] };
+function migrateLegacySubToMain(subRaw: unknown): OtherServiceMain {
+  if (!subRaw || typeof subRaw !== "object") {
+    return { id: genId("m"), name: "", items: [] };
   }
-  const o = raw as Record<string, unknown>;
-  const id = typeof o.id === "string" ? o.id : genId("s");
-  const name = typeof o.name === "string" ? o.name : "";
+  const o = subRaw as Record<string, unknown>;
+  const id = typeof o.id === "string" ? o.id : genId("m");
+  const name = typeof o.name === "string" ? o.name : "Подраздел";
   const items = Array.isArray(o.items) ? o.items.map(migrateItem) : [];
-  const descRaw = o.description;
-  const description =
-    typeof descRaw === "string" && descRaw.trim() ? descRaw.trim() : undefined;
+  const d = o.description;
+  const description = typeof d === "string" && d.trim() ? d.trim() : undefined;
   return description ? { id, name, description, items } : { id, name, items };
 }
 
-function migrateMain(raw: unknown): OtherServiceMain {
+/** Старый main с `subsections` раскрываем в несколько `main` на одном уровне. */
+function migrateMainEntry(raw: unknown): OtherServiceMain[] {
   if (!raw || typeof raw !== "object") {
-    return { id: genId("m"), name: "", subsections: [], items: [] };
+    return [{ id: genId("m"), name: "", items: [] }];
   }
   const o = raw as Record<string, unknown>;
   const id = typeof o.id === "string" ? o.id : genId("m");
   const name = typeof o.name === "string" ? o.name : "";
-  const subsections = Array.isArray(o.subsections) ? o.subsections.map(migrateSubsection) : [];
-  const items = Array.isArray(o.items) ? o.items.map(migrateItem) : [];
-  return { id, name, subsections, items };
+  const baseItems = Array.isArray(o.items) ? o.items.map(migrateItem) : [];
+  const subsections = Array.isArray(o.subsections) ? o.subsections : [];
+  const descM =
+    typeof o.description === "string" && o.description.trim() ? o.description.trim() : undefined;
+  if (subsections.length === 0) {
+    return descM
+      ? [{ id, name, description: descM, items: baseItems }]
+      : [{ id, name, items: baseItems }];
+  }
+  const fromSubs: OtherServiceMain[] = subsections.map((sr) => migrateLegacySubToMain(sr));
+  if (baseItems.length > 0) {
+    const first: OtherServiceMain = descM
+      ? { id, name, description: descM, items: baseItems }
+      : { id, name, items: baseItems };
+    return [first, ...fromSubs];
+  }
+  return fromSubs;
 }
 
 function migrateGame(raw: unknown): OtherServiceGame {
@@ -199,7 +212,7 @@ function migrateGame(raw: unknown): OtherServiceGame {
       : typeof o.projectKey === "string"
         ? (LEGACY_GAME_LABEL[o.projectKey] ?? o.projectKey)
         : "Игра";
-  const mainSections = Array.isArray(o.mainSections) ? o.mainSections.map(migrateMain) : [];
+  const mainSections = Array.isArray(o.mainSections) ? o.mainSections.flatMap(migrateMainEntry) : [];
   return { id, name, mainSections };
 }
 
@@ -271,8 +284,7 @@ export function addMainSection(gameId: string, name: string): OtherServiceMain |
   }
   const m: OtherServiceMain = {
     id: genId("m"),
-    name: name.trim() || "Раздел",
-    subsections: [],
+    name: name.trim() || "Подраздел",
     items: [],
   };
   g.mainSections.push(m);
@@ -295,56 +307,18 @@ export function removeMainSection(gameId: string, mainId: string): boolean {
   return true;
 }
 
-export function addSubsection(gameId: string, mainId: string, name: string): OtherServiceSubsection | null {
+export function setMainDescription(gameId: string, mainId: string, text: string): boolean {
   const s = safeLoad();
   const g = s.games.find((x) => x.id === gameId);
   const m = g?.mainSections.find((x) => x.id === mainId);
   if (!g || !m) {
-    return null;
-  }
-  if (m.items.length > 0) {
-    return null;
-  }
-  const sub: OtherServiceSubsection = { id: genId("s"), name: name.trim() || "Подраздел", items: [] };
-  m.subsections.push(sub);
-  save(s);
-  return sub;
-}
-
-export function removeSubsection(gameId: string, mainId: string, subId: string): boolean {
-  const s = safeLoad();
-  const g = s.games.find((x) => x.id === gameId);
-  const m = g?.mainSections.find((x) => x.id === mainId);
-  if (!g || !m) {
-    return false;
-  }
-  const n = m.subsections.length;
-  m.subsections = m.subsections.filter((s) => s.id !== subId);
-  if (m.subsections.length === n) {
-    return false;
-  }
-  save(s);
-  return true;
-}
-
-export function setSubsectionDescription(
-  gameId: string,
-  mainId: string,
-  subId: string,
-  text: string,
-): boolean {
-  const s = safeLoad();
-  const g = s.games.find((x) => x.id === gameId);
-  const m = g?.mainSections.find((x) => x.id === mainId);
-  const sub = m?.subsections.find((x) => x.id === subId);
-  if (!g || !m || !sub) {
     return false;
   }
   const t = text.trim();
   if (t) {
-    sub.description = t;
+    m.description = t;
   } else {
-    delete sub.description;
+    delete m.description;
   }
   save(s);
   return true;
@@ -362,7 +336,7 @@ function makeItem(input: { description: string; paymentMode: "manager" | "info";
   return it;
 }
 
-/** Товар в корне раздела (только если подразделов нет) */
+/** Позиция внутри подраздела. */
 export function addItemToMain(
   gameId: string,
   mainId: string,
@@ -374,30 +348,8 @@ export function addItemToMain(
   if (!g || !m) {
     return null;
   }
-  if (m.subsections.length > 0) {
-    return null;
-  }
   const it = makeItem(input);
   m.items.push(it);
-  save(s);
-  return it;
-}
-
-export function addItemToSub(
-  gameId: string,
-  mainId: string,
-  subId: string,
-  input: { description: string; paymentMode: "manager" | "info"; paymentInfo?: string },
-): OtherServiceItem | null {
-  const s = safeLoad();
-  const g = s.games.find((x) => x.id === gameId);
-  const m = g?.mainSections.find((x) => x.id === mainId);
-  const sub = m?.subsections.find((x) => x.id === subId);
-  if (!g || !m || !sub) {
-    return null;
-  }
-  const it = makeItem(input);
-  sub.items.push(it);
   save(s);
   return it;
 }
@@ -412,28 +364,6 @@ export function removeItemFromMain(gameId: string, mainId: string, itemId: strin
   const n = m.items.length;
   m.items = m.items.filter((i) => i.id !== itemId);
   if (m.items.length === n) {
-    return false;
-  }
-  save(s);
-  return true;
-}
-
-export function removeItemFromSub(
-  gameId: string,
-  mainId: string,
-  subId: string,
-  itemId: string,
-): boolean {
-  const s = safeLoad();
-  const g = s.games.find((x) => x.id === gameId);
-  const m = g?.mainSections.find((x) => x.id === mainId);
-  const sub = m?.subsections.find((x) => x.id === subId);
-  if (!g || !m || !sub) {
-    return false;
-  }
-  const n = sub.items.length;
-  sub.items = sub.items.filter((i) => i.id !== itemId);
-  if (sub.items.length === n) {
     return false;
   }
   save(s);
