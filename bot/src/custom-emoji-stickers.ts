@@ -147,7 +147,8 @@ export async function buildWelcomeHandPointerCaption(
   }
   const he = hS.emoji as string;
   const pe = pS.emoji as string;
-  const afterHand = " ";
+  /** Визуальный зазор после hand в caption (как h1 + "  " в order-manager). */
+  const afterHand = "  ";
   const beforePointer = " ";
   const text = he + afterHand + line1Text + "\n\n" + line2Text + beforePointer + pe;
   const entities: MessageEntity[] = [

@@ -117,10 +117,10 @@ export const DialogContent = ({
         data-tg-dialog-popup={isPopupSurface ? "true" : undefined}
       >
         {isPopupSurface ? (
-          <div className="tw-bg-gradient-card-border relative flex max-h-full min-h-0 flex-1 rounded-[16px] p-px">
+          <div className="tw-bg-gradient-card-border relative flex w-full min-w-0 max-h-full min-h-0 flex-1 rounded-[16px] p-px">
             <div
               className={cn(
-                "tw-bg-gradient-popup-surface text-text-primary relative flex max-h-full min-h-0 flex-1 flex-col rounded-[15px] backdrop-blur-[2px]",
+                "tw-bg-gradient-popup-surface text-text-primary relative flex w-full min-w-0 max-h-full min-h-0 flex-1 flex-col rounded-[15px] backdrop-blur-[2px]",
                 resolvedVariant === "popupCentered" ||
                 resolvedVariant === "popupFormCentered"
                   ? "pt-[max(0.75rem,env(safe-area-inset-top,0px))] pb-3"

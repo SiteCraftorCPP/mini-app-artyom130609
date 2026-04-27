@@ -19,7 +19,7 @@ type FaqProps = {
 };
 
 const faqAnswerTextClass = cn(
-  "font-medium text-white text-[20px] leading-[120%] whitespace-pre-line",
+  "max-w-full min-w-0 text-pretty break-words font-medium text-white text-[20px] leading-[120%] whitespace-pre-line",
 );
 
 export const Faq = ({ items }: FaqProps) => {
@@ -71,11 +71,7 @@ export const Faq = ({ items }: FaqProps) => {
       </section>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent
-          variant="popupCentered"
-          lockBodyScroll={dialogOpen}
-          className="overflow-hidden"
-        >
+        <DialogContent variant="popupCentered" lockBodyScroll={dialogOpen}>
           {active && (
             <>
               <DialogHeader className="gap-3 pr-0">
@@ -87,7 +83,7 @@ export const Faq = ({ items }: FaqProps) => {
               </DialogHeader>
               <div
                 className={cn(
-                  "hide-scrollbar mt-3 flex min-h-0 flex-1 flex-col touch-pan-y overflow-y-auto overscroll-contain",
+                  "hide-scrollbar mt-3 flex min-h-0 w-full min-w-0 max-w-full flex-1 flex-col self-stretch touch-pan-y overflow-y-auto overflow-x-clip overscroll-contain px-4 pb-2",
                 )}
               >
                 <FaqAnswerText answer={active.answer} />
