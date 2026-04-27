@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from "node:fs";
+import { accessSync, constants, existsSync, readFileSync } from "node:fs";
 import { dirname, resolve, basename } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -137,6 +137,15 @@ function resolveWelcomePhoto(): WelcomePhoto | null {
   return null;
 }
 
+function fileReadable(p: string): boolean {
+  try {
+    accessSync(p, constants.R_OK);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function resolveAboutShopPhoto(): WelcomePhoto | null {
   const url = process.env.ABOUT_SHOP_PHOTO_URL?.trim();
   if (url && /^https?:\/\//i.test(url)) {
@@ -151,13 +160,73 @@ function resolveAboutShopPhoto(): WelcomePhoto | null {
     fromEnvResolved,
     resolve(botRoot, "images", "photo_4.jpg"),
     resolve(botRoot, "images", "photo_4.png"),
+    resolve(botRoot, "images", "photo_4.jpeg"),
+    resolve(botRoot, "images", "photo_4.webp"),
     resolve(repoRoot, "images", "photo_4.jpg"),
     resolve(repoRoot, "images", "photo_4.png"),
+    resolve(repoRoot, "images", "photo_4.jpeg"),
+    resolve(repoRoot, "images", "photo_4.webp"),
   ].filter((p): p is string => Boolean(p));
   for (const p of candidates) {
-    if (existsSync(p)) return { type: "file", path: p };
+    if (existsSync(p) && fileReadable(p)) return { type: "file", path: p };
   }
   return null;
+}
+
+function logAboutShopPhotoOnStartup(): void {
+  const url = process.env.ABOUT_SHOP_PHOTO_URL?.trim();
+  if (url && /^https?:\/\//i.test(url)) {
+    console.info("[about-shop] баннер: URL из ABOUT_SHOP_PHOTO_URL =", url);
+    return;
+  }
+  const fromEnv = process.env.ABOUT_SHOP_PHOTO_PATH?.trim();
+  if (fromEnv) {
+    console.info("[about-shop] в .env: ABOUT_SHOP_PHOTO_PATH =", fromEnv);
+  } else {
+    console.info(
+      "[about-shop] в .env нет ABOUT_SHOP_PHOTO_PATH / ABOUT_SHOP_PHOTO_URL — ищем images/photo_4.* рядом с ботом и в корне репо (как photo_1).",
+    );
+  }
+  const r = resolveAboutShopPhoto();
+  if (r?.type === "file") {
+    const ok = fileReadable(r.path);
+    console.info(
+      "[about-shop] баннер найден:",
+      r.path,
+      ok ? "(чтение ok)" : "ВНИМАНИЕ: нет права на чтение (chmod/chown) — фото в Telegram не уйдёт",
+    );
+    return;
+  }
+  if (r?.type === "url") {
+    console.info("[about-shop] баннер: URL =", r.url);
+    return;
+  }
+  const botRoot = resolve(__dirname, "..");
+  const repoRoot = resolve(__dirname, "../..");
+  const fromEnvRes =
+    fromEnv && (fromEnv.startsWith("/") ? fromEnv : resolve(botRoot, fromEnv));
+  const toTry = [
+    fromEnvRes,
+    resolve(botRoot, "images", "photo_4.jpg"),
+    resolve(botRoot, "images", "photo_4.png"),
+    resolve(botRoot, "images", "photo_4.jpeg"),
+    resolve(botRoot, "images", "photo_4.webp"),
+    resolve(repoRoot, "images", "photo_4.jpg"),
+    resolve(repoRoot, "images", "photo_4.png"),
+    resolve(repoRoot, "images", "photo_4.jpeg"),
+    resolve(repoRoot, "images", "photo_4.webp"),
+  ].filter((p): p is string => Boolean(p));
+  const unique = [...new Set(toTry)];
+  console.error(
+    "[about-shop] фото НЕ найдено. Положите photo_4 рядом с photo_1, например:",
+    resolve(repoRoot, "images", "photo_4.jpg"),
+    "или задайте ABOUT_SHOP_PHOTO_PATH. Проверка существования:",
+  );
+  for (const p of unique) {
+    const ex = existsSync(p);
+    const rd = ex ? fileReadable(p) : false;
+    console.error("  ", ex ? (rd ? "OK " : "есть, нет R ") : "нет ", p);
+  }
 }
 
 function resolveInstructionVideoPath(): string | null {
@@ -577,6 +646,7 @@ await bot.start({
   onStart: async (botInfo) => {
     console.log(`Бот @${botInfo.username} запущен (long polling)`);
     console.log(`Mini App URL: ${miniAppUrl}`);
+    logAboutShopPhotoOnStartup();
     const shopUrl = miniAppUrl.replace(/\/$/, "");
     try {
       await bot.api.setChatMenuButton({
