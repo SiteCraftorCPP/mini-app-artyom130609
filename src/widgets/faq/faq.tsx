@@ -1,43 +1,55 @@
+import { useState } from "react";
+
 import { AppText } from "@/ui/app-text";
-import { TAG } from "@/ui/app-text/model";
 import { Button } from "@/ui/button";
 import { Card } from "@/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/ui/dialog";
 
 import { SUPPORT_CHAT_URL } from "@/shared/constants/common";
 import { INFO_PAGE_TEXT } from "@/shared/constants/text";
 import type { InfoFaqItem } from "@/shared/mock/info-page";
+import { cn } from "@/shared/utils";
 
 import CopyIcon from "@/assets/icon/copy.svg";
 
-import { PopupApp, PopupAppHeader } from "@/widgets/popup-app";
+import { PopupAppHeader } from "@/widgets/popup-app/default/popup-app-header";
 
 type FaqProps = {
   items: InfoFaqItem[];
 };
 
+const faqAnswerTextClass = cn(
+  "font-medium text-white text-[20px] leading-[120%] whitespace-pre-line",
+);
+
 export const Faq = ({ items }: FaqProps) => {
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [active, setActive] = useState<InfoFaqItem | null>(null);
+
   return (
     <Card className="space-y-5 p-4" bordered={true} glow="none">
       <section aria-labelledby="faq-title" className="space-y-3 pb-3">
         <ul className="mb-8 flex flex-col gap-4">
           {items.map((item) => (
             <li key={item.id}>
-              <PopupApp
-                dialogVariant="popupCentered"
-                slot={<PopupAppHeader title={INFO_PAGE_TEXT.supportButton} />}
-                content={<FaqAnswer item={item} />}
+              <Button
+                type="button"
+                variant="faq"
+                size="faq"
+                onClick={() => {
+                  setActive(item);
+                  setDialogOpen(true);
+                }}
               >
-                <Button type="button" variant="faq" size="faq">
-                  <CopyIcon className="size-4 shrink-0" />
-                  <AppText
-                    className="truncate group-hover:text-white hover:text-white"
-                    variant="darkStrong"
-                    size={"medium"}
-                  >
-                    {item.question}
-                  </AppText>
-                </Button>
-              </PopupApp>
+                <CopyIcon className="size-4 shrink-0" />
+                <AppText
+                  className="truncate group-hover:text-white hover:text-white"
+                  variant="darkStrong"
+                  size={"medium"}
+                >
+                  {item.question}
+                </AppText>
+              </Button>
             </li>
           ))}
         </ul>
@@ -57,26 +69,38 @@ export const Faq = ({ items }: FaqProps) => {
           </Button>
         </div>
       </section>
+
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent
+          variant="popupCentered"
+          lockBodyScroll={dialogOpen}
+          className="overflow-hidden"
+        >
+          {active && (
+            <>
+              <DialogHeader className="gap-3 pr-0">
+                <DialogTitle className="sr-only">{active.question}</DialogTitle>
+                <PopupAppHeader
+                  title={active.question}
+                  onBack={() => setDialogOpen(false)}
+                />
+              </DialogHeader>
+              <div
+                className={cn(
+                  "hide-scrollbar mt-3 flex min-h-0 flex-1 flex-col touch-pan-y overflow-y-auto overscroll-contain",
+                )}
+              >
+                <FaqAnswerText answer={active.answer} />
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 };
 
-const FaqAnswer = ({ item }: { item: InfoFaqItem }) => {
-  return (
-    <article className="space-y-3 px-4 pb-4">
-      <h3>
-        <AppText variant="primaryStrong" size={"popupBody"}>
-          {item.question}
-        </AppText>
-      </h3>
-      <AppText
-        tag={TAG.p}
-        variant={"primaryMedium"}
-        size={"popupBody"}
-        className="whitespace-pre-line"
-      >
-        {item.answer}
-      </AppText>
-    </article>
-  );
+const FaqAnswerText = ({ answer }: { answer: string }) => {
+  return <div className={cn(faqAnswerTextClass, "w-full min-w-0")}>{answer}</div>;
 };
+
