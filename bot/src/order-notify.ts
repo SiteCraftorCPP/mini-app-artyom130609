@@ -8,6 +8,7 @@ import { fileURLToPath } from "node:url";
 import type { Bot } from "grammy";
 import { InputFile } from "grammy";
 import { InlineKeyboard } from "grammy";
+import { Freekassa } from "@boarteam/freekassa-sdk";
 
 import { getTelegramUserIdFromWebAppInitData } from "./telegram-webapp-init-data.js";
 import { captionEntitiesAllBoldExcludingCustomEmoji } from "./caption-bold-helpers.js";
@@ -39,7 +40,6 @@ import { consumePromoCode, getAllPromoCodes } from "./promo-codes-store.js";
 import { parseRublesAmountFromUserText } from "./money-input.js";
 import {
   buildPaymentUrl,
-  createFreeKassaOrderPayUrl,
   formatAmountForFk,
   isFreeKassaNotifyIp,
   parseFreeKassaFormBody,
@@ -1048,6 +1048,7 @@ export function startOrderNotifyHttpServer(
         const sign = signPaymentForm(merchantId, oa, secret1, "RUB", merchantOrderId);
         const i = fkMethodId(body.method);
         const apiKey = process.env.FREEKASSA_API_KEY?.trim();
+        const secret2 = process.env.FREEKASSA_SECRET2?.trim() || process.env.FREEKASSA_SECRET?.trim();
         const clientIp = getClientIp(req).trim() || "0.0.0.0";
         const payerEmail = `u${telegramUserId}@invalid`;
 
@@ -1059,21 +1060,43 @@ export function startOrderNotifyHttpServer(
             res.end(JSON.stringify({ error: "freekassa merchant id" }));
             return;
           }
+          if (!secret2) {
+            console.warn("[payment] задан FREEKASSA_API_KEY, но нет FREEKASSA_SECRET2 (нужен для @boarteam/freekassa-sdk)");
+            res.writeHead(503, { "Content-Type": "application/json", ...corsNotifyHeaders });
+            res.end(JSON.stringify({ error: "freekassa secret2" }));
+            return;
+          }
           try {
-            const created = await createFreeKassaOrderPayUrl({
-              apiKey,
+            const fk = new Freekassa({
+              key: apiKey,
+              secretWord1: secret1,
+              secretWord2: secret2,
               shopId: shopIdNum,
-              paymentId: merchantOrderId,
-              i,
+              lang: "ru",
+              currency: "RUB",
+              payUrl: "https://pay.fk.money/",
+              apiUrl: "https://api.fk.life/v1/",
+            });
+            const orderRes = await fk.createOrder({
+              methodId: i,
               email: payerEmail,
               ip: clientIp,
-              amountRub: amountNum,
+              amount: amountNum,
+              paymentId: merchantOrderId,
               currency: "RUB",
             });
-            payUrl = created.payUrl;
+            if (orderRes.type !== "success" || !orderRes.location?.trim()) {
+              console.error("[payment] FK createOrder ответ", JSON.stringify(orderRes));
+              res.writeHead(502, { "Content-Type": "application/json", ...corsNotifyHeaders });
+              res.end(JSON.stringify({ error: "freekassa api" }));
+              return;
+            }
+            payUrl = orderRes.location.trim();
           } catch (e) {
             const msg = e instanceof Error ? e.message : String(e);
-            console.error("[payment] FK API orders/create", msg);
+            const ext = e as Error & { body?: string };
+            const logBody = typeof ext.body === "string" ? ext.body : "";
+            console.error("[payment] FK createOrder", msg, logBody ? logBody.slice(0, 800) : "");
             res.writeHead(502, { "Content-Type": "application/json", ...corsNotifyHeaders });
             res.end(JSON.stringify({ error: "freekassa api" }));
             return;
@@ -1393,7 +1416,7 @@ export function startOrderNotifyHttpServer(
         `HTTP мини-апп → продать: POST http://${bind}:${port}/notify/sell-virt-webapp { initData }`,
       );
       console.log(
-        `FreeKassa: prepare POST http://${bind}:${port}/notify/payment/prepare (при FREEKASSA_API_KEY — api.fk.life/orders/create; иначе pay.fk.money); callback GET|POST /notify/freekassa (URL оповещения в ЛК, секрет 2)`,
+        `FreeKassa: prepare POST http://${bind}:${port}/notify/payment/prepare (при FREEKASSA_API_KEY — @boarteam/freekassa-sdk createOrder); callback GET|POST /notify/freekassa (URL оповещения в ЛК)`,
       );
     }
     if (secret) {

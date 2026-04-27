@@ -48,6 +48,9 @@ function mapPrepareError(status: number, body: string): string {
   if (code === "freekassa not configured") {
     return "На сервере не задан FREEKASSA_SECRET1 в .env у бота — попросите администратора.";
   }
+  if (code === "freekassa secret2") {
+    return "Для оплаты через API задайте FREEKASSA_SECRET2 в .env бота (секретное слово 2 из ЛК).";
+  }
   if (code === "freekassa api") {
     return "Платёжка отклонила создание заказа. Проверьте FREEKASSA_API_KEY и ID способов в .env; если не поможет — напишите в поддержку.";
   }

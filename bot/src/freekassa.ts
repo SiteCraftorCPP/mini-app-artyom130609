@@ -1,4 +1,4 @@
-import { createHash, createHmac } from "node:crypto";
+import { createHash } from "node:crypto";
 
 /**
  * FreeKassa: ID способа `i` в ссылке на оплату — смотри кабинет (список валют / способы).
@@ -40,105 +40,6 @@ export function resolveFreeKassaMethodId(
 }
 
 const PAY_BASE = "https://pay.fk.money/";
-
-/** REST API (нужен для способов «только API», напр. Card RUB): docs.freekassa.net → orders/create */
-const FK_API_BASE = "https://api.fk.life/v1";
-
-/**
- * HMAC-SHA256 как в @boarteam/freekassa-sdk: Object.keys, sort, values join |.
- * Важно: `nonce` в теле — строка (см. request() в freekassa.sdk.js), иначе подпись не совпадёт.
- */
-export function signFreeKassaApiPayload(
-  payload: Record<string, string | number | undefined>,
-  apiKey: string,
-): string {
-  const keys = Object.keys(payload).filter(
-    (k) => k !== "signature" && payload[k] !== undefined,
-  );
-  keys.sort();
-  const str = keys.map((k) => payload[k] as string | number).join("|");
-  return createHmac("sha256", apiKey).update(str, "utf8").digest("hex");
-}
-
-export type FreeKassaCreateOrderResult = {
-  payUrl: string;
-  fkOrderId: number;
-  orderHash: string;
-};
-
-/**
- * Создать заказ и получить ссылку на оплату (для методов без GET-формы на pay.fk.money).
- * В ЛК: настройки → API-ключ.
- */
-export async function createFreeKassaOrderPayUrl(args: {
-  apiKey: string;
-  shopId: number;
-  paymentId: string;
-  i: number;
-  email: string;
-  ip: string;
-  amountRub: number;
-  currency: "RUB";
-}): Promise<FreeKassaCreateOrderResult> {
-  const oa = formatAmountForFk(args.amountRub);
-  const amount = Number(oa);
-  if (!Number.isFinite(amount) || amount <= 0) {
-    throw new Error("invalid amount");
-  }
-  /** Как @boarteam/freekassa-sdk: request() добавляет nonce строкой, иначе подпись на FK не сходится. */
-  const nonce = Date.now().toString();
-  const payload: Record<string, string | number> = {
-    amount,
-    currency: args.currency,
-    email: args.email,
-    i: args.i,
-    ip: args.ip,
-    nonce,
-    paymentId: args.paymentId,
-    shopId: args.shopId,
-  };
-  const signature = signFreeKassaApiPayload(payload, args.apiKey);
-  const body = { ...payload, signature };
-  const r = await fetch(`${FK_API_BASE}/orders/create`, {
-    method: "POST",
-    headers: {
-      Accept: "application/json",
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(body),
-  });
-  const text = await r.text();
-  let parsed: {
-    type?: string;
-    location?: string;
-    orderId?: number;
-    orderHash?: string;
-    message?: string;
-  };
-  try {
-    parsed = JSON.parse(text) as typeof parsed;
-  } catch {
-    throw new Error(`FK API: ответ не JSON (${r.status}): ${text.slice(0, 280)}`);
-  }
-  if (parsed.type !== "success" || !parsed.location?.trim()) {
-    const errMsg = [
-      (parsed as { error?: string }).error,
-      parsed.message,
-      (parsed as { description?: string }).description,
-    ]
-      .filter(Boolean)
-      .join(" — ");
-    throw new Error(
-      errMsg.trim() ||
-        `FK API orders/create: ${r.status} ${text.slice(0, 400)}`,
-    );
-  }
-  return {
-    payUrl: parsed.location.trim(),
-    fkOrderId: parsed.orderId ?? 0,
-    orderHash: parsed.orderHash ?? "",
-  };
-}
 
 const FK_NOTIFY_IPS = new Set([
   "168.119.157.136",
