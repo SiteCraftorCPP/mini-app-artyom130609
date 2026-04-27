@@ -113,6 +113,14 @@ export const BuyAccountOptions = ({
                       {BUY_ACCOUNT_OPTIONS_TEXT.aboutAccountsBodyLine2}
                     </AppText>
                   </li>
+                  <li className="flex gap-2">
+                    <span className="text-white/80" aria-hidden>
+                      –
+                    </span>
+                    <AppText tag={TAG.span} variant="primaryMedium" size="small">
+                      {BUY_ACCOUNT_OPTIONS_TEXT.aboutAccountsBodyLine3}
+                    </AppText>
+                  </li>
                 </ul>
               </div>
             ) : null}
@@ -147,9 +155,9 @@ export const BuyAccountOptions = ({
                   onChange={(e) => setCustomKkStr(e.target.value)}
                   inputMode="decimal"
                   autoComplete="off"
+                  disableAutoScrollOnFocus
                   placeholder={BUY_ACCOUNT_OPTIONS_TEXT.customKkPricingPlaceholder}
                   variant="form"
-                  className="text-sm placeholder:text-[10px] placeholder:leading-snug placeholder:text-white/55 md:placeholder:text-xs"
                 />
               </div>
             ) : (

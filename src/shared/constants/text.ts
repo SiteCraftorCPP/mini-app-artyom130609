@@ -76,7 +76,9 @@ export const VIRT_SELL_TEXT = {
 export const BUY_ACCOUNT_OPTIONS_TEXT = {
   aboutAccountsBodyLine1: "Аккаунт без привязок",
   aboutAccountsBodyLine2: "Возможны дополнительные бонусы на аккаунте",
-  aboutAccountsButton: "Об аккаунте",
+  aboutAccountsBodyLine3:
+    "На балансе аккаунта гарантирована та сумма, которую вы указали",
+  aboutAccountsButton: "Об аккаунтах",
   aboutAccountsTitle: "Об аккаунтах:",
   byLevel: "По уровню",
   byVirts: "По виртам",

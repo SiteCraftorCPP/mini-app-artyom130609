@@ -60,7 +60,7 @@ export const HomeActionDialog = ({
   /** Показываем «назад», как только выбран пункт (даже пока грузится virt по id). */
   const shouldShowBackButton =
     (isBuyVirtsAction || isSellVirtsAction || isBuyAccountAction) &&
-    Boolean(virtPopupFlow.selectedVirtId);
+    Boolean(virtPopupFlow.activeVirtId);
 
   let content: ReactNode;
   if (isBuyVirtsAction) {

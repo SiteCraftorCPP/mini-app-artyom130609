@@ -14,12 +14,22 @@ type UseVirtPopupFlowParams = {
 export const useVirtPopupFlow = ({ enabled, type }: UseVirtPopupFlowParams) => {
   const [selectedVirtId, setSelectedVirtId] = useState<string | null>(null);
   const nestedBackHandlerRef = useRef<(() => boolean) | null>(null);
-  /** После «назад» с экрана единственной игры не автовыбирать снова, пока не закроют попап. */
+  /** После «назад» с экрана единственной игры не подставлять авто-id, пока не закроют попап. */
   const buyAccountBackFromSingleListRef = useRef(false);
   const { data, isLoading } = useVirtsPopupContent({ enabled, type });
+
+  const activeVirtId =
+    selectedVirtId ??
+    (type === "buy-accounts" &&
+    data &&
+    data.length === 1 &&
+    !buyAccountBackFromSingleListRef.current
+      ? data[0]!.id
+      : null);
+
   const selectedVirtQuery = useGetVirtById({
     enabled,
-    id: selectedVirtId,
+    id: activeVirtId,
     type,
   });
 
@@ -30,17 +40,8 @@ export const useVirtPopupFlow = ({ enabled, type }: UseVirtPopupFlowParams) => {
     }
   }, [enabled]);
 
-  useEffect(() => {
-    if (!enabled || type !== "buy-accounts" || !data || data.length !== 1) {
-      return;
-    }
-    if (selectedVirtId !== null || buyAccountBackFromSingleListRef.current) {
-      return;
-    }
-    setSelectedVirtId(data[0]!.id);
-  }, [data, enabled, selectedVirtId, type]);
-
   return {
+    activeVirtId,
     data,
     isLoading,
     isVirtLoading: selectedVirtQuery.isLoading,
