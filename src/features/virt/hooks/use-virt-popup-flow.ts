@@ -14,6 +14,8 @@ type UseVirtPopupFlowParams = {
 export const useVirtPopupFlow = ({ enabled, type }: UseVirtPopupFlowParams) => {
   const [selectedVirtId, setSelectedVirtId] = useState<string | null>(null);
   const nestedBackHandlerRef = useRef<(() => boolean) | null>(null);
+  /** После «назад» с экрана единственной игры не автовыбирать снова, пока не закроют попап. */
+  const buyAccountBackFromSingleListRef = useRef(false);
   const { data, isLoading } = useVirtsPopupContent({ enabled, type });
   const selectedVirtQuery = useGetVirtById({
     enabled,
@@ -24,8 +26,19 @@ export const useVirtPopupFlow = ({ enabled, type }: UseVirtPopupFlowParams) => {
   useEffect(() => {
     if (!enabled) {
       setSelectedVirtId(null);
+      buyAccountBackFromSingleListRef.current = false;
     }
   }, [enabled]);
+
+  useEffect(() => {
+    if (!enabled || type !== "buy-accounts" || !data || data.length !== 1) {
+      return;
+    }
+    if (selectedVirtId !== null || buyAccountBackFromSingleListRef.current) {
+      return;
+    }
+    setSelectedVirtId(data[0]!.id);
+  }, [data, enabled, selectedVirtId, type]);
 
   return {
     data,
@@ -35,6 +48,9 @@ export const useVirtPopupFlow = ({ enabled, type }: UseVirtPopupFlowParams) => {
       const wasHandledByNestedStep = nestedBackHandlerRef.current?.() ?? false;
 
       if (!wasHandledByNestedStep) {
+        if (type === "buy-accounts" && data && data.length === 1) {
+          buyAccountBackFromSingleListRef.current = true;
+        }
         setSelectedVirtId(null);
       }
     },
