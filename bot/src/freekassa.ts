@@ -45,17 +45,18 @@ const PAY_BASE = "https://pay.fk.money/";
 const FK_API_BASE = "https://api.fk.life/v1";
 
 /**
- * Подпись JSON-запросов к api.fk.life: ключи по алфавиту, значения через |, HMAC-SHA256 от API-ключа.
- * @see https://docs.freekassa.net/ — раздел «Подпись запросов»
+ * HMAC-SHA256 как в @boarteam/freekassa-sdk: Object.keys, sort, values join |.
+ * Важно: `nonce` в теле — строка (см. request() в freekassa.sdk.js), иначе подпись не совпадёт.
  */
 export function signFreeKassaApiPayload(
-  payload: Record<string, string | number>,
+  payload: Record<string, string | number | undefined>,
   apiKey: string,
 ): string {
-  const keys = Object.keys(payload)
-    .filter((k) => k !== "signature")
-    .sort();
-  const str = keys.map((k) => String(payload[k]!)).join("|");
+  const keys = Object.keys(payload).filter(
+    (k) => k !== "signature" && payload[k] !== undefined,
+  );
+  keys.sort();
+  const str = keys.map((k) => payload[k] as string | number).join("|");
   return createHmac("sha256", apiKey).update(str, "utf8").digest("hex");
 }
 
@@ -84,7 +85,8 @@ export async function createFreeKassaOrderPayUrl(args: {
   if (!Number.isFinite(amount) || amount <= 0) {
     throw new Error("invalid amount");
   }
-  const nonce = Date.now();
+  /** Как @boarteam/freekassa-sdk: request() добавляет nonce строкой, иначе подпись на FK не сходится. */
+  const nonce = Date.now().toString();
   const payload: Record<string, string | number> = {
     amount,
     currency: args.currency,
@@ -119,8 +121,15 @@ export async function createFreeKassaOrderPayUrl(args: {
     throw new Error(`FK API: ответ не JSON (${r.status}): ${text.slice(0, 280)}`);
   }
   if (parsed.type !== "success" || !parsed.location?.trim()) {
+    const errMsg = [
+      (parsed as { error?: string }).error,
+      parsed.message,
+      (parsed as { description?: string }).description,
+    ]
+      .filter(Boolean)
+      .join(" — ");
     throw new Error(
-      parsed.message?.trim() ||
+      errMsg.trim() ||
         `FK API orders/create: ${r.status} ${text.slice(0, 400)}`,
     );
   }
