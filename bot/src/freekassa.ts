@@ -1,14 +1,43 @@
 import { createHash } from "node:crypto";
 
-/** FreeKassa: способы из ЛК, см. раздел «Список валют» в docs. */
-export const FREEKASSA_METHOD = {
-  /** СБП */
-  SBP: 42,
+/**
+ * FreeKassa: ID способа `i` в ссылке на оплату — смотри кабинет (список валют / способы).
+ * Дефолты по договорённости с заказчиком; при расхождении с ЛК задай в `bot/.env`:
+ * FREEKASSA_METHOD_SBP, FREEKASSA_METHOD_CARD, FREEKASSA_METHOD_MIR.
+ */
+export const FREEKASSA_METHOD_DEFAULTS = {
+  /** СБП (НСПК) — часто 44, у магазинов может отличаться */
+  SBP: 44,
   /** МИР */
   MIR: 12,
   /** Card RUB API (VISA, MasterCard) */
   CARD_RUB: 36,
 } as const;
+
+function intFromEnv(name: string, fallback: number): number {
+  const raw = process.env[name]?.trim();
+  if (raw === undefined || raw === "") {
+    return fallback;
+  }
+  const n = Number(raw);
+  if (Number.isInteger(n) && n > 0) {
+    return n;
+  }
+  return fallback;
+}
+
+/** ID `i` для GET-формы на pay.fk.money (без смены кода — через env). */
+export function resolveFreeKassaMethodId(
+  method: "sbp" | "mir" | "card_rub",
+): number {
+  if (method === "sbp") {
+    return intFromEnv("FREEKASSA_METHOD_SBP", FREEKASSA_METHOD_DEFAULTS.SBP);
+  }
+  if (method === "mir") {
+    return intFromEnv("FREEKASSA_METHOD_MIR", FREEKASSA_METHOD_DEFAULTS.MIR);
+  }
+  return intFromEnv("FREEKASSA_METHOD_CARD", FREEKASSA_METHOD_DEFAULTS.CARD_RUB);
+}
 
 const PAY_BASE = "https://pay.fk.money/";
 

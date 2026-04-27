@@ -40,10 +40,10 @@ import { parseRublesAmountFromUserText } from "./money-input.js";
 import {
   buildPaymentUrl,
   formatAmountForFk,
-  FREEKASSA_METHOD,
   isFreeKassaNotifyIp,
   parseFreeKassaFormBody,
   readRequestBodyString,
+  resolveFreeKassaMethodId,
   signNotification,
   signPaymentForm,
 } from "./freekassa.js";
@@ -924,13 +924,7 @@ type PaymentPrepareJson = {
 };
 
 function fkMethodId(m: PaymentPrepareJson["method"]): number {
-  if (m === "sbp") {
-    return FREEKASSA_METHOD.SBP;
-  }
-  if (m === "mir") {
-    return FREEKASSA_METHOD.MIR;
-  }
-  return FREEKASSA_METHOD.CARD_RUB;
+  return resolveFreeKassaMethodId(m);
 }
 
 /** GET query + x-www-form-urlencoded body */
