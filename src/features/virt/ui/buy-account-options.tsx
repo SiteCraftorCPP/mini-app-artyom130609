@@ -17,6 +17,7 @@ import {
 import { formatNumberWithSpaces } from "@/shared/lib/format-numbers";
 
 import { PaymentMethodDialog } from "@/features/payment/payment-method-dialog";
+import { Input } from "@/shared/ui/input";
 
 import {
   type BuyAccountModeConfig,
@@ -39,12 +40,16 @@ export const BuyAccountOptions = ({
 }: BuyAccountOptionsProps) => {
   const {
     amountRub,
+    customKkStr,
+    effectiveOption,
     handleSubmit,
+    isCustomVirtsMode,
     isSubmitting,
     modeOptions,
     selectMode,
     selectedMode,
     selectedOption,
+    setCustomKkStr,
     setSelectedOption,
     setServer,
     server,
@@ -85,29 +90,52 @@ export const BuyAccountOptions = ({
             </Select>
           </div>
           <div className="space-y-1">
-            <Select
-              value={selectedOption?.id}
-              onValueChange={(value) => {
-                const nextOption =
-                  selectedMode.options.find((option) => option.id === value) ??
-                  null;
+            {isCustomVirtsMode ? (
+              <div className="space-y-1">
+                <AppText tag={TAG.p} variant="darkStrong" className="mb-1">
+                  {BUY_ACCOUNT_OPTIONS_TEXT.customKkLabel}
+                </AppText>
+                <Input
+                  value={customKkStr}
+                  onChange={(e) => setCustomKkStr(e.target.value)}
+                  inputMode="decimal"
+                  autoComplete="off"
+                  placeholder={BUY_ACCOUNT_OPTIONS_TEXT.customKkPlaceholder}
+                  variant="form"
+                />
+                <AppText
+                  tag={TAG.p}
+                  variant="primaryMedium"
+                  className="text-center text-xs leading-[120%] text-white/70"
+                >
+                  {BUY_ACCOUNT_OPTIONS_TEXT.customKkHint}
+                </AppText>
+              </div>
+            ) : (
+              <Select
+                value={selectedOption?.id}
+                onValueChange={(value) => {
+                  const nextOption =
+                    selectedMode.options.find((option) => option.id === value) ??
+                    null;
 
-                setSelectedOption(nextOption);
-              }}
-            >
-              <SelectTrigger className="h-9.5">
-                <SelectValue>
-                  <AppText variant="darkStrong">{selectedOptionLabel}</AppText>
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {selectedMode.options.map((option) => (
-                  <SelectItem key={option.id} value={option.id}>
-                    {`${option.label} - ${formatNumberWithSpaces(option.amountRub)} ${CURRENCY.RUB}`}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+                  setSelectedOption(nextOption);
+                }}
+              >
+                <SelectTrigger className="h-9.5">
+                  <SelectValue>
+                    <AppText variant="darkStrong">{selectedOptionLabel}</AppText>
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {selectedMode.options.map((option) => (
+                    <SelectItem key={option.id} value={option.id}>
+                      {`${option.label} - ${formatNumberWithSpaces(option.amountRub)} ${CURRENCY.RUB}`}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </div>
           <div className="mt-1 flex items-center justify-between gap-3">
             <div className="border-app-border-soft tw-bg-gradient-badge-background flex h-8 min-w-[100px] items-center justify-center rounded-full border px-5 text-white">
@@ -120,7 +148,7 @@ export const BuyAccountOptions = ({
               variant="popupSubmit"
               size="popupSubmit"
               className="h-8.5"
-              disabled={!selectedOption || isSubmitting}
+              disabled={!effectiveOption || isSubmitting}
               onClick={handleSubmit}
             >
               <AppText variant="primaryStrong" size="small">

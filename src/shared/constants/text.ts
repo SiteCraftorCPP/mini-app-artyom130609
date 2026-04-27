@@ -77,6 +77,9 @@ export const BUY_ACCOUNT_OPTIONS_TEXT = {
   byLevel: "По уровню",
   byVirts: "По виртам",
   byVirtsAmount: "По количеству виртов",
+  customKkLabel: "Сколько кк на аккаунте",
+  customKkPlaceholder: "Например, 6",
+  customKkHint: "100 ₽ за каждые 1кк + 100 ₽ за аккаунт",
 } as const;
 
 export const INFO_PAGE_TEXT = {

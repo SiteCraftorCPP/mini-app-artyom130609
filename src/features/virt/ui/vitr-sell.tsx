@@ -61,16 +61,6 @@ export const VirtSell = ({ virt }: VirtSellProps) => {
         >
           {VIRT_SELL_TEXT.description}
         </AppText>
-        <a
-          href={SUPPORT_CHAT_URL}
-          className="text-center text-base font-medium text-[#00FF00] underline underline-offset-2"
-          onClick={(e) => {
-            e.preventDefault();
-            goManager();
-          }}
-        >
-          {SUPPORT_CHAT_URL.replace(/^https:\/\//, "")}
-        </a>
         <AppText className="text-center leading-[120%]" variant="primaryMedium">
           {VIRT_SELL_TEXT.note}
         </AppText>

@@ -3,6 +3,11 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import type { PaymentDialogContext } from "@/features/payment/payment-method-dialog";
 import { BUY_ACCOUNT_OPTIONS_TEXT } from "@/shared/constants/text";
+import {
+  accountWithVirtsPriceRub,
+  formatKkLabelForOrder,
+  parseKkFromUserInput,
+} from "@/shared/lib/account-virt-pricing";
 
 import SortLevelIcon from "@/assets/icon/sort-level.svg";
 import SortVirtIcon from "@/assets/icon/sort-virt.svg";
@@ -40,9 +45,54 @@ export const useBuyAccountOptions = ({
   );
   const [selectedOption, setSelectedOption] =
     useState<AccountPurchaseOption | null>(null);
+  const [customKkStr, setCustomKkStr] = useState("");
   const [server, setServer] = useState(virt.serverOptions[0] || "");
 
-  const amountRub = selectedOption?.amountRub ?? 0;
+  const isCustomVirtsMode = Boolean(
+    virt.accountVirtsCustomPricing && selectedMode?.mode === "virts",
+  );
+
+  const parsedKk = useMemo(
+    () => (isCustomVirtsMode ? parseKkFromUserInput(customKkStr) : null),
+    [customKkStr, isCustomVirtsMode],
+  );
+
+  const amountRub = useMemo(() => {
+    if (
+      isCustomVirtsMode &&
+      virt.accountVirtsCustomPricing &&
+      parsedKk !== null
+    ) {
+      return accountWithVirtsPriceRub(parsedKk, virt.accountVirtsCustomPricing);
+    }
+    return selectedOption?.amountRub ?? 0;
+  }, [
+    isCustomVirtsMode,
+    virt.accountVirtsCustomPricing,
+    parsedKk,
+    selectedOption,
+  ]);
+
+  const effectiveOption: AccountPurchaseOption | null = useMemo(() => {
+    if (
+      isCustomVirtsMode &&
+      virt.accountVirtsCustomPricing &&
+      parsedKk !== null
+    ) {
+      return {
+        id: "custom-kk",
+        label: formatKkLabelForOrder(parsedKk),
+        amountRub,
+      };
+    }
+    return selectedOption;
+  }, [
+    amountRub,
+    isCustomVirtsMode,
+    parsedKk,
+    selectedOption,
+    virt.accountVirtsCustomPricing,
+  ]);
 
   const modeOptions = useMemo<BuyAccountModeConfig[]>(
     () => [
@@ -55,17 +105,31 @@ export const useBuyAccountOptions = ({
       {
         icon: SortVirtIcon,
         mode: "virts",
-        options: virt.accountVirtOptions ?? [],
+        options: virt.accountVirtsCustomPricing
+          ? []
+          : virt.accountVirtOptions ?? [],
         title: BUY_ACCOUNT_OPTIONS_TEXT.byVirtsAmount,
       },
     ],
-    [virt.accountLevelOptions, virt.accountVirtOptions],
+    [
+      virt.accountLevelOptions,
+      virt.accountVirtOptions,
+      virt.accountVirtsCustomPricing,
+    ],
   );
 
-  const selectMode = useCallback((modeConfig: BuyAccountModeConfig) => {
-    setSelectedMode(modeConfig);
-    setSelectedOption(modeConfig.options[0] ?? null);
-  }, []);
+  const selectMode = useCallback(
+    (modeConfig: BuyAccountModeConfig) => {
+      setSelectedMode(modeConfig);
+      setCustomKkStr("");
+      if (modeConfig.mode === "virts" && virt.accountVirtsCustomPricing) {
+        setSelectedOption(null);
+      } else {
+        setSelectedOption(modeConfig.options[0] ?? null);
+      }
+    },
+    [virt.accountVirtsCustomPricing],
+  );
 
   const handleBack = useCallback(() => {
     if (!selectedMode) {
@@ -74,6 +138,7 @@ export const useBuyAccountOptions = ({
 
     setSelectedMode(null);
     setSelectedOption(null);
+    setCustomKkStr("");
     return true;
   }, [selectedMode]);
 
@@ -83,8 +148,12 @@ export const useBuyAccountOptions = ({
     return () => onBackStateChange?.(null);
   }, [handleBack, onBackStateChange, selectedMode]);
 
+  useEffect(() => {
+    setServer(virt.serverOptions[0] || "");
+  }, [virt.id, virt.serverOptions]);
+
   const handleSubmit = useCallback(() => {
-    if (!selectedMode || !selectedOption) {
+    if (!selectedMode || !effectiveOption) {
       return;
     }
     setPaymentAmountRub(amountRub);
@@ -92,12 +161,12 @@ export const useBuyAccountOptions = ({
       orderKind: "account",
       game: virt.name,
       server,
-      transferMethod: `${selectedMode.title}: ${selectedOption.label}`,
+      transferMethod: `${selectedMode.title}: ${effectiveOption.label}`,
       accountMode: selectedMode.title,
-      accountOptionLabel: selectedOption.label,
+      accountOptionLabel: effectiveOption.label,
     });
     setPaymentOpen(true);
-  }, [amountRub, selectedMode, selectedOption, server, virt.name]);
+  }, [amountRub, effectiveOption, selectedMode, server, virt.name]);
 
   return {
     server,
@@ -108,6 +177,7 @@ export const useBuyAccountOptions = ({
     selectMode,
     selectedMode,
     selectedOption,
+    effectiveOption,
     setSelectedOption,
     setServer,
     paymentOpen,
@@ -115,5 +185,8 @@ export const useBuyAccountOptions = ({
     paymentContext,
     paymentAmountRub,
     initData: webApp?.initData?.trim() ?? "",
+    isCustomVirtsMode,
+    customKkStr,
+    setCustomKkStr,
   };
 };

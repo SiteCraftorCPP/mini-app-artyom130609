@@ -1,32 +1,23 @@
 import { BLACK_RUSSIA_SERVER_OPTIONS } from "../constants/servers-black-russia";
-import { AMAZING_RP_SERVER_OPTIONS } from "../constants/servers-amazing-rp";
-import { ARIZONA_RP_SERVER_OPTIONS } from "../constants/servers-arizona-rp";
-import { GRAND_MOBILE_RP_SERVER_OPTIONS } from "../constants/servers-grand-mobile-rp";
-import { GTA_V_RP_SERVER_OPTIONS } from "../constants/servers-gta-v-rp";
-import { MAJESTIC_RP_SERVER_OPTIONS } from "../constants/servers-majestic-rp";
-import { MATRYOSHKA_RP_SERVER_OPTIONS } from "../constants/servers-matryoshka-rp";
-import { PROVINCE_RP_SERVER_OPTIONS } from "../constants/servers-province-rp";
-import { RADMIR_RP_SERVER_OPTIONS } from "../constants/servers-radmir-rp";
 import { VIRTS_ICONS } from "../constants/virt-icons";
 
-import type { AccountPurchaseOption, Virt } from "@/entities/virt";
+import type { Virt } from "@/entities/virt";
 
 const ACCOUNT_LEVEL_PRICE_LIST = [
   10, 40, 100, 150, 200, 300, 400, 500, 600, 700, 800, 1000, 1200, 1400, 1500,
   1600, 1700, 1800,
 ] as const;
 
-const ACCOUNT_LEVEL_OPTIONS: AccountPurchaseOption[] =
-  ACCOUNT_LEVEL_PRICE_LIST.map((amountRub, index) => {
-    const level = index + 1;
+const ACCOUNT_LEVEL_OPTIONS = ACCOUNT_LEVEL_PRICE_LIST.map((amountRub, index) => {
+  const level = index + 1;
+  return {
+    amountRub,
+    id: `level-${level}`,
+    label: `${level} LVL`,
+  };
+});
 
-    return {
-      amountRub,
-      id: `level-${level}`,
-      label: `${level} LVL`,
-    };
-  });
-
+/** Только Black Russia: «Купить аккаунт» / «по виртам» с произвольным кк. */
 export const BUY_ACCOUNTS_MOCK: Virt[] = [
   {
     id: "black-russia",
@@ -43,177 +34,9 @@ export const BUY_ACCOUNTS_MOCK: Virt[] = [
     promoCode: "",
     minAmountRub: 100,
     accountLevelOptions: ACCOUNT_LEVEL_OPTIONS,
-    accountVirtOptions: [
-      { id: "virts-1kk", label: "1кк", amountRub: 900 },
-      { id: "virts-5kk", label: "5кк", amountRub: 4200 },
-    ],
-  },
-  {
-    id: "matryoshka-rp",
-    name: "Матрешка РП",
-    slug: "matryoshka-rp",
-    gradientToken: "purple",
-    logo: VIRTS_ICONS["matryoshka-rp"],
-    serverLabel: "Сервер",
-    serverOptions: [...MATRYOSHKA_RP_SERVER_OPTIONS],
-    accountNumber: "",
-    amountRub: 0,
-    amountVirts: 0,
-    exchangeRate: 2.2,
-    promoCode: "",
-    minAmountRub: 100,
-    accountLevelOptions: ACCOUNT_LEVEL_OPTIONS,
-    accountVirtOptions: [
-      { id: "virts-1m", label: "1 000 000", amountRub: 850 },
-      { id: "virts-1kk", label: "1кк", amountRub: 850 },
-      { id: "virts-5kk", label: "5кк", amountRub: 3900 },
-    ],
-  },
-  {
-    id: "gta-v-rp",
-    name: "GTA V RP",
-    slug: "gta-v-rp",
-    gradientToken: "yellow",
-    logo: VIRTS_ICONS["gta-v-rp"],
-    serverLabel: "Сервер",
-    serverOptions: [...GTA_V_RP_SERVER_OPTIONS],
-    accountNumber: "",
-    amountRub: 0,
-    amountVirts: 0,
-    exchangeRate: 2.4,
-    promoCode: "",
-    minAmountRub: 100,
-    accountLevelOptions: ACCOUNT_LEVEL_OPTIONS,
-    accountVirtOptions: [
-      { id: "virts-1m", label: "1 000 000", amountRub: 1000 },
-      { id: "virts-1kk", label: "1кк", amountRub: 1000 },
-      { id: "virts-5kk", label: "5кк", amountRub: 4800 },
-    ],
-  },
-  {
-    id: "majestic-rp",
-    name: "Majestic RP",
-    slug: "majestic-rp",
-    gradientToken: "pink",
-    logo: VIRTS_ICONS["majestic-rp"],
-    serverLabel: "Сервер",
-    serverOptions: [...MAJESTIC_RP_SERVER_OPTIONS],
-    accountNumber: "",
-    amountRub: 0,
-    amountVirts: 0,
-    exchangeRate: 2.7,
-    promoCode: "",
-    minAmountRub: 100,
-    accountLevelOptions: ACCOUNT_LEVEL_OPTIONS,
-    accountVirtOptions: [
-      { id: "virts-1m", label: "1 000 000", amountRub: 1100 },
-      { id: "virts-1kk", label: "1кк", amountRub: 1100 },
-      { id: "virts-5kk", label: "5кк", amountRub: 5200 },
-    ],
-  },
-  {
-    id: "arizona-rp",
-    name: "Arizona RP",
-    slug: "arizona-rp",
-    gradientToken: "blue",
-    logo: VIRTS_ICONS["arizona-rp"],
-    serverLabel: "Сервер",
-    serverOptions: [...ARIZONA_RP_SERVER_OPTIONS],
-    accountNumber: "",
-    amountRub: 0,
-    amountVirts: 0,
-    exchangeRate: 1.9,
-    promoCode: "",
-    minAmountRub: 100,
-    accountLevelOptions: ACCOUNT_LEVEL_OPTIONS,
-    accountVirtOptions: [
-      { id: "virts-1m", label: "1 000 000", amountRub: 950 },
-      { id: "virts-1kk", label: "1кк", amountRub: 950 },
-      { id: "virts-5kk", label: "5кк", amountRub: 4500 },
-    ],
-  },
-  {
-    id: "radmir-rp",
-    name: "Radmir RP",
-    slug: "radmir-rp",
-    gradientToken: "orange",
-    logo: VIRTS_ICONS["radmir-rp"],
-    serverLabel: "Сервер",
-    serverOptions: [...RADMIR_RP_SERVER_OPTIONS],
-    accountNumber: "",
-    amountRub: 0,
-    amountVirts: 0,
-    exchangeRate: 2.5,
-    promoCode: "",
-    minAmountRub: 100,
-    accountLevelOptions: ACCOUNT_LEVEL_OPTIONS,
-    accountVirtOptions: [
-      { id: "virts-1m", label: "1 000 000", amountRub: 1000 },
-      { id: "virts-1kk", label: "1кк", amountRub: 1000 },
-      { id: "virts-5kk", label: "5кк", amountRub: 5000 },
-    ],
-  },
-  {
-    id: "province-rp",
-    name: "Province RP",
-    slug: "province-rp",
-    gradientToken: "grey",
-    logo: VIRTS_ICONS["province-rp"],
-    serverLabel: "Сервер",
-    serverOptions: [...PROVINCE_RP_SERVER_OPTIONS],
-    accountNumber: "",
-    amountRub: 0,
-    amountVirts: 0,
-    exchangeRate: 2.8,
-    promoCode: "",
-    minAmountRub: 100,
-    accountLevelOptions: ACCOUNT_LEVEL_OPTIONS,
-    accountVirtOptions: [
-      { id: "virts-1m", label: "1 000 000", amountRub: 1150 },
-      { id: "virts-1kk", label: "1кк", amountRub: 1150 },
-      { id: "virts-5kk", label: "5кк", amountRub: 5500 },
-    ],
-  },
-  {
-    id: "amazing-rp",
-    name: "Amazing RP",
-    slug: "amazing-rp",
-    gradientToken: "gold",
-    logo: VIRTS_ICONS["amazing-rp"],
-    serverLabel: "Сервер",
-    serverOptions: [...AMAZING_RP_SERVER_OPTIONS],
-    accountNumber: "",
-    amountRub: 0,
-    amountVirts: 0,
-    exchangeRate: 2.1,
-    promoCode: "",
-    minAmountRub: 100,
-    accountLevelOptions: ACCOUNT_LEVEL_OPTIONS,
-    accountVirtOptions: [
-      { id: "virts-1m", label: "1 000 000", amountRub: 900 },
-      { id: "virts-1kk", label: "1кк", amountRub: 900 },
-      { id: "virts-5kk", label: "5кк", amountRub: 4000 },
-    ],
-  },
-  {
-    id: "grand-mobile-rp",
-    name: "Grand Mobile RP",
-    slug: "grand-mobile-rp",
-    gradientToken: "dark",
-    logo: VIRTS_ICONS["grand-mobile-rp"],
-    serverLabel: "Сервер",
-    serverOptions: [...GRAND_MOBILE_RP_SERVER_OPTIONS],
-    accountNumber: "",
-    amountRub: 0,
-    amountVirts: 0,
-    exchangeRate: 3,
-    promoCode: "",
-    minAmountRub: 100,
-    accountLevelOptions: ACCOUNT_LEVEL_OPTIONS,
-    accountVirtOptions: [
-      { id: "virts-1m", label: "1 000 000", amountRub: 1200 },
-      { id: "virts-1kk", label: "1кк", amountRub: 1200 },
-      { id: "virts-5kk", label: "5кк", amountRub: 5600 },
-    ],
+    accountVirtsCustomPricing: {
+      rubPerKk: 100,
+      accountFeeRub: 100,
+    },
   },
 ];
