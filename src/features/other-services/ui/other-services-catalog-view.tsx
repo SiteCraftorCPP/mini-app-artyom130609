@@ -4,9 +4,10 @@ import { AppText } from "@/ui/app-text";
 import { TAG } from "@/ui/app-text/model";
 import { Button } from "@/ui/button";
 import { SUPPORT_CHAT_URL } from "@/shared/constants/common";
-import { BUY_VIRTS_MOCK } from "@/shared/mock/buy-virts.mock";
-import { VIRT_GRADIENT_CLASSES } from "@/shared/constants/virt-gradients";
-import type { VirtGradientToken } from "@/entities/virt";
+import {
+  HOME_ACTION_GRADIENTS,
+  HOME_ACTION_GRADIENT_TOKEN,
+} from "@/shared/constants/home-screen";
 import type {
   OtherServiceItem,
   OtherServiceMain,
@@ -15,8 +16,71 @@ import type {
 } from "@/shared/types/other-services-catalog";
 import { cn } from "@/shared/utils";
 
-/** Второй уровень (подраздел-переключатель) — нейтральный тёмный, как «внутри» выбранного. */
-const SUB_GRADIENT: VirtGradientToken = "dark";
+/** Как кнопка «Купить вирты» на главной: бирюзовая pill, только текст. */
+const SECTION_GRADIENT = HOME_ACTION_GRADIENTS[HOME_ACTION_GRADIENT_TOKEN.aqua];
+
+function SectionPill({
+  title,
+  subtitle,
+  active,
+  onClick,
+}: {
+  title: string;
+  subtitle?: string;
+  active?: boolean;
+  onClick?: () => void;
+}) {
+  const inner = (
+    <>
+      <AppText
+        className="relative z-10 text-[22px] font-bold leading-tight tracking-tight"
+        variant="heroButton"
+        size="heroButton"
+      >
+        {title}
+      </AppText>
+      {subtitle?.trim() ? (
+        <AppText
+          tag={TAG.p}
+          variant="primaryMedium"
+          size="small"
+          className="relative z-10 mt-1 !line-clamp-3 !whitespace-pre-wrap !text-left !text-white/95"
+        >
+          {subtitle.trim()}
+        </AppText>
+      ) : null}
+    </>
+  );
+
+  if (onClick) {
+    return (
+      <Button
+        type="button"
+        variant="brand"
+        size="pill"
+        onClick={onClick}
+        className={cn(
+          "relative flex min-h-20 w-full flex-col items-stretch justify-center overflow-hidden border border-white/30 px-8 py-3 text-left",
+          SECTION_GRADIENT,
+          active && "ring-2 ring-white/45",
+        )}
+      >
+        {inner}
+      </Button>
+    );
+  }
+
+  return (
+    <div
+      className={cn(
+        "relative flex min-h-20 w-full flex-col items-stretch justify-center overflow-hidden rounded-full border border-white/30 px-8 py-3 text-left",
+        SECTION_GRADIENT,
+      )}
+    >
+      {inner}
+    </div>
+  );
+}
 
 function ServiceItemCard({ item }: { item: OtherServiceItem }) {
   return (
@@ -70,36 +134,19 @@ function SubSectionPicker({
   onSelect: (id: string) => void;
 }) {
   return (
-    <ul className="flex w-full min-w-0 flex-col gap-2">
+    <ul className="flex w-full min-w-0 flex-col gap-3">
       {subsections.map((s) => {
         const isOn = s.id === activeId;
         return (
           <li key={s.id} className="w-full min-w-0">
-            <Button
-              type="button"
-              variant="virtCard"
-              size="virtCard"
+            <SectionPill
+              title={s.name}
+              subtitle={s.description}
+              active={isOn}
               onClick={() => {
                 onSelect(s.id);
               }}
-              className="w-full"
-            >
-              <span
-                className={cn(
-                  "m-px flex w-full min-w-0 items-center rounded-[10px] px-3 py-2.5",
-                  VIRT_GRADIENT_CLASSES[SUB_GRADIENT],
-                  isOn && "ring-1 ring-white/40",
-                )}
-              >
-                <AppText
-                  variant="primaryStrong"
-                  size="headerInfo"
-                  className="!line-clamp-2 min-w-0 w-full !text-left !text-base !leading-snug"
-                >
-                  {s.name}
-                </AppText>
-              </span>
-            </Button>
+            />
           </li>
         );
       })}
@@ -121,22 +168,7 @@ function MainSectionBlock({ main }: { main: OtherServiceMain }) {
   return (
     <li className="min-w-0">
       <div className="mb-3 w-full min-w-0">
-        <div className="tw-bg-gradient-virt-card-border tw-shadow-virt-card w-full min-w-0 overflow-hidden rounded-[12px] p-px text-left">
-          <div
-            className={cn(
-              "m-px flex w-full min-w-0 items-center rounded-[10px] px-3 py-3",
-              VIRT_GRADIENT_CLASSES.red,
-            )}
-          >
-            <AppText
-              variant="primaryStrong"
-              size="xxxl"
-              className="!line-clamp-3 min-w-0 w-full !text-left !leading-snug"
-            >
-              {main.name}
-            </AppText>
-          </div>
-        </div>
+        <SectionPill title={main.name} />
       </div>
       {hasSub && activeSub ? (
         <>
@@ -145,27 +177,17 @@ function MainSectionBlock({ main }: { main: OtherServiceMain }) {
             activeId={activeSub.id}
             onSelect={setSubId}
           />
-          {activeSub.description?.trim() ? (
-            <AppText
-              tag={TAG.p}
-              variant="primaryMedium"
-              size="small"
-              className="!mb-3 !whitespace-pre-wrap !px-0 !text-left !text-white/80"
-            >
-              {activeSub.description.trim()}
-            </AppText>
-          ) : null}
           {activeSub.items.length === 0 ? (
             <AppText
               tag={TAG.p}
               variant="primaryMedium"
               size="small"
-              className="!text-left text-white/45"
+              className="!mt-3 !text-left text-white/45"
             >
               Пока пусто.
             </AppText>
           ) : (
-            <ul className="flex flex-col gap-2">
+            <ul className="mt-3 flex flex-col gap-2">
               {activeSub.items.map((it) => (
                 <ServiceItemCard key={it.id} item={it} />
               ))}
@@ -217,38 +239,18 @@ export const OtherServicesCatalogView = ({ catalog }: Props) => {
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4 pb-4">
-      <ul className="flex flex-col gap-2 px-4">
-        {games.map((g, idx) => {
+      <ul className="flex flex-col gap-3 px-4">
+        {games.map((g) => {
           const isActive = (selectedId ?? games[0]!.id) === g.id;
-          const grad: VirtGradientToken =
-            BUY_VIRTS_MOCK[idx % BUY_VIRTS_MOCK.length]!.gradientToken;
           return (
             <li key={g.id} className="w-full min-w-0">
-              <Button
-                type="button"
-                variant="virtCard"
-                size="virtCard"
+              <SectionPill
+                title={g.name}
+                active={isActive}
                 onClick={() => {
                   setSelectedId(g.id);
                 }}
-                className="w-full"
-              >
-                <span
-                  className={cn(
-                    "m-px flex w-full min-w-0 items-center rounded-[10px] px-3 py-3",
-                    VIRT_GRADIENT_CLASSES[grad],
-                    isActive && "ring-1 ring-white/40",
-                  )}
-                >
-                  <AppText
-                    variant="primaryStrong"
-                    size="xxxl"
-                    className="!line-clamp-3 min-w-0 w-full !text-left !leading-snug"
-                  >
-                    {g.name}
-                  </AppText>
-                </span>
-              </Button>
+              />
             </li>
           );
         })}

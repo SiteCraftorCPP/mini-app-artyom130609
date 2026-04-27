@@ -48,10 +48,10 @@ function buildRootKb(): InlineKeyboard {
   const kb = new InlineKeyboard();
   const st = getOtherServicesV1();
   st.games.forEach((g, gi) => {
-    const lab = (g.name || "Игра").slice(0, 28);
+    const lab = (g.name || "Раздел").slice(0, 28);
     kb.text(lab.slice(0, 32), `${PREFIX}g!${gi}`).row();
   });
-  kb.text("➕ Добавить игру", `${PREFIX}newg`).row();
+  kb.text("➕ Добавить", `${PREFIX}newg`).row();
   kb.text(BTN_BACK_TO_ADMIN, "admin:menu");
   return kb;
 }
@@ -59,10 +59,10 @@ function buildRootKb(): InlineKeyboard {
 function buildRootText(): string {
   const st = getOtherServicesV1();
   if (st.games.length === 0) {
-    return "<b>Другие услуги</b>\n\nПока нет игр. Нажмите <b>Добавить игру</b> - введите название.";
+    return "<b>Другие услуги</b>\n\nПока пусто. Нажмите <b>Добавить</b> и введите название раздела.";
   }
   const lines = st.games.map((g) => `• ${esc(g.name)}`);
-  return `<b>Другие услуги</b>\n\n${st.games.length} игр.\n${lines.join("\n")}`;
+  return `<b>Другие услуги</b>\n\n${st.games.length} раздел(ов).\n${lines.join("\n")}`;
 }
 
 function gameView(gi: number): { text: string; kb: InlineKeyboard } {
@@ -71,16 +71,20 @@ function gameView(gi: number): { text: string; kb: InlineKeyboard } {
   if (!g) {
     return { text: "Нет в списке.", kb: new InlineKeyboard().text("⬅️", `${PREFIX}0`) };
   }
-  const lines = g.mainSections.map(
-    (m) => `• <b>${esc(m.name)}</b> — подр.: ${m.subsections.length}, товаров: ${m.subsections.length ? m.subsections.reduce((a, s) => a + s.items.length, 0) : m.items.length}`,
-  );
-  const text = `<b>${esc(g.name)}</b>\n\n${lines.length ? lines.join("\n") : "Нет разделов."}`;
+  const lines = g.mainSections.map((m) => {
+    const n = m.subsections.length
+      ? m.subsections.reduce((a, s) => a + s.items.length, 0)
+      : m.items.length;
+    return `• <b>${esc(m.name)}</b> — ${n} п.`;
+  });
+  const text = `<b>${esc(g.name)}</b>\n\n${lines.length ? lines.join("\n") : "Пока нет подразделов."}`;
   const kb = new InlineKeyboard();
   g.mainSections.forEach((m, mi) => {
-    kb.text(`📁 ${m.name.slice(0, 24)}`, `${PREFIX}m!${gi}!${mi}`).row();
+    kb.text(m.name.slice(0, 32), `${PREFIX}m!${gi}!${mi}`).row();
   });
-  kb.text("➕ Раздел", `${PREFIX}addm!${gi}`).row();
-  kb.text("Удалить игру", `${PREFIX}ydg!${gi}`).row();
+  kb.text("➕ Добавить подраздел", `${PREFIX}addm!${gi}`).row();
+  kb.text("➕ ОПИСАНИЕ", `${PREFIX}addo!${gi}`).row();
+  kb.text("🗑 Удалить раздел", `${PREFIX}ydg!${gi}`).row();
   kb.text("⬅️", `${PREFIX}0`);
   return { text, kb };
 }
@@ -94,14 +98,14 @@ function mainView(gi: number, mi: number): { text: string; kb: InlineKeyboard } 
   }
   const hasSub = m.subsections.length > 0;
   const hasM = m.items.length > 0;
-  let body = `📁 <b>${esc(m.name)}</b> · ${esc(g.name)}\n\n`;
+  let body = `<b>${esc(m.name)}</b>\n${esc(g.name)}\n\n`;
   if (hasSub) {
-    body += "Подразделы:\n";
+    body += "Вложенные подразделы:\n";
     m.subsections.forEach((s) => {
       body += `• ${esc(s.name)} — ${s.items.length} п.\n`;
     });
   } else {
-    body += "Товары:\n";
+    body += "Позиции (описания):\n";
     m.items.forEach((it) => {
       const pm = it.paymentMode === "manager" ? "→ менеджер" : "инфо";
       body += `• ${esc(it.description.slice(0, 40))} (${pm})\n`;
@@ -114,23 +118,26 @@ function mainView(gi: number, mi: number): { text: string; kb: InlineKeyboard } 
   const kb = new InlineKeyboard();
   if (hasSub) {
     m.subsections.forEach((s, si) => {
-      kb.text(`📂 ${s.name.slice(0, 22)}`, `${PREFIX}s!${gi}!${mi}!${si}`).row();
+      kb.text(s.name.slice(0, 32), `${PREFIX}s!${gi}!${mi}!${si}`).row();
     });
-    kb.text("➕ Подраздел", `${PREFIX}adds!${gi}!${mi}`).row();
+    kb.text("➕ Добавить подраздел", `${PREFIX}adds!${gi}!${mi}`).row();
+    if (m.subsections.length === 1) {
+      kb.text("➕ ОПИСАНИЕ", `${PREFIX}addis!${gi}!${mi}!0`).row();
+    }
   } else {
     if (hasM) {
       m.items.forEach((it, ii) => {
         const t = (it.description.slice(0, 16) + (it.description.length > 16 ? "…" : "")) as string;
-        kb.text(`🧾 ${t}`, `${PREFIX}ydim!${gi}!${mi}!${ii}`).row();
+        kb.text(t, `${PREFIX}ydim!${gi}!${mi}!${ii}`).row();
       });
     }
-    kb.text("➕ Описание", `${PREFIX}addim!${gi}!${mi}`).row();
+    kb.text("➕ ОПИСАНИЕ", `${PREFIX}addim!${gi}!${mi}`).row();
     if (!hasM) {
-      kb.text("➕ Подраздел", `${PREFIX}adds!${gi}!${mi}`).row();
+      kb.text("➕ Добавить подраздел", `${PREFIX}adds!${gi}!${mi}`).row();
     }
   }
-  kb.text("Удалить раздел", `${PREFIX}ydm!${gi}!${mi}`).row();
-  kb.text("⬅️ К игре", `${PREFIX}g!${gi}`);
+  kb.text("🗑 Удалить подраздел", `${PREFIX}ydm!${gi}!${mi}`).row();
+  kb.text("⬅️ К разделу", `${PREFIX}g!${gi}`);
   return { text: body, kb };
 }
 
@@ -140,7 +147,7 @@ function subView(gi: number, mi: number, si: number): { text: string; kb: Inline
   if (!s) {
     return { text: "Нет.", kb: new InlineKeyboard().text("⬅️", `${PREFIX}m!${gi}!${mi}`) };
   }
-  let body = `📂 <b>${esc(s.name)}</b>\n`;
+  let body = `<b>${esc(s.name)}</b>\n`;
   if (s.description?.trim()) {
     body += `${esc(s.description.trim())}\n\n`;
   } else {
@@ -151,16 +158,16 @@ function subView(gi: number, mi: number, si: number): { text: string; kb: Inline
     body += `• ${esc(it.description.slice(0, 50))} (${pm})\n`;
   });
   if (s.items.length === 0) {
-    body += "Пока пусто.\n";
+    body += "Пока нет позиций.\n";
   }
   const kb = new InlineKeyboard();
   s.items.forEach((it, ii) => {
     const t = (it.description.slice(0, 16) + (it.description.length > 16 ? "…" : "")) as string;
-    kb.text(`🧾 ${t}`, `${PREFIX}ydis!${gi}!${mi}!${si}!${ii}`).row();
+    kb.text(t, `${PREFIX}ydis!${gi}!${mi}!${si}!${ii}`).row();
   });
-  kb.text("➕ Описание (позиция)", `${PREFIX}addis!${gi}!${mi}!${si}`).row();
-  kb.text("Текст подраздела", `${PREFIX}subd!${gi}!${mi}!${si}`).row();
-  kb.text("Удалить подраздел", `${PREFIX}yds!${gi}!${mi}!${si}`).row();
+  kb.text("➕ ОПИСАНИЕ", `${PREFIX}addis!${gi}!${mi}!${si}`).row();
+  kb.text("Текст на плашке", `${PREFIX}subd!${gi}!${mi}!${si}`).row();
+  kb.text("🗑 Удалить подраздел", `${PREFIX}yds!${gi}!${mi}!${si}`).row();
   kb.text("⬅️", `${PREFIX}m!${gi}!${mi}`);
   return { text: body, kb };
 }
@@ -250,7 +257,7 @@ export function installOtherServicesAdmin(bot: Bot, adminIds: Set<number>) {
       wizards.set(ctx.from.id, { k: "gameName" });
     }
     await ctx.answerCallbackQuery();
-    await a.reply("Введите <b>название</b>:", { parse_mode: "HTML", reply_markup: kbCancel() });
+    await a.reply("Введите <b>название</b> раздела:", { parse_mode: "HTML", reply_markup: kbCancel() });
   });
 
   bot.callbackQuery(new RegExp(`^${PREFIX.replace("!", "\\!")}g!([0-9]+)$`), async (ctx) => {
@@ -320,7 +327,56 @@ export function installOtherServicesAdmin(bot: Bot, adminIds: Set<number>) {
       wizards.set(ctx.from.id, { k: "mainName", g: gi });
     }
     await ctx.answerCallbackQuery();
-    await a.reply("Введите <b>название</b> раздела:", { parse_mode: "HTML", reply_markup: kbCancel() });
+    await a.reply("Введите <b>название подраздела</b>:", { parse_mode: "HTML", reply_markup: kbCancel() });
+  });
+
+  /** В корневом разделе: + ОПИСАНИЕ — товар, если ровно один плоский подраздел. */
+  bot.callbackQuery(new RegExp(`^${PREFIX.replace("!", "\\!")}addo!([0-9]+)$`), async (ctx) => {
+    const a = await requireAd(ctx);
+    if (a == null) {
+      return;
+    }
+    const gi = Number(ctx.match![1]!);
+    const g = getOtherServicesV1().games[gi];
+    if (!g) {
+      await ctx.answerCallbackQuery({ text: "Нет в списке.", show_alert: true });
+      return;
+    }
+    if (g.mainSections.length === 0) {
+      await ctx.answerCallbackQuery({
+        text: "Сначала добавьте подраздел.",
+        show_alert: true,
+      });
+      return;
+    }
+    if (g.mainSections.length > 1) {
+      await ctx.answerCallbackQuery({
+        text: "Откройте подраздел в списке и добавьте описание там.",
+        show_alert: true,
+      });
+      return;
+    }
+    const m0 = g.mainSections[0]!;
+    if (m0.subsections.length > 0) {
+      if (m0.subsections.length === 1) {
+        if (ctx.from) {
+          wizards.set(ctx.from.id, { k: "itemDesc", g: gi, m: 0, sub: 0 });
+        }
+        await ctx.answerCallbackQuery();
+        await a.reply("Введите <b>описание позиции</b>:", { parse_mode: "HTML", reply_markup: kbCancel() });
+        return;
+      }
+      await ctx.answerCallbackQuery({
+        text: "Откройте вложенный подраздел в списке.",
+        show_alert: true,
+      });
+      return;
+    }
+    if (ctx.from) {
+      wizards.set(ctx.from.id, { k: "itemDesc", g: gi, m: 0 });
+    }
+    await ctx.answerCallbackQuery();
+    await a.reply("Введите <b>описание позиции</b>:", { parse_mode: "HTML", reply_markup: kbCancel() });
   });
 
   bot.callbackQuery(new RegExp(`^${PREFIX.replace("!", "\\!")}adds!([0-9]+)!([0-9]+)$`), async (ctx) => {
@@ -378,7 +434,7 @@ export function installOtherServicesAdmin(bot: Bot, adminIds: Set<number>) {
       wizards.set(ctx.from.id, { k: "subSectionDesc", g: gi, m: mi, s: si });
     }
     await ctx.answerCallbackQuery();
-    await a.reply("Введите <b>текст подраздела</b> (под заголовком). Пустое сообщение — сбросить.", {
+    await a.reply("Введите <b>текст на плашке</b> (под названием). Пустое — сбросить.", {
       parse_mode: "HTML",
       reply_markup: kbCancel(),
     });
@@ -452,7 +508,7 @@ export function installOtherServicesAdmin(bot: Bot, adminIds: Set<number>) {
       .row()
       .text("Отмена", `${PREFIX}g!${gi}`);
     const g = getOtherServicesV1().games[gi];
-    await a.reply(`Игра <b>${esc(g?.name ?? "")}</b> — удалить?`, { parse_mode: "HTML", reply_markup: kb });
+    await a.reply(`Раздел <b>${esc(g?.name ?? "")}</b> — удалить?`, { parse_mode: "HTML", reply_markup: kb });
   });
 
   bot.callbackQuery(new RegExp(`^${PREFIX.replace("!", "\\!")}dy!([0-9]+)$`), async (ctx) => {
@@ -490,7 +546,7 @@ export function installOtherServicesAdmin(bot: Bot, adminIds: Set<number>) {
       .row()
       .text("Отмена", `${PREFIX}m!${gi}!${mi}`);
     const m = getOtherServicesV1().games[gi]?.mainSections[mi];
-    await a.reply(`Раздел <b>${esc(m?.name ?? "")}</b> — удалить?`, { parse_mode: "HTML", reply_markup: kb });
+    await a.reply(`Подраздел <b>${esc(m?.name ?? "")}</b> — удалить?`, { parse_mode: "HTML", reply_markup: kb });
   });
 
   bot.callbackQuery(new RegExp(`^${PREFIX.replace("!", "\\!")}dm!([0-9]+)!([0-9]+)$`), async (ctx) => {
@@ -513,7 +569,7 @@ export function installOtherServicesAdmin(bot: Bot, adminIds: Set<number>) {
       return;
     }
     const { text, kb } = gameView(gi);
-    await a.reply("✅ Раздел удалён.", { parse_mode: "HTML" });
+    await a.reply("✅ Подраздел удалён.", { parse_mode: "HTML" });
     await a.reply(text, { parse_mode: "HTML", reply_markup: kb });
   });
 
