@@ -1,12 +1,11 @@
 import { useWebApp } from "@vkruglikov/react-telegram-web-app";
-import { useState } from "react";
+import { useCallback } from "react";
 
 import { AppText } from "@/ui/app-text";
 import { Button } from "@/ui/button";
 
+import { SUPPORT_CHAT_URL } from "@/shared/constants/common";
 import { TEXT, VIRT_SELL_TEXT } from "@/shared/constants/text";
-import { showErrorMessage, showSuccessMessage } from "@/shared/lib/notify";
-import { notifySellVirtFromMiniApp } from "@/shared/lib/telegram-sell-notify";
 
 import { type Virt, VirtCard } from "@/entities/virt";
 
@@ -14,23 +13,31 @@ type VirtSellProps = {
   virt: Virt;
 };
 
+function openTelegramExternal(
+  webApp: ReturnType<typeof useWebApp>,
+  url: string,
+): void {
+  const w = webApp as {
+    openTelegramLink?: (u: string) => void;
+    openLink?: (u: string, opts?: { try_instant_view?: boolean }) => void;
+  };
+  if (typeof w.openTelegramLink === "function") {
+    w.openTelegramLink(url);
+    return;
+  }
+  if (typeof w.openLink === "function") {
+    w.openLink(url);
+    return;
+  }
+  window.open(url, "_blank", "noopener,noreferrer");
+}
+
 export const VirtSell = ({ virt }: VirtSellProps) => {
   const webApp = useWebApp();
-  const [pending, setPending] = useState(false);
 
-  const handleSellClick = async () => {
-    setPending(true);
-    try {
-      const ok = await notifySellVirtFromMiniApp(webApp);
-      if (ok) {
-        showSuccessMessage(VIRT_SELL_TEXT.notifySuccess);
-      } else {
-        showErrorMessage(VIRT_SELL_TEXT.notifyError);
-      }
-    } finally {
-      setPending(false);
-    }
-  };
+  const goManager = useCallback(() => {
+    openTelegramExternal(webApp, SUPPORT_CHAT_URL);
+  }, [webApp]);
 
   return (
     <div className="flex flex-col items-center justify-center gap-4 px-4 pb-6">
@@ -39,13 +46,12 @@ export const VirtSell = ({ virt }: VirtSellProps) => {
         <Button
           type="button"
           variant="link"
-          className="border-white"
-          size="link"
-          disabled={pending}
-          onClick={handleSellClick}
+          size="pill"
+          className="border-white !h-[4.5rem] min-w-[min(100%,18rem)] !px-10 !text-xl !font-semibold"
+          onClick={goManager}
         >
-          <AppText variant={"primaryStrong"} size={"popupBody"}>
-            {pending ? VIRT_SELL_TEXT.notifyPending : TEXT.buttons.sell}
+          <AppText variant={"primaryStrong"} size={"popupBody"} className="!text-xl">
+            {TEXT.buttons.sell}
           </AppText>
         </Button>
         <AppText
@@ -55,6 +61,16 @@ export const VirtSell = ({ virt }: VirtSellProps) => {
         >
           {VIRT_SELL_TEXT.description}
         </AppText>
+        <a
+          href={SUPPORT_CHAT_URL}
+          className="text-center text-base font-medium text-[#00FF00] underline underline-offset-2"
+          onClick={(e) => {
+            e.preventDefault();
+            goManager();
+          }}
+        >
+          {SUPPORT_CHAT_URL.replace(/^https:\/\//, "")}
+        </a>
         <AppText className="text-center leading-[120%]" variant="primaryMedium">
           {VIRT_SELL_TEXT.note}
         </AppText>
