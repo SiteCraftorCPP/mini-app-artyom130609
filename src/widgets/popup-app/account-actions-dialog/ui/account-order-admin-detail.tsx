@@ -57,7 +57,7 @@ export const AccountAdminOrderDetail = ({ order }: AccountAdminOrderDetailProps)
 
   return (
     <div className="flex w-full min-w-0 flex-col gap-3 px-4 pb-4">
-      <div className="space-y-2 rounded-[8px] bg-app-surface-overlay/80 p-3">
+      <div className="space-y-2 rounded-xl border border-white/10 bg-[#1A1A1A] p-3">
         <AppText tag={TAG.h2} variant="primaryStrong" size="popupBody" className="!text-left">
           {ORDER_ADMIN_TEXT.title(id)}
         </AppText>
@@ -127,11 +127,11 @@ const AdminLine = ({
   em?: boolean;
 }) => (
   <div className="min-w-0 break-words text-left">
-    <AppText variant="primaryMedium" size="small" className="!inline">
+    <AppText variant="primaryMedium" size="small" className="!inline text-[#8C8C8C]">
       {k}{" "}
     </AppText>
     <AppText
-      variant="primaryMedium"
+      variant="primaryStrong"
       size="small"
       className={em ? "!font-semibold !italic" : ""}
     >

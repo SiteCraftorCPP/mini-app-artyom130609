@@ -54,7 +54,7 @@ export const AccountCurrentOrders = ({
           tag={TAG.p}
           variant="primaryMedium"
           size="small"
-          className="!text-left"
+          className="!text-left text-[#8C8C8C]"
         >
           {ORDER_ADMIN_TEXT.pendingHeader}
         </AppText>
@@ -65,7 +65,7 @@ export const AccountCurrentOrders = ({
                 type="button"
                 variant="accountMenu"
                 size="accountMenu"
-                className="h-auto min-h-12 w-full max-w-full shrink border-white/50 py-3 text-left"
+                className="h-auto min-h-12 w-full max-w-full shrink [background-image:none] border border-white/10 !bg-[#1A1A1A] py-3 text-left shadow-none hover:brightness-105"
                 onClick={() => onSelectOrder(order.id)}
               >
                 <AppText

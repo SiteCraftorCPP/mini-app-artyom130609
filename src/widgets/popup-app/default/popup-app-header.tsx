@@ -13,13 +13,13 @@ type PopupAppHeaderProps = {
 
 export const PopupAppHeader = ({ onBack, title }: PopupAppHeaderProps) => {
   return (
-    <div className="flex w-full min-w-0 items-center gap-3 px-4 pb-1">
-      <div className="min-w-0 flex-1">
-        <div className="tw-bg-gradient-badge-background flex h-8 w-fit max-w-full min-w-0 items-center justify-center rounded-[6px] border border-white/50 px-3">
+    <div className="flex w-full min-w-0 items-center gap-2 px-4 pb-1 sm:gap-3">
+      <div className="min-w-0 flex-1 overflow-hidden">
+        <div className="tw-bg-gradient-badge-background inline-flex h-8 min-w-0 max-w-full items-center rounded-[6px] border border-white/50 px-3">
           <AppText
             variant="primaryStrong"
             size="popupBadge"
-            className="truncate"
+            className="min-w-0 truncate"
           >
             {title}
           </AppText>
@@ -31,7 +31,7 @@ export const PopupAppHeader = ({ onBack, title }: PopupAppHeaderProps) => {
             type="button"
             variant="ghost"
             size="sm"
-            className="tw-bg-popup-submit hover:bg-app-surface-overlay-hover size-8 shrink-0 rounded-[6px] border border-white px-0 text-white"
+            className="size-8 shrink-0 rounded-[6px] border border-white/15 bg-[#1A1A1A] px-0 text-white hover:bg-[#252525] hover:brightness-100"
             onClick={onBack}
           >
             <ArrowLeft className="size-6" />

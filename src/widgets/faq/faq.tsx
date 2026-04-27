@@ -74,7 +74,7 @@ export const Faq = ({ items }: FaqProps) => {
         <DialogContent variant="popupCentered" lockBodyScroll={dialogOpen}>
           {active && (
             <>
-              <DialogHeader className="gap-3 pr-0">
+              <DialogHeader className="min-w-0 gap-3 pr-0">
                 <DialogTitle className="sr-only">{active.question}</DialogTitle>
                 <PopupAppHeader
                   title={active.question}

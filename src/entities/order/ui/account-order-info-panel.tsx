@@ -23,7 +23,7 @@ export const AccountOrderInfoPanel = ({
   };
 
   return (
-    <div className="bg-order-panel flex-1 rounded-[8px] p-4">
+    <div className="flex-1 rounded-xl border border-white/10 bg-[#1A1A1A] p-4">
       <div className="flex flex-col gap-2">
         <OrderLine
           label={ORDER_INFO_TEXT.createdAt}
@@ -67,10 +67,14 @@ export const AccountOrderInfoPanel = ({
 const OrderLine = ({ label, value }: { label: string; value: string }) => {
   return (
     <div className="flex flex-wrap gap-1">
-      <AppText variant="primaryMedium" size="small">
+      <AppText
+        variant="primaryMedium"
+        size="small"
+        className="text-[#8C8C8C]"
+      >
         {label}
       </AppText>
-      <AppText variant="primaryMedium" size="small">
+      <AppText variant="primaryStrong" size="small">
         {value}
       </AppText>
     </div>

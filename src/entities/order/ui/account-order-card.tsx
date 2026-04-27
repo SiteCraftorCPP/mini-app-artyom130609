@@ -20,12 +20,10 @@ export const AccountOrderCard = ({ onClick, order }: AccountOrderCardProps) => {
       }
       onClick={onClick}
     >
-      <div className="tw-bg-gradient-card-border flex size-19.5 items-center justify-center rounded-2xl p-px">
-        <span className="bg-surface-inverse flex h-full w-full items-center justify-center overflow-hidden rounded-2xl">
-          <img src={order.logo} alt="" className="size-full object-contain" />
-        </span>
+      <div className="flex size-19.5 shrink-0 items-center justify-center">
+        <img src={order.logo} alt="" className="h-full w-full object-contain" />
       </div>
-      <span className="bg-surface-inverse rounded-md px-2 py-1">
+      <span className="rounded-md bg-[#1A1A1A] px-2 py-1">
         <AppText variant="primaryStrong" size="small">
           {order.number}
         </AppText>
