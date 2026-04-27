@@ -176,23 +176,6 @@ function resolveInstructionVideoPath(): string | null {
   return null;
 }
 
-/** Снять reply-клавиатуру и показать inline-меню в ОДНОМ видимом сообщении (без send+delete). */
-const REPLY_KB_REMOVE = { remove_keyboard: true as const };
-
-async function applyMainMenuInlineAfterRemove(
-  ctx: Context,
-  messageId: number,
-  inlineMarkup: ReturnType<typeof mainMenuInlineKeyboard>,
-): Promise<void> {
-  const chatId = ctx.chat?.id;
-  if (chatId == null) return;
-  try {
-    await ctx.api.editMessageReplyMarkup(chatId, messageId, { reply_markup: inlineMarkup });
-  } catch (e) {
-    console.warn("[start] inline-меню после remove_keyboard:", e);
-  }
-}
-
 async function sendWelcome(ctx: Context) {
   const markup = mainMenuInlineKeyboard(miniAppUrl);
   const fromEnv = getWelcomeStickerFileIdsFromEnv();
@@ -248,36 +231,33 @@ async function sendWelcome(ctx: Context) {
   const photo = resolveWelcomePhoto();
   if (photo) {
     if (photo.type === "url") {
-      const m = await ctx.replyWithPhoto(photo.url, {
+      await ctx.replyWithPhoto(photo.url, {
         caption,
-        reply_markup: REPLY_KB_REMOVE,
+        reply_markup: markup,
         ...(withEntities
           ? { caption_entities: capEntitiesFinal }
           : { parse_mode: "HTML" as const }),
       });
-      await applyMainMenuInlineAfterRemove(ctx, m.message_id, markup);
     } else {
       const buffer = readFileSync(photo.path);
-      const m = await ctx.replyWithPhoto(new InputFile(buffer, basename(photo.path)), {
+      await ctx.replyWithPhoto(new InputFile(buffer, basename(photo.path)), {
         caption,
-        reply_markup: REPLY_KB_REMOVE,
+        reply_markup: markup,
         ...(withEntities
           ? { caption_entities: capEntitiesFinal }
           : { parse_mode: "HTML" as const }),
       });
-      await applyMainMenuInlineAfterRemove(ctx, m.message_id, markup);
     }
   } else {
     console.warn(
       "Баннер не найден: WELCOME_PHOTO_URL / WELCOME_PHOTO_PATH — иконки в одном сообщении с текстом.",
     );
-    const m = await ctx.reply(caption, {
-      reply_markup: REPLY_KB_REMOVE,
+    await ctx.reply(caption, {
+      reply_markup: markup,
       ...(withEntities
         ? { entities: capEntitiesFinal }
         : { parse_mode: "HTML" as const }),
     });
-    await applyMainMenuInlineAfterRemove(ctx, m.message_id, markup);
   }
 }
 

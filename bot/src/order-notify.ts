@@ -271,36 +271,27 @@ export async function sendSellVirtMessage(
   }
 
   const withCapEntities = caption_entities && caption_entities.length > 0;
-  const withRemove: Record<string, unknown> = {
+  const sendPhotoOptions = {
     caption,
-    reply_markup: { remove_keyboard: true },
+    reply_markup,
     ...(withCapEntities ? { caption_entities } : { parse_mode: "HTML" as const }),
   };
-  let lastMessageId: number | undefined;
+
   await retrySendPhoto(async () => {
     if (photo.type === "url") {
-      const m = await bot.api.sendPhoto(telegramUserId, photo.url, withRemove);
-      lastMessageId = m.message_id;
+      await bot.api.sendPhoto(telegramUserId, photo.url, sendPhotoOptions);
     } else {
       const buffer = readFileSync(photo.path);
-      const m = await bot.api.sendPhoto(
+      await bot.api.sendPhoto(
         telegramUserId,
         new InputFile(buffer, `${Date.now()}_${basename(photo.path)}`),
-        withRemove,
+        sendPhotoOptions,
       );
-      lastMessageId = m.message_id;
     }
   }).catch((e) => {
     console.error("[sell] Фото так и не отправилось", e);
     throw e;
   });
-  if (lastMessageId != null) {
-    try {
-      await bot.api.editMessageReplyMarkup(telegramUserId, lastMessageId, { reply_markup });
-    } catch (e) {
-      console.warn("[sell] editMessageReplyMarkup", e);
-    }
-  }
 }
 
 function formatOrderNumberForCaption(orderNumber: string): string {
