@@ -69,7 +69,12 @@ const FaqAnswer = ({ item }: { item: InfoFaqItem }) => {
           {item.question}
         </AppText>
       </h3>
-      <AppText tag={TAG.p} variant={"primaryMedium"} size={"popupBody"}>
+      <AppText
+        tag={TAG.p}
+        variant={"primaryMedium"}
+        size={"popupBody"}
+        className="whitespace-pre-line"
+      >
         {item.answer}
       </AppText>
     </article>
