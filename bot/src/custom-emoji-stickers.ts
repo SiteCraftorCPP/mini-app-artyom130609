@@ -1,7 +1,7 @@
 import type { Context } from "grammy";
 import type { MessageEntity, Sticker } from "@grammyjs/types";
 
-import { captionEntitiesAllBoldExcludingCustomEmoji } from "./caption-bold-helpers.js";
+import { captionEntitiesAllBoldExcludingCustomEmoji, sortEntities } from "./caption-bold-helpers.js";
 
 /**
  * custom_emoji: subtext = Sticker.emoji (getCustomEmojiStickers). sendSticker+file_id custom_emoji = 400.
@@ -164,7 +164,8 @@ export async function buildWelcomeHandPointerCaption(
       custom_emoji_id: pId,
     },
   ];
-  return { text, entities: captionEntitiesAllBoldExcludingCustomEmoji(text, entities) };
+  // Только custom_emoji — без жирного по всему абзацу (как обычный текст с «👋» / «👇»).
+  return { text, entities: sortEntities(entities) };
 }
 
 /**

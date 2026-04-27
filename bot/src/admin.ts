@@ -1186,7 +1186,7 @@ export function installAdminModule(bot: Bot<Context>, adminIds: Set<number>) {
       process.env.APP_DOMAIN?.trim() ||
       "https://artshopvirts.space";
 
-    const kb = new InlineKeyboard().webApp(BTN_BROADCAST_BUY_VIRTS, miniAppUrl);
+    const kb = new InlineKeyboard().webApp(BTN_BROADCAST_BUY_VIRTS, miniAppUrl).success();
     const userIds = getAllUserIds();
 
     (async () => {
@@ -1832,7 +1832,7 @@ export function installAdminModule(bot: Bot<Context>, adminIds: Set<number>) {
       awaitingBroadcastConfirmMsgId.set(ctx.from.id, msgId);
 
       const miniAppUrl = process.env.MINI_APP_URL?.trim() || process.env.APP_DOMAIN?.trim() || "https://artshopvirts.space";
-      const kb = new InlineKeyboard().webApp(BTN_BROADCAST_BUY_VIRTS, miniAppUrl);
+      const kb = new InlineKeyboard().webApp(BTN_BROADCAST_BUY_VIRTS, miniAppUrl).success();
 
       await ctx.reply("Вот так будет выглядеть сообщение:");
       await ctx.copyMessage(ctx.chat.id, { reply_markup: kb });

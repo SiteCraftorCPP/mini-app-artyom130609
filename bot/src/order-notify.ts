@@ -424,7 +424,7 @@ function getOrderManagerSuccessTextParts(
 function buildOrderDetailsKeyboard(miniAppUrl: string) {
   const base = miniAppUrl.replace(/\/$/, "");
   const url = `${base}/profile?open=orderHistory`;
-  return new InlineKeyboard().webApp("Узнать детали", url);
+  return new InlineKeyboard().webApp("Узнать детали", url).success();
 }
 
 function buildManagerOrderKeyboard(): InlineKeyboard {

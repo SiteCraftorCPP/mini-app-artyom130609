@@ -297,9 +297,7 @@ async function sendWelcome(ctx: Context) {
   const caption = withIcons?.text ?? WELCOME_HTML;
   const capEntities = withIcons?.entities;
   const capEntitiesFinal =
-    capEntities && capEntities.length > 0
-      ? captionEntitiesAllBoldExcludingCustomEmoji(caption, capEntities)
-      : undefined;
+    capEntities && capEntities.length > 0 ? capEntities : undefined;
   const withEntities = Boolean(capEntities?.length);
 
   const photo = resolveWelcomePhoto();
