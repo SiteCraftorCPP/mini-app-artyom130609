@@ -8,6 +8,15 @@ import type { OtherServicesCatalogV1 } from "@/shared/types/other-services-catal
 
 type Params = { enabled?: boolean };
 
+function normalizeCatalog(raw: unknown): OtherServicesCatalogV1 {
+  if (!raw || typeof raw !== "object") {
+    return { v: 1, games: [] };
+  }
+  const g = (raw as { games?: unknown }).games;
+  const games = Array.isArray(g) ? g : [];
+  return { v: 1, games: games as OtherServicesCatalogV1["games"] };
+}
+
 function resolveInitData(webApp: { initData?: string } | null): string {
   const fromHook = webApp?.initData?.trim();
   if (fromHook) {
@@ -33,7 +42,7 @@ export const useGetOtherServicesCatalog = ({
     queryFn: async () => {
       const initData = resolveInitData(webApp);
       if (!initData) {
-        throw new Error("Нет initData: откройте из Telegram");
+        return { v: 1, games: [] };
       }
       let apiUrl =
         typeof window !== "undefined" && window.location?.origin
@@ -51,11 +60,13 @@ export const useGetOtherServicesCatalog = ({
         const t = await res.text().catch(() => "");
         throw new Error(`HTTP ${res.status} ${t || res.statusText}`);
       }
-      const j = (await res.json()) as { ok?: boolean; catalog?: OtherServicesCatalogV1 };
-      if (!j.ok || !j.catalog) {
-        throw new Error("Неверный ответ каталога");
+      let j: { ok?: boolean; catalog?: unknown };
+      try {
+        j = (await res.json()) as { ok?: boolean; catalog?: unknown };
+      } catch {
+        return { v: 1, games: [] };
       }
-      return j.catalog;
+      return normalizeCatalog(j.catalog);
     },
     enabled,
     staleTime: TIMING.cacheTimeMs,

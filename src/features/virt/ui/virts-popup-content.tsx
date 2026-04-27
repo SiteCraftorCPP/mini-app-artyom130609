@@ -32,6 +32,10 @@ export const VirtsPopupContent = ({
     );
   }
 
+  if (type === "services" && !enabled) {
+    return null;
+  }
+
   if (type === "services") {
     if (catalogQuery.isLoading) {
       return (
