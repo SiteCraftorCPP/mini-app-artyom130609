@@ -2,6 +2,8 @@ import type { MessageEntity } from "@grammyjs/types";
 
 /**
  * Жирный для всего текста, кроме `custom_emoji` (смещения не пересекаются).
+ * Длинные отрезки `bold` с `\n` иногда в клиентах (caption + custom_emoji) не
+ * рисуются — дробим на части по строкам.
  */
 export function addBoldGapsExcludingCustomEmoji(
   text: string,
@@ -14,14 +16,41 @@ export function addBoldGapsExcludingCustomEmoji(
   let pos = 0;
   for (const c of em) {
     if (c.offset > pos) {
-      out.push({ type: "bold", offset: pos, length: c.offset - pos });
+      for (const p of splitGapIntoBoldParts(text, pos, c.offset)) {
+        out.push({ type: "bold", ...p });
+      }
     }
     pos = c.offset + c.length;
   }
   if (pos < text.length) {
-    out.push({ type: "bold", offset: pos, length: text.length - pos });
+    for (const p of splitGapIntoBoldParts(text, pos, text.length)) {
+      out.push({ type: "bold", ...p });
+    }
   }
   return sortEntities(out);
+}
+
+/** Один кусок [gapStart, gapEnd) (не включая end) — несколько `bold` по `\n` с подстроками. */
+function splitGapIntoBoldParts(
+  text: string,
+  gapStart: number,
+  gapEnd: number,
+): { offset: number; length: number }[] {
+  if (gapStart >= gapEnd) {
+    return [];
+  }
+  const parts: { offset: number; length: number }[] = [];
+  let segStart = gapStart;
+  for (let i = gapStart; i < gapEnd; i++) {
+    if (text[i] === "\n") {
+      parts.push({ offset: segStart, length: i - segStart + 1 });
+      segStart = i + 1;
+    }
+  }
+  if (segStart < gapEnd) {
+    parts.push({ offset: segStart, length: gapEnd - segStart });
+  }
+  return parts;
 }
 
 /**

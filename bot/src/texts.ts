@@ -1,5 +1,5 @@
 /**
- * /start: custom emoji в entities; остальной текст обычный (не жирный), либо WELCOME_HTML + parse_mode.
+ * /start: custom emoji + жирный весь остальной текст (entities), либо WELCOME_HTML + parse_mode.
  * «О магазине» — 4 custom id; то же, либо ABOUT_SHOP_HTML.
  * Обычный текст без `parse_mode` / без MessageEntity **не** бывает жирным в Telegram.
  */
@@ -116,8 +116,8 @@ function escHtml(s: string): string {
     .replace(/>/g, "&gt;");
 }
 
-/** /start: без custom emoji в подписи — `parse_mode: "HTML"`, текст не жирный (как в чате с 👋/👇). */
-export const WELCOME_HTML = escHtml(WELCOME);
+/** /start: без custom emoji в подписи — `parse_mode: "HTML"`, весь текст жирный. */
+export const WELCOME_HTML = `<b>${escHtml(WELCOME)}</b>`;
 
 /** «О магазине» без custom emoji: `parse_mode: "HTML"`, весь текст жирный. */
 export const ABOUT_SHOP_HTML = `<b>${escHtml(ABOUT_SHOP)}</b>`;
