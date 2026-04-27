@@ -1050,9 +1050,26 @@ export function startOrderNotifyHttpServer(
         const apiKey = process.env.FREEKASSA_API_KEY?.trim();
         const secret2 = process.env.FREEKASSA_SECRET2?.trim() || process.env.FREEKASSA_SECRET?.trim();
         const clientIp = getClientIp(req).trim() || "0.0.0.0";
-        const payerEmail = `u${telegramUserId}@invalid`;
+        /** Домен example.com зарезервирован (RFC), подходит как технический email для FK. */
+        const payerEmail = `tg${telegramUserId}@example.com`;
+        const orderTelOptional = process.env.FREEKASSA_ORDER_TEL?.trim();
+
+        /** Карта RUB / СБП в кабинете FK — только API; GET pay.fk.money с i= даёт страницу «только по API». */
+        const needsFkApi = body.method === "card_rub" || body.method === "sbp";
 
         let payUrl: string;
+        if (needsFkApi && !apiKey) {
+          res.writeHead(503, { "Content-Type": "application/json", ...corsNotifyHeaders });
+          res.end(
+            JSON.stringify({
+              error: "freekassa api key required",
+              detail:
+                "Укажите FREEKASSA_API_KEY в окружении бота (systemd EnvironmentFile → bot/.env) и перезапустите сервис. Без API ключа СБП/карта не создают ссылку.",
+            }),
+          );
+          return;
+        }
+
         if (apiKey) {
           const shopIdNum = Number.parseInt(merchantId, 10);
           if (!Number.isFinite(shopIdNum) || shopIdNum <= 0) {
@@ -1077,18 +1094,31 @@ export function startOrderNotifyHttpServer(
               payUrl: "https://pay.fk.money/",
               apiUrl: "https://api.fk.life/v1/",
             });
-            const orderRes = await fk.createOrder({
+            const orderDto: {
+              methodId: number;
+              email: string;
+              ip: string;
+              amount: number;
+              paymentId: string;
+              currency: "RUB";
+              phone?: string;
+            } = {
               methodId: i,
               email: payerEmail,
               ip: clientIp,
               amount: amountNum,
               paymentId: merchantOrderId,
               currency: "RUB",
-            });
+            };
+            if (orderTelOptional) {
+              orderDto.phone = orderTelOptional;
+            }
+            const orderRes = await fk.createOrder(orderDto);
             if (orderRes.type !== "success" || !orderRes.location?.trim()) {
-              console.error("[payment] FK createOrder ответ", JSON.stringify(orderRes));
+              const detail = JSON.stringify(orderRes).slice(0, 900);
+              console.error("[payment] FK createOrder ответ", detail);
               res.writeHead(502, { "Content-Type": "application/json", ...corsNotifyHeaders });
-              res.end(JSON.stringify({ error: "freekassa api" }));
+              res.end(JSON.stringify({ error: "freekassa api", detail }));
               return;
             }
             payUrl = orderRes.location.trim();
@@ -1096,9 +1126,10 @@ export function startOrderNotifyHttpServer(
             const msg = e instanceof Error ? e.message : String(e);
             const ext = e as Error & { body?: string };
             const logBody = typeof ext.body === "string" ? ext.body : "";
-            console.error("[payment] FK createOrder", msg, logBody ? logBody.slice(0, 800) : "");
+            const detail = [msg, logBody].filter(Boolean).join(" | ").slice(0, 1200);
+            console.error("[payment] FK createOrder", detail);
             res.writeHead(502, { "Content-Type": "application/json", ...corsNotifyHeaders });
-            res.end(JSON.stringify({ error: "freekassa api" }));
+            res.end(JSON.stringify({ error: "freekassa api", detail }));
             return;
           }
         } else {

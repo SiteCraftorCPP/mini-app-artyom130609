@@ -39,9 +39,11 @@ export type PaymentPrepareResult = {
 
 function mapPrepareError(status: number, body: string): string {
   let code: string | undefined;
+  let detail: string | undefined;
   try {
-    const j = JSON.parse(body) as { error?: string };
+    const j = JSON.parse(body) as { error?: string; detail?: string };
     code = j?.error;
+    detail = typeof j?.detail === "string" ? j.detail.trim() : undefined;
   } catch {
     /* не JSON — nginx/html */
   }
@@ -51,8 +53,14 @@ function mapPrepareError(status: number, body: string): string {
   if (code === "freekassa secret2") {
     return "Для оплаты через API задайте FREEKASSA_SECRET2 в .env бота (секретное слово 2 из ЛК).";
   }
+  if (code === "freekassa api key required") {
+    return "На сервере нет FREEKASSA_API_KEY (или бот не видит .env: проверьте EnvironmentFile в systemd). СБП и карта RUB в FreeKassa работают только через API — без ключа ссылка на оплату не создаётся.";
+  }
   if (code === "freekassa api") {
-    return "Платёжка отклонила создание заказа. Проверьте FREEKASSA_API_KEY и ID способов в .env; если не поможет — напишите в поддержку.";
+    if (detail) {
+      return `FreeKassa: ${detail}`;
+    }
+    return "Платёжка отклонила создание заказа. Проверьте API-ключ, оба секрета и ID способов; спросите текст ошибки у админа (логи бота).";
   }
   if (code === "freekassa merchant id") {
     return "Неверный FREEKASSA_MERCHANT_ID на сервере.";
