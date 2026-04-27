@@ -102,3 +102,21 @@ export const formatAmountVirtsShort = (value: string) => {
 
   return String(normalizedAmount);
 };
+
+/** Отображение КК и согласованных целых виртов при пересчёте из ₽ (округление до 0.1 КК). */
+export function roundKkTenthsFromVirts(virtsStr: string): {
+  kkDisplay: string;
+  virtsRounded: string;
+} {
+  if (!virtsStr.trim()) {
+    return { kkDisplay: "", virtsRounded: "" };
+  }
+  const virts = Number(virtsStr);
+  if (!Number.isFinite(virts) || virts < 0) {
+    return { kkDisplay: "", virtsRounded: "0" };
+  }
+  const kk = virts / 1_000_000;
+  const kkRounded = Math.round(kk * 10) / 10;
+  const virtsRounded = String(Math.round(kkRounded * 1_000_000));
+  return { kkDisplay: String(kkRounded), virtsRounded };
+}

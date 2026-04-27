@@ -218,9 +218,14 @@ export const STAT_PERIOD_TITLES = [
   "За определённый период",
 ] as const;
 
-export const VIDEO_CAPTION = "Ознакомление: как оформить заказ";
+export const VIDEO_CAPTION = [
+  "Ознакомление: как оформить заказ",
+  "",
+  "🔤 Есть трудности с оформлением заказа? Напишите менеджеру — кнопка ниже",
+].join("\n");
 
-/** Подпись к видео «Как оформить заказ» без custom_emoji: весь текст жирный. */
+/** Кнопка под видео «Как оформить заказ» (URL в LINK_ABOUT_MANAGER). */
+export const BTN_HOW_TO_ORDER_MANAGER = "Написать менеджеру";
 export const VIDEO_CAPTION_HTML = `<b>${escHtml(VIDEO_CAPTION)}</b>`;
 
 /**

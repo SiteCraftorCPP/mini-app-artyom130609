@@ -12,7 +12,11 @@ process.on("uncaughtException", (error) => {
   console.error("Uncaught Exception:", error);
 });
 
-import { aboutShopResourceKeyboard, mainMenuInlineKeyboard } from "./keyboards.js";
+import {
+  aboutShopResourceKeyboard,
+  howToOrderManagerKeyboard,
+  mainMenuInlineKeyboard,
+} from "./keyboards.js";
 import {
   buildCustomEmojiPrefixCaption,
   buildMultilineCustomEmojiLinesCaption,
@@ -370,7 +374,7 @@ bot.use(async (ctx, next) => {
       const isSubscribed = ["creator", "administrator", "member"].includes(member.status);
       if (isSubscribed) {
         await ctx.answerCallbackQuery({ text: "✅ Подписка подтверждена!", show_alert: true });
-        await ctx.deleteMessage().catch(() => {});
+        await ctx.deleteMessage().catch(() => { });
         return sendWelcome(ctx);
       } else {
         await ctx.answerCallbackQuery({ text: "❌ Вы еще не подписались на канал.", show_alert: true });
@@ -391,10 +395,10 @@ bot.use(async (ctx, next) => {
         .url("Подписаться", requiredChannelUrl)
         .row()
         .text("Проверить", "check_sub");
-      
+
       if (ctx.callbackQuery) {
         await ctx.answerCallbackQuery();
-        await ctx.editMessageText(text, { reply_markup: kb }).catch(() => {});
+        await ctx.editMessageText(text, { reply_markup: kb }).catch(() => { });
       } else {
         await ctx.reply(text, { reply_markup: kb });
       }
@@ -439,7 +443,7 @@ bot.command("start", async (ctx) => {
     await sendSellVirtGuidance(ctx);
     return;
   }
-  
+
   if (payload.startsWith("ref_")) {
     const refIdStr = payload.replace("ref_", "");
     const refId = parseInt(refIdStr, 10);
@@ -454,11 +458,13 @@ bot.command("start", async (ctx) => {
 installAdminModule(bot, BOT_ADMIN_IDS);
 
 async function sendHowToVideo(ctx: Context) {
+  const howKb = howToOrderManagerKeyboard();
   const howToken = (getHowStickerFileIdFromEnv() ?? CUSTOM_EMOJI_IDS.lightning).trim();
   const path = resolveInstructionVideoPath();
   if (!path) {
     await ctx.reply(
       "Видео «Как оформить заказ» пока не загружено: bot/images/ или задайте INSTRUCTION_VIDEO_PATH в .env.",
+      { reply_markup: howKb },
     );
     return;
   }
@@ -469,6 +475,7 @@ async function sendHowToVideo(ctx: Context) {
       await ctx.replyWithVideo(new InputFile(path), {
         caption: VIDEO_CAPTION_HTML,
         parse_mode: "HTML" as const,
+        reply_markup: howKb,
       });
     } else {
       const videoEntities = captionEntitiesAllBoldExcludingCustomEmoji(
@@ -478,6 +485,7 @@ async function sendHowToVideo(ctx: Context) {
       await ctx.replyWithVideo(new InputFile(path), {
         caption: cap.text,
         caption_entities: videoEntities,
+        reply_markup: howKb,
       });
     }
   } else {
@@ -485,6 +493,7 @@ async function sendHowToVideo(ctx: Context) {
     await ctx.replyWithVideo(new InputFile(path), {
       caption: VIDEO_CAPTION_HTML,
       parse_mode: "HTML" as const,
+      reply_markup: howKb,
     });
   }
 }

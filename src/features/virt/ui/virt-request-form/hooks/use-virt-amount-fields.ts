@@ -5,6 +5,7 @@ import { DEFAULT } from "@/shared/constants/default";
 import {
   calculateAmountRub,
   calculateAmountVirts,
+  roundKkTenthsFromVirts,
 } from "@/features/virt/model";
 
 const getVirtExchangeRate = (exchangeRate: number) => ({
@@ -36,13 +37,15 @@ export const useVirtAmountFields = ({
 }: UseVirtAmountFieldsParams) => {
   const [amountRubValue, setAmountRubValue] = useState(initialAmountRub);
   const [amountVirtValue, setAmountVirtValue] = useState(
-    initialAmountVirts ? String(Number(initialAmountVirts) / 1_000_000) : "",
+    initialAmountVirts
+      ? roundKkTenthsFromVirts(initialAmountVirts).kkDisplay
+      : "",
   );
 
   useEffect(() => {
     setAmountRubValue(initialAmountRub);
     setAmountVirtValue(
-      initialAmountVirts ? String(Number(initialAmountVirts) / 1_000_000) : "",
+      initialAmountVirts ? roundKkTenthsFromVirts(initialAmountVirts).kkDisplay : "",
     );
   }, [initialAmountRub, initialAmountVirts]);
 
@@ -68,11 +71,9 @@ export const useVirtAmountFields = ({
         amountRubValue,
         getVirtExchangeRate(exchangeRate),
       );
-      const inKK = nextAmountVirts
-        ? String(Number(nextAmountVirts) / 1_000_000)
-        : "";
-      setAmountVirtValue(inKK);
-      onAmountsCommit(amountRubValue, nextAmountVirts);
+      const { kkDisplay, virtsRounded } = roundKkTenthsFromVirts(nextAmountVirts);
+      setAmountVirtValue(kkDisplay);
+      onAmountsCommit(amountRubValue, virtsRounded);
       return;
     }
     if (lastEditedForAmount === "amountVirts" && amountVirtValue.trim() !== "") {
@@ -106,10 +107,9 @@ export const useVirtAmountFields = ({
       const nextAmountVirts = value
         ? calculateAmountVirts(value, getVirtExchangeRate(exchangeRate))
         : "";
-
-      const inKK = nextAmountVirts ? String(Number(nextAmountVirts) / 1_000_000) : "";
-      setAmountVirtValue(inKK);
-      onAmountsCommit(value, nextAmountVirts);
+      const { kkDisplay, virtsRounded } = roundKkTenthsFromVirts(nextAmountVirts);
+      setAmountVirtValue(kkDisplay);
+      onAmountsCommit(value, virtsRounded);
     },
     [exchangeRate, onAmountsCommit],
   );
