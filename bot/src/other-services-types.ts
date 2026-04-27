@@ -15,6 +15,8 @@ export type OtherServiceItem = {
 export type OtherServiceSubsection = {
   id: string;
   name: string;
+  /** Вводится в админке; короткий текст под названием в мини-аппе */
+  description?: string;
   items: OtherServiceItem[];
 };
 

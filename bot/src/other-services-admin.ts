@@ -13,6 +13,7 @@ import {
   removeItemFromSub,
   removeMainSection,
   removeSubsection,
+  setSubsectionDescription,
 } from "./other-services-store.js";
 import { BTN_BACK_TO_ADMIN } from "./texts.js";
 
@@ -24,6 +25,7 @@ type Wiz =
   | { k: "gameName" }
   | { k: "mainName"; g: number }
   | { k: "subName"; g: number; m: number }
+  | { k: "subSectionDesc"; g: number; m: number; s: number }
   | { k: "itemDesc"; g: number; m: number; sub?: number }
   | { k: "itemInfoText"; g: number; m: number; sub?: number; desc: string; pay: "info" };
 
@@ -78,7 +80,7 @@ function gameView(gi: number): { text: string; kb: InlineKeyboard } {
     kb.text(`📁 ${m.name.slice(0, 24)}`, `${PREFIX}m!${gi}!${mi}`).row();
   });
   kb.text("➕ Раздел", `${PREFIX}addm!${gi}`).row();
-  kb.text("🗑 Игра", `${PREFIX}ydg!${gi}`).row();
+  kb.text("Удалить игру", `${PREFIX}ydg!${gi}`).row();
   kb.text("⬅️", `${PREFIX}0`);
   return { text, kb };
 }
@@ -122,12 +124,12 @@ function mainView(gi: number, mi: number): { text: string; kb: InlineKeyboard } 
         kb.text(`🧾 ${t}`, `${PREFIX}ydim!${gi}!${mi}!${ii}`).row();
       });
     }
-    kb.text("➕ Товар", `${PREFIX}addim!${gi}!${mi}`).row();
+    kb.text("➕ Описание", `${PREFIX}addim!${gi}!${mi}`).row();
     if (!hasM) {
       kb.text("➕ Подраздел", `${PREFIX}adds!${gi}!${mi}`).row();
     }
   }
-  kb.text("🗑 Раздел", `${PREFIX}ydm!${gi}!${mi}`).row();
+  kb.text("Удалить раздел", `${PREFIX}ydm!${gi}!${mi}`).row();
   kb.text("⬅️ К игре", `${PREFIX}g!${gi}`);
   return { text: body, kb };
 }
@@ -138,7 +140,12 @@ function subView(gi: number, mi: number, si: number): { text: string; kb: Inline
   if (!s) {
     return { text: "Нет.", kb: new InlineKeyboard().text("⬅️", `${PREFIX}m!${gi}!${mi}`) };
   }
-  let body = `📂 <b>${esc(s.name)}</b>\n\n`;
+  let body = `📂 <b>${esc(s.name)}</b>\n`;
+  if (s.description?.trim()) {
+    body += `${esc(s.description.trim())}\n\n`;
+  } else {
+    body += "\n";
+  }
   s.items.forEach((it) => {
     const pm = it.paymentMode === "manager" ? "→ менеджер" : "текст";
     body += `• ${esc(it.description.slice(0, 50))} (${pm})\n`;
@@ -151,8 +158,9 @@ function subView(gi: number, mi: number, si: number): { text: string; kb: Inline
     const t = (it.description.slice(0, 16) + (it.description.length > 16 ? "…" : "")) as string;
     kb.text(`🧾 ${t}`, `${PREFIX}ydis!${gi}!${mi}!${si}!${ii}`).row();
   });
-  kb.text("➕ Товар", `${PREFIX}addis!${gi}!${mi}!${si}`).row();
-  kb.text("🗑 Подраздел", `${PREFIX}yds!${gi}!${mi}!${si}`).row();
+  kb.text("➕ Описание (позиция)", `${PREFIX}addis!${gi}!${mi}!${si}`).row();
+  kb.text("Текст подраздела", `${PREFIX}subd!${gi}!${mi}!${si}`).row();
+  kb.text("Удалить подраздел", `${PREFIX}yds!${gi}!${mi}!${si}`).row();
   kb.text("⬅️", `${PREFIX}m!${gi}!${mi}`);
   return { text: body, kb };
 }
@@ -326,7 +334,7 @@ export function installOtherServicesAdmin(bot: Bot, adminIds: Set<number>) {
       wizards.set(ctx.from.id, { k: "subName", g: gi, m: mi });
     }
     await ctx.answerCallbackQuery();
-    await a.reply("Введите <b>подраздел</b>:", { parse_mode: "HTML", reply_markup: kbCancel() });
+    await a.reply("Введите <b>название подраздела</b>:", { parse_mode: "HTML", reply_markup: kbCancel() });
   });
 
   bot.callbackQuery(new RegExp(`^${PREFIX.replace("!", "\\!")}addim!([0-9]+)!([0-9]+)$`), async (ctx) => {
@@ -340,7 +348,7 @@ export function installOtherServicesAdmin(bot: Bot, adminIds: Set<number>) {
       wizards.set(ctx.from.id, { k: "itemDesc", g: gi, m: mi });
     }
     await ctx.answerCallbackQuery();
-    await a.reply("Введите <b>описание</b>:", { parse_mode: "HTML", reply_markup: kbCancel() });
+    await a.reply("Введите <b>описание позиции</b>:", { parse_mode: "HTML", reply_markup: kbCancel() });
   });
 
   bot.callbackQuery(new RegExp(`^${PREFIX.replace("!", "\\!")}addis!([0-9]+)!([0-9]+)!([0-9]+)$`), async (ctx) => {
@@ -355,7 +363,25 @@ export function installOtherServicesAdmin(bot: Bot, adminIds: Set<number>) {
       wizards.set(ctx.from.id, { k: "itemDesc", g: gi, m: mi, sub: si });
     }
     await ctx.answerCallbackQuery();
-    await a.reply("Введите <b>описание</b>:", { parse_mode: "HTML", reply_markup: kbCancel() });
+    await a.reply("Введите <b>описание позиции</b>:", { parse_mode: "HTML", reply_markup: kbCancel() });
+  });
+
+  bot.callbackQuery(new RegExp(`^${PREFIX.replace("!", "\\!")}subd!([0-9]+)!([0-9]+)!([0-9]+)$`), async (ctx) => {
+    const a = await requireAd(ctx);
+    if (a == null) {
+      return;
+    }
+    const gi = Number(ctx.match![1]!);
+    const mi = Number(ctx.match![2]!);
+    const si = Number(ctx.match![3]!);
+    if (ctx.from) {
+      wizards.set(ctx.from.id, { k: "subSectionDesc", g: gi, m: mi, s: si });
+    }
+    await ctx.answerCallbackQuery();
+    await a.reply("Введите <b>текст подраздела</b> (под заголовком). Пустое сообщение — сбросить.", {
+      parse_mode: "HTML",
+      reply_markup: kbCancel(),
+    });
   });
 
   bot.callbackQuery(new RegExp(`^${PREFIX.replace("!", "\\!")}pay!([01])$`), async (ctx) => {
@@ -695,7 +721,7 @@ export function installOtherServicesAdmin(bot: Bot, adminIds: Set<number>) {
         const r = addSubsection(game.id, main.id, t);
         if (r == null) {
           clearWiz(ctx.from.id);
-          await ctx.reply("Удалите товары из раздела.", { parse_mode: "HTML" });
+          await ctx.reply("Сначала удалите описания (позиции) из раздела.", { parse_mode: "HTML" });
           return;
         }
       }
@@ -709,6 +735,19 @@ export function installOtherServicesAdmin(bot: Bot, adminIds: Set<number>) {
         return;
       }
       const { text, kb } = mainView(gi, mi);
+      await ctx.reply(text, { parse_mode: "HTML", reply_markup: kb });
+      return;
+    }
+    if (st0?.k === "subSectionDesc") {
+      const { g: gi, m: mi, s: si } = st0;
+      const game = getOtherServicesV1().games[gi];
+      const main = game?.mainSections[mi];
+      const sub = main?.subsections[si];
+      if (game && main && sub) {
+        setSubsectionDescription(game.id, main.id, sub.id, t);
+      }
+      clearWiz(ctx.from.id);
+      const { text, kb } = subView(gi, mi, si);
       await ctx.reply(text, { parse_mode: "HTML", reply_markup: kb });
       return;
     }

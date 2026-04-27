@@ -12,6 +12,7 @@ export type OtherServiceItem = {
 export type OtherServiceSubsection = {
   id: string;
   name: string;
+  description?: string;
   items: OtherServiceItem[];
 };
 

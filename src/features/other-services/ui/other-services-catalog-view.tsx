@@ -1,13 +1,13 @@
 import { useMemo, useState } from "react";
 
-import type { VirtGradientToken } from "@/entities/virt";
 import { AppText } from "@/ui/app-text";
 import { TAG } from "@/ui/app-text/model";
 import { Button } from "@/ui/button";
 import { SUPPORT_CHAT_URL } from "@/shared/constants/common";
+import { BUY_VIRTS_MOCK } from "@/shared/mock/buy-virts.mock";
 import { VIRT_GRADIENT_CLASSES } from "@/shared/constants/virt-gradients";
+import type { VirtGradientToken } from "@/entities/virt";
 import type {
-  OtherServiceGame,
   OtherServiceItem,
   OtherServiceMain,
   OtherServiceSubsection,
@@ -15,36 +15,27 @@ import type {
 } from "@/shared/types/other-services-catalog";
 import { cn } from "@/shared/utils";
 
-const PLAQUE_GRADIENTS: VirtGradientToken[] = [
-  "blue",
-  "dark",
-  "pink",
-  "purple",
-  "red",
-  "yellow",
-  "orange",
-  "gold",
-  "grey",
-];
+/** Второй уровень (подраздел-переключатель) — нейтральный тёмный, как «внутри» выбранного. */
+const SUB_GRADIENT: VirtGradientToken = "dark";
 
 function ServiceItemCard({ item }: { item: OtherServiceItem }) {
   return (
-    <li className="tw-bg-gradient-card-border flex flex-col gap-2 rounded-[12px] p-px">
-      <div
-        className={cn(
-          "flex min-w-0 flex-col gap-2 rounded-[11px] border border-white/10 bg-[#1A1A1A] p-3",
-        )}
-      >
-        <AppText variant="primaryStrong" size="medium" className="!whitespace-pre-wrap !text-left">
+    <li className="w-full min-w-0">
+      <div className="flex flex-col gap-3 rounded-[12px] border border-white/10 bg-white p-3 shadow-sm">
+        <AppText
+          variant="primaryStrong"
+          size="medium"
+          className="!whitespace-pre-wrap !text-left !text-neutral-900"
+        >
           {item.description}
         </AppText>
         {item.paymentMode === "info" && item.paymentInfo ? (
-          <div className="rounded-md border border-white/10 bg-black/20 p-2.5">
+          <div className="rounded-md border border-neutral-200 bg-neutral-50 p-2.5">
             <AppText
               tag={TAG.p}
               variant="primaryMedium"
               size="small"
-              className="!whitespace-pre-wrap !text-left text-white/90"
+              className="!whitespace-pre-wrap !text-left !text-neutral-800"
             >
               {item.paymentInfo}
             </AppText>
@@ -69,7 +60,7 @@ function ServiceItemCard({ item }: { item: OtherServiceItem }) {
   );
 }
 
-function SubChipRow({
+function SubSectionPicker({
   subsections,
   activeId,
   onSelect,
@@ -79,30 +70,40 @@ function SubChipRow({
   onSelect: (id: string) => void;
 }) {
   return (
-    <div className="hide-scrollbar mb-2 flex min-w-0 flex-nowrap gap-2 overflow-x-auto pb-1">
+    <ul className="flex w-full min-w-0 flex-col gap-2">
       {subsections.map((s) => {
         const isOn = s.id === activeId;
         return (
-          <button
-            key={s.id}
-            type="button"
-            onClick={() => {
-              onSelect(s.id);
-            }}
-            className={cn(
-              "shrink-0 rounded-full border px-3 py-1.5 text-left transition",
-              isOn
-                ? "border-white/30 bg-white/10"
-                : "border-white/10 bg-white/5 hover:bg-white/10",
-            )}
-          >
-            <AppText variant="primaryStrong" size="small" className="!max-w-[10rem] !truncate !leading-tight">
-              {s.name}
-            </AppText>
-          </button>
+          <li key={s.id} className="w-full min-w-0">
+            <Button
+              type="button"
+              variant="virtCard"
+              size="virtCard"
+              onClick={() => {
+                onSelect(s.id);
+              }}
+              className="w-full"
+            >
+              <span
+                className={cn(
+                  "m-px flex w-full min-w-0 items-center rounded-[10px] px-3 py-2.5",
+                  VIRT_GRADIENT_CLASSES[SUB_GRADIENT],
+                  isOn && "ring-1 ring-white/40",
+                )}
+              >
+                <AppText
+                  variant="primaryStrong"
+                  size="headerInfo"
+                  className="!line-clamp-2 min-w-0 w-full !text-left !text-base !leading-snug"
+                >
+                  {s.name}
+                </AppText>
+              </span>
+            </Button>
+          </li>
         );
       })}
-    </div>
+    </ul>
   );
 }
 
@@ -119,22 +120,41 @@ function MainSectionBlock({ main }: { main: OtherServiceMain }) {
 
   return (
     <li className="min-w-0">
-      <div className="mb-3 border-b border-white/10 pb-2">
-        <AppText
-          variant="primaryStrong"
-          size="headerInfo"
-          className="!text-left !tracking-tight !text-base"
-        >
-          {main.name}
-        </AppText>
+      <div className="mb-3 w-full min-w-0">
+        <div className="tw-bg-gradient-virt-card-border tw-shadow-virt-card w-full min-w-0 overflow-hidden rounded-[12px] p-px text-left">
+          <div
+            className={cn(
+              "m-px flex w-full min-w-0 items-center rounded-[10px] px-3 py-3",
+              VIRT_GRADIENT_CLASSES.red,
+            )}
+          >
+            <AppText
+              variant="primaryStrong"
+              size="xxxl"
+              className="!line-clamp-3 min-w-0 w-full !text-left !leading-snug"
+            >
+              {main.name}
+            </AppText>
+          </div>
+        </div>
       </div>
       {hasSub && activeSub ? (
         <>
-          <SubChipRow
+          <SubSectionPicker
             subsections={main.subsections}
             activeId={activeSub.id}
             onSelect={setSubId}
           />
+          {activeSub.description?.trim() ? (
+            <AppText
+              tag={TAG.p}
+              variant="primaryMedium"
+              size="small"
+              className="!mb-3 !whitespace-pre-wrap !px-0 !text-left !text-white/80"
+            >
+              {activeSub.description.trim()}
+            </AppText>
+          ) : null}
           {activeSub.items.length === 0 ? (
             <AppText
               tag={TAG.p}
@@ -142,7 +162,7 @@ function MainSectionBlock({ main }: { main: OtherServiceMain }) {
               size="small"
               className="!text-left text-white/45"
             >
-              Пусто.
+              Пока пусто.
             </AppText>
           ) : (
             <ul className="flex flex-col gap-2">
@@ -190,7 +210,7 @@ export const OtherServicesCatalogView = ({ catalog }: Props) => {
     );
   }
 
-  const current: OtherServiceGame = useMemo(() => {
+  const current = useMemo(() => {
     const k = selectedId ?? games[0]!.id;
     return games.find((g) => g.id === k) ?? games[0]!;
   }, [games, selectedId]);
@@ -200,7 +220,8 @@ export const OtherServicesCatalogView = ({ catalog }: Props) => {
       <ul className="flex flex-col gap-2 px-4">
         {games.map((g, idx) => {
           const isActive = (selectedId ?? games[0]!.id) === g.id;
-          const grad = PLAQUE_GRADIENTS[idx % PLAQUE_GRADIENTS.length]!;
+          const grad: VirtGradientToken =
+            BUY_VIRTS_MOCK[idx % BUY_VIRTS_MOCK.length]!.gradientToken;
           return (
             <li key={g.id} className="w-full min-w-0">
               <Button
@@ -216,7 +237,7 @@ export const OtherServicesCatalogView = ({ catalog }: Props) => {
                   className={cn(
                     "m-px flex w-full min-w-0 items-center rounded-[10px] px-3 py-3",
                     VIRT_GRADIENT_CLASSES[grad],
-                    isActive && "ring-1 ring-white/35",
+                    isActive && "ring-1 ring-white/40",
                   )}
                 >
                   <AppText

@@ -168,7 +168,10 @@ function migrateSubsection(raw: unknown): OtherServiceSubsection {
   const id = typeof o.id === "string" ? o.id : genId("s");
   const name = typeof o.name === "string" ? o.name : "";
   const items = Array.isArray(o.items) ? o.items.map(migrateItem) : [];
-  return { id, name, items };
+  const descRaw = o.description;
+  const description =
+    typeof descRaw === "string" && descRaw.trim() ? descRaw.trim() : undefined;
+  return description ? { id, name, description, items } : { id, name, items };
 }
 
 function migrateMain(raw: unknown): OtherServiceMain {
@@ -319,6 +322,29 @@ export function removeSubsection(gameId: string, mainId: string, subId: string):
   m.subsections = m.subsections.filter((s) => s.id !== subId);
   if (m.subsections.length === n) {
     return false;
+  }
+  save(s);
+  return true;
+}
+
+export function setSubsectionDescription(
+  gameId: string,
+  mainId: string,
+  subId: string,
+  text: string,
+): boolean {
+  const s = safeLoad();
+  const g = s.games.find((x) => x.id === gameId);
+  const m = g?.mainSections.find((x) => x.id === mainId);
+  const sub = m?.subsections.find((x) => x.id === subId);
+  if (!g || !m || !sub) {
+    return false;
+  }
+  const t = text.trim();
+  if (t) {
+    sub.description = t;
+  } else {
+    delete sub.description;
   }
   save(s);
   return true;
