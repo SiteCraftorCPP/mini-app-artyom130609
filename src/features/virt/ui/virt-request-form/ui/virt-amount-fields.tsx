@@ -110,7 +110,7 @@ export const VirtAmountFields = memo(
                     onChange={handleAmountRubChange}
                     debounceMs={TIMING.inputDebounceMs}
                     onDebounce={handleAmountRubDebounce}
-                    placeholder=""
+                    placeholder={VIRT_FORM_TEXT.amountRubPlaceholder}
                     className="pr-8"
                   />
                   <span className="absolute right-4 top-1/2 -translate-y-1/2 text-black/60 font-medium">
@@ -158,7 +158,7 @@ export const VirtAmountFields = memo(
                     onChange={handleAmountVirtChange}
                     debounceMs={TIMING.inputDebounceMs}
                     onDebounce={handleAmountVirtDebounce}
-                    placeholder=""
+                    placeholder={VIRT_FORM_TEXT.amountVirtsKkPlaceholder}
                     className="pr-10"
                   />
                   <span className="absolute right-4 top-1/2 -translate-y-1/2 text-black/60 font-medium">

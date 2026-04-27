@@ -16,19 +16,55 @@ function resolveInitData(webApp: any): string {
   return "";
 }
 
+function displayNameFromTelegramUser(
+  u: { first_name?: string; last_name?: string; username?: string } | undefined,
+): string {
+  if (!u) {
+    return "User";
+  }
+  const full = [u.first_name, u.last_name].filter(Boolean).join(" ").trim();
+  if (full.length > 0) {
+    return full;
+  }
+  if (u.username) {
+    return `@${u.username}`;
+  }
+  return "User";
+}
+
+function telegramUserPhotoUrl(
+  u: { photo_url?: string | true } | undefined,
+): string | null {
+  const p = u?.photo_url;
+  if (typeof p === "string" && p.length > 0) {
+    return p;
+  }
+  return null;
+}
+
 export const useAuthMe = (): UseQueryResult<User, Error> => {
   const webApp = useWebApp();
   const initDataString = resolveInitData(webApp);
 
   return useQuery<User, Error>({
-    queryKey: [QUERY_KEYS.USERS.ME],
+    queryKey: [QUERY_KEYS.USERS.ME, initDataString],
     queryFn: async () => {
+      const tgUser = webApp?.initDataUnsafe?.user;
+      const name = displayNameFromTelegramUser(tgUser);
+      const photoUrl = telegramUserPhotoUrl(tgUser);
+      const idStr = tgUser ? String(tgUser.id) : "1";
+
       let balance = 0;
       try {
         if (initDataString) {
-          let apiUrl = typeof window !== "undefined" && window.location?.origin ? window.location.origin : "";
-          if (import.meta.env.VITE_API_URL) apiUrl = import.meta.env.VITE_API_URL;
-          
+          let apiUrl =
+            typeof window !== "undefined" && window.location?.origin
+              ? window.location.origin
+              : "";
+          if (import.meta.env.VITE_API_URL) {
+            apiUrl = import.meta.env.VITE_API_URL;
+          }
+
           const res = await fetch(`${apiUrl}/notify/sell-virt-webapp`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -44,12 +80,12 @@ export const useAuthMe = (): UseQueryResult<User, Error> => {
       }
 
       return {
-        id: "1",
-        telegramId: "1",
-        name: "User",
-        photoUrl: null,
+        id: idStr,
+        telegramId: idStr,
+        name,
+        photoUrl,
         level: 1,
-        balance: balance,
+        balance,
         status: "Новичок",
         currency: {
           name: CURRENCY.RUB,
