@@ -980,43 +980,17 @@ export function startOrderNotifyHttpServer(
     );
   }
 
-  let cachedBotUsername: string | null = null;
-  let botUsernameResolvePromise: Promise<string> | null = null;
-
-  async function resolveReferralBotUsername(): Promise<string> {
-    if (cachedBotUsername) {
-      return cachedBotUsername;
-    }
-
-    if (!botUsernameResolvePromise) {
-      botUsernameResolvePromise = bot.api
-        .getMe()
-        .then((me) => {
-          const username = me.username?.trim().replace(/^@/, "") || "";
-          if (!username) {
-            throw new Error("Bot username is empty in getMe()");
-          }
-          cachedBotUsername = username;
-          return username;
-        })
-        .catch(async (e) => {
-          console.error("[referral] failed to resolve bot username via getMe():", e);
-          const fromEnvRaw =
-            process.env.TELEGRAM_BOT_USERNAME?.trim() ||
-            process.env.VITE_BOT_ADDRESS?.trim();
-          const fromEnv = fromEnvRaw?.replace(/^@/, "");
-          if (fromEnv) {
-            cachedBotUsername = fromEnv;
-            return fromEnv;
-          }
-          return "artshopvirts_bot";
-        })
-        .finally(() => {
-          botUsernameResolvePromise = null;
-        });
-    }
-
-    return botUsernameResolvePromise;
+  /**
+   * Реф-ссылка в мини-аппе. Не используем getMe(): токен в .env может быть от «старого» бота,
+   * тогда getMe() вернёт неверный username. VITE_* из фронта тоже не читаем — на сервере часто устаревает.
+   * Явно: REFERRAL_BOT_USERNAME → TELEGRAM_BOT_USERNAME → artshopvirts_bot.
+   */
+  function resolveReferralBotHandle(): string {
+    const raw =
+      process.env.REFERRAL_BOT_USERNAME?.trim() ||
+      process.env.TELEGRAM_BOT_USERNAME?.trim();
+    const s = (raw || "artshopvirts_bot").replace(/^@/, "").trim();
+    return s || "artshopvirts_bot";
   }
 
   const server = createServer(async (req, res) => {
@@ -1401,7 +1375,7 @@ export function startOrderNotifyHttpServer(
 
         if (body.action === "get_referral") {
           const refUser = getReferralUser(telegramUserId);
-          const botUsername = await resolveReferralBotUsername();
+          const botUsername = resolveReferralBotHandle();
           const refLink = `https://t.me/${botUsername}?start=ref_${telegramUserId}`;
 
           res.writeHead(200, { "Content-Type": "application/json", ...corsNotifyHeaders });
