@@ -8,19 +8,19 @@ export const WELCOME_LINE_1 =
 export const WELCOME_LINE_2 = "Чтобы оформить заказ, нажмите открыть магазин";
 export const WELCOME = [WELCOME_LINE_1, "", WELCOME_LINE_2].join("\n");
 
-/** 4 абзаца «О магазине» — к каждому в подписи своя custom-иконка. */
+/** 4 абзаца «О магазине» — к началу каждой сроки в подписи custom-иконка (см. ABOUT_CUSTOM_EMOJI_ORDER). */
 export const ABOUT_SHOP_LINES: readonly [string, string, string, string] = [
   "Продаём и скупаем вирты во всех RP-проектах, а также предоставляем полный спектр услуг.",
-  "Гарантируем возврат средств в случае блокировки аккаунта, связанной с нашим магазином.",
+  "Гарантируем возврат части средств в случае блокировки аккаунта, связанной с нашим магазином.",
   "Работаем с 2024 года: более 1500 клиентов и 780 отзывов.",
-  [
-    "Наши официальные ссылки:",
-    "Telegram канал: @artshopvirts_channel",
-    "Отзывы: https://t.me/artshopvirts_channel/85",
-    "Менеджер: @artshopvirts_man",
-    "MEDIA-сотрудничество: @artshopvirts_media",
-  ].join("\n"),
+  "Наши официальные ресурсы — по кнопкам ниже.",
 ];
+
+/** Ссылки под «О магазине» (кнопки-URL + env при необходимости). */
+export const LINK_ABOUT_CHANNEL = "https://t.me/artshopvirts_channel";
+export const LINK_ABOUT_REVIEWS = "https://t.me/artshopvirts_channel/85";
+export const LINK_ABOUT_MANAGER = "https://t.me/artshopvirts_man";
+export const LINK_ABOUT_MEDIA = "https://t.me/artshopvirts_media";
 
 export const ABOUT_SHOP = [
   ABOUT_SHOP_LINES[0],

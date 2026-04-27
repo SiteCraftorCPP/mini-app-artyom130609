@@ -12,7 +12,7 @@ process.on("uncaughtException", (error) => {
   console.error("Uncaught Exception:", error);
 });
 
-import { aboutBackKeyboard, mainMenuInlineKeyboard } from "./keyboards.js";
+import { aboutShopResourceKeyboard, mainMenuInlineKeyboard } from "./keyboards.js";
 import {
   buildCustomEmojiPrefixCaption,
   buildMultilineCustomEmojiLinesCaption,
@@ -137,6 +137,27 @@ function resolveWelcomePhoto(): WelcomePhoto | null {
   return null;
 }
 
+function resolveAboutShopPhoto(): WelcomePhoto | null {
+  const url = process.env.ABOUT_SHOP_PHOTO_URL?.trim();
+  if (url && /^https?:\/\//i.test(url)) {
+    return { type: "url", url };
+  }
+  const fromEnv = process.env.ABOUT_SHOP_PHOTO_PATH?.trim();
+  const botRoot = resolve(__dirname, "..");
+  const repoRoot = resolve(__dirname, "../..");
+  const candidates = [
+    fromEnv && resolve(botRoot, fromEnv),
+    resolve(botRoot, "images", "photo_4.jpg"),
+    resolve(botRoot, "images", "photo_4.png"),
+    resolve(repoRoot, "images", "photo_4.jpg"),
+    resolve(repoRoot, "images", "photo_4.png"),
+  ].filter((p): p is string => Boolean(p));
+  for (const p of candidates) {
+    if (existsSync(p)) return { type: "file", path: p };
+  }
+  return null;
+}
+
 function resolveInstructionVideoPath(): string | null {
   const fromEnv = process.env.INSTRUCTION_VIDEO_PATH?.trim();
   const base = resolve(__dirname, "..");
@@ -153,23 +174,24 @@ function resolveInstructionVideoPath(): string | null {
   return null;
 }
 
-/** Старая reply-клавиатура «залипает» у клиента, пока не придёт remove_keyboard (в одном сообщении с inline её нельзя совместить). */
-async function clearReplyKeyboard(ctx: Context) {
+/** Снять reply-клавиатуру и показать inline-меню в ОДНОМ видимом сообщении (без send+delete). */
+const REPLY_KB_REMOVE = { remove_keyboard: true as const };
+
+async function applyMainMenuInlineAfterRemove(
+  ctx: Context,
+  messageId: number,
+  inlineMarkup: ReturnType<typeof mainMenuInlineKeyboard>,
+): Promise<void> {
   const chatId = ctx.chat?.id;
-  if (chatId === undefined) return;
-  const m = await ctx.reply("\u2060", {
-    reply_markup: { remove_keyboard: true },
-  });
+  if (chatId == null) return;
   try {
-    await ctx.api.deleteMessage(chatId, m.message_id);
-  } catch {
-    /* не критично */
+    await ctx.api.editMessageReplyMarkup(chatId, messageId, { reply_markup: inlineMarkup });
+  } catch (e) {
+    console.warn("[start] inline-меню после remove_keyboard:", e);
   }
 }
 
 async function sendWelcome(ctx: Context) {
-  await clearReplyKeyboard(ctx);
-
   const markup = mainMenuInlineKeyboard(miniAppUrl);
   const fromEnv = getWelcomeStickerFileIdsFromEnv();
   if (fromEnv && fromEnv.length !== 2) {
@@ -184,7 +206,9 @@ async function sendWelcome(ctx: Context) {
     handPointerPair.every((t) => isLikelyCustomEmojiIdString(t));
 
   if (!allCustomVisual) {
-    await sendVisualTokensInOrder(ctx, handPointerPair);
+    await sendVisualTokensInOrder(ctx, handPointerPair, {
+      removeReplyKeyboardOnFirstMessage: true,
+    });
     const photoPlain = resolveWelcomePhoto();
     if (photoPlain) {
       const extra = {
@@ -222,33 +246,36 @@ async function sendWelcome(ctx: Context) {
   const photo = resolveWelcomePhoto();
   if (photo) {
     if (photo.type === "url") {
-      await ctx.replyWithPhoto(photo.url, {
+      const m = await ctx.replyWithPhoto(photo.url, {
         caption,
-        reply_markup: markup,
+        reply_markup: REPLY_KB_REMOVE,
         ...(withEntities
           ? { caption_entities: capEntitiesFinal }
           : { parse_mode: "HTML" as const }),
       });
+      await applyMainMenuInlineAfterRemove(ctx, m.message_id, markup);
     } else {
       const buffer = readFileSync(photo.path);
-      await ctx.replyWithPhoto(new InputFile(buffer, basename(photo.path)), {
+      const m = await ctx.replyWithPhoto(new InputFile(buffer, basename(photo.path)), {
         caption,
-        reply_markup: markup,
+        reply_markup: REPLY_KB_REMOVE,
         ...(withEntities
           ? { caption_entities: capEntitiesFinal }
           : { parse_mode: "HTML" as const }),
       });
+      await applyMainMenuInlineAfterRemove(ctx, m.message_id, markup);
     }
   } else {
     console.warn(
       "Баннер не найден: WELCOME_PHOTO_URL / WELCOME_PHOTO_PATH — иконки в одном сообщении с текстом.",
     );
-    await ctx.reply(caption, {
-      reply_markup: markup,
+    const m = await ctx.reply(caption, {
+      reply_markup: REPLY_KB_REMOVE,
       ...(withEntities
         ? { entities: capEntitiesFinal }
         : { parse_mode: "HTML" as const }),
     });
+    await applyMainMenuInlineAfterRemove(ctx, m.message_id, markup);
   }
 }
 
@@ -274,7 +301,6 @@ async function sendSellVirtGuidance(ctx: Context) {
   if (uid === undefined) {
     return;
   }
-  await clearReplyKeyboard(ctx);
   await sendSellVirtMessage(bot, uid);
 }
 
@@ -426,6 +452,8 @@ bot.callbackQuery("menu:about", async (ctx) => {
   const allCustom =
     aboutTokens.length > 0 &&
     aboutTokens.every((t) => isLikelyCustomEmojiIdString(t.trim()));
+  const aboutKb = aboutShopResourceKeyboard();
+  const aboutPhoto = resolveAboutShopPhoto();
 
   if (allCustom) {
     const cap = await buildMultilineCustomEmojiLinesCaption(
@@ -434,15 +462,47 @@ bot.callbackQuery("menu:about", async (ctx) => {
       ABOUT_SHOP_LINES,
     );
     if (cap) {
-      await ctx.reply(cap.text, {
-        reply_markup: aboutBackKeyboard(),
-        entities: captionEntitiesAllBoldExcludingCustomEmoji(cap.text, cap.entities),
-      });
+      const ent = captionEntitiesAllBoldExcludingCustomEmoji(cap.text, cap.entities);
+      if (aboutPhoto) {
+        if (aboutPhoto.type === "url") {
+          await ctx.replyWithPhoto(aboutPhoto.url, {
+            caption: cap.text,
+            caption_entities: ent,
+            reply_markup: aboutKb,
+          });
+        } else {
+          const buffer = readFileSync(aboutPhoto.path);
+          await ctx.replyWithPhoto(new InputFile(buffer, basename(aboutPhoto.path)), {
+            caption: cap.text,
+            caption_entities: ent,
+            reply_markup: aboutKb,
+          });
+        }
+      } else {
+        await ctx.reply(cap.text, { entities: ent, reply_markup: aboutKb });
+      }
       return;
     }
   }
   await sendVisualTokensInOrder(ctx, aboutTokens);
-  await ctx.reply(ABOUT_SHOP_HTML, { parse_mode: "HTML", reply_markup: aboutBackKeyboard() });
+  if (aboutPhoto) {
+    if (aboutPhoto.type === "url") {
+      await ctx.replyWithPhoto(aboutPhoto.url, {
+        caption: ABOUT_SHOP_HTML,
+        parse_mode: "HTML" as const,
+        reply_markup: aboutKb,
+      });
+    } else {
+      const buffer = readFileSync(aboutPhoto.path);
+      await ctx.replyWithPhoto(new InputFile(buffer, basename(aboutPhoto.path)), {
+        caption: ABOUT_SHOP_HTML,
+        parse_mode: "HTML" as const,
+        reply_markup: aboutKb,
+      });
+    }
+    return;
+  }
+  await ctx.reply(ABOUT_SHOP_HTML, { parse_mode: "HTML", reply_markup: aboutKb });
 });
 
 bot.callbackQuery("about:back", async (ctx) => {

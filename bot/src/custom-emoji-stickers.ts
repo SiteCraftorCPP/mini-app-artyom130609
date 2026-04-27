@@ -370,9 +370,12 @@ export async function buildOrderSuccessThreeEmojisCaption(
   return { text, entities: captionEntitiesAllBoldExcludingCustomEmoji(text, entities) };
 }
 
+type SendMessageExtra = NonNullable<Parameters<Context["api"]["sendMessage"]>[2]>;
+
 export async function sendCustomEmojisInMessage(
   ctx: Pick<Context, "api" | "chat">,
   customEmojiIds: readonly string[],
+  extra?: SendMessageExtra,
 ): Promise<boolean> {
   const chatId = ctx.chat?.id;
   if (chatId === undefined || customEmojiIds.length === 0) {
@@ -383,7 +386,7 @@ export async function sendCustomEmojisInMessage(
     return false;
   }
   try {
-    await ctx.api.sendMessage(chatId, cap.text, { entities: cap.entities });
+    await ctx.api.sendMessage(chatId, cap.text, { entities: cap.entities, ...extra });
     return true;
   } catch (e) {
     console.warn("[custom-emoji] sendMessage(entities) failed", e);
@@ -391,14 +394,17 @@ export async function sendCustomEmojisInMessage(
   }
 }
 
+type SendStickerExtra = NonNullable<Parameters<Context["api"]["sendSticker"]>[2]>;
+
 async function sendOneRegularSticker(
   ctx: Pick<Context, "api" | "chat">,
   fileId: string,
+  extra?: SendStickerExtra,
 ): Promise<boolean> {
   const chatId = ctx.chat?.id;
   if (chatId === undefined) return false;
   try {
-    await ctx.api.sendSticker(chatId, fileId);
+    await ctx.api.sendSticker(chatId, fileId, extra);
     return true;
   } catch (e) {
     console.warn("[sticker] sendSticker failed", e);
@@ -432,16 +438,29 @@ function buildSegments(tokens: readonly string[]): Seg[] {
 export async function sendVisualTokensInOrder(
   ctx: Pick<Context, "api" | "chat">,
   tokens: readonly string[],
+  options?: { removeReplyKeyboardOnFirstMessage?: boolean },
 ): Promise<boolean> {
   const segs = buildSegments(tokens);
   let anyOk = false;
+  let first = true;
   for (const seg of segs) {
+    const removeFirst =
+      first && options?.removeReplyKeyboardOnFirstMessage === true;
+    first = false;
     if (seg.kind === "custom") {
-      if (await sendCustomEmojisInMessage(ctx, seg.ids)) {
+      if (await sendCustomEmojisInMessage(
+        ctx,
+        seg.ids,
+        removeFirst ? { reply_markup: { remove_keyboard: true } } : undefined,
+      )) {
         anyOk = true;
       }
     } else {
-      if (await sendOneRegularSticker(ctx, seg.fileId)) {
+      if (await sendOneRegularSticker(
+        ctx,
+        seg.fileId,
+        removeFirst ? { reply_markup: { remove_keyboard: true } } : undefined,
+      )) {
         anyOk = true;
       }
     }
