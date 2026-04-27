@@ -147,9 +147,9 @@ export async function buildWelcomeHandPointerCaption(
   }
   const he = hS.emoji as string;
   const pe = pS.emoji as string;
-  const text = he + line1Text + "\n\n" + line2Text + pe;
-  const heLen = he.length;
-  const offPointer = (he + line1Text + "\n\n" + line2Text).length;
+  const afterHand = " ";
+  const beforePointer = " ";
+  const text = he + afterHand + line1Text + "\n\n" + line2Text + beforePointer + pe;
   const entities: MessageEntity[] = [
     {
       type: "custom_emoji",
@@ -159,7 +159,7 @@ export async function buildWelcomeHandPointerCaption(
     },
     {
       type: "custom_emoji",
-      offset: offPointer,
+      offset: text.length - pe.length,
       length: pe.length,
       custom_emoji_id: pId,
     },
@@ -256,7 +256,7 @@ export async function buildOrderManagerSuccessTwoEmojisCaption(
   const h1 = s0.emoji as string;
   const h2 = s1.emoji as string;
   const text =
-    h1 + "  " + p.line1 + "\n\n" + p.whatToDo + "\n" + p.lineLast + h2;
+    h1 + "  " + p.line1 + "\n\n" + p.whatToDo + "\n" + p.lineLast + " " + h2;
   const offPointer = text.length - h2.length;
   const entities: MessageEntity[] = [
     { type: "custom_emoji", offset: 0, length: h1.length, custom_emoji_id: sId },
@@ -359,7 +359,7 @@ export async function buildOrderSuccessThreeEmojisCaption(
     "\n\n" + h2 + " " + p.delivery +
     "\n" + p.paren +
     "\n\n" + p.body +
-    "\n\n" + p.lastBeforePointer + h3;
+    "\n\n" + p.lastBeforePointer + " " + h3;
   const off2 = (h1 + "  " + p.line1 + "\n\n").length;
   const off3 = text.length - h3.length;
   const entities: MessageEntity[] = [

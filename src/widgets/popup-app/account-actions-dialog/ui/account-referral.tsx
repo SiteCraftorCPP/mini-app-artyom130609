@@ -20,7 +20,9 @@ export const AccountReferral = () => {
   const initDataString = resolveInitData(webApp);
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ["referral-data"],
+    queryKey: ["referral-data", initDataString],
+    staleTime: 0,
+    gcTime: 0,
     queryFn: async () => {
       if (!initDataString) {
         throw new Error("No init data: try opening from Telegram");

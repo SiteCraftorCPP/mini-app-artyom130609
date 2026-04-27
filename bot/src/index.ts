@@ -453,6 +453,15 @@ bot.command("start", async (ctx) => {
     }
   }
 
+  if (payload === "how") {
+    await sendHowToVideo(ctx);
+    return;
+  }
+  if (payload === "about") {
+    await sendAboutShop(ctx);
+    return;
+  }
+
   await sendWelcome(ctx);
 });
 
@@ -517,13 +526,7 @@ async function sendHowToVideo(ctx: Context) {
   }
 }
 
-bot.callbackQuery("menu:how", async (ctx) => {
-  await ctx.answerCallbackQuery();
-  await sendHowToVideo(ctx);
-});
-
-bot.callbackQuery("menu:about", async (ctx) => {
-  await ctx.answerCallbackQuery();
+async function sendAboutShop(ctx: Context) {
   const aboutFromEnv = getAboutStickerFileIdsFromEnv();
   const aboutTokens: readonly string[] = aboutFromEnv?.length
     ? aboutFromEnv
@@ -582,6 +585,16 @@ bot.callbackQuery("menu:about", async (ctx) => {
     return;
   }
   await ctx.reply(ABOUT_SHOP_HTML, { parse_mode: "HTML", reply_markup: aboutKb });
+}
+
+bot.callbackQuery("menu:how", async (ctx) => {
+  await ctx.answerCallbackQuery();
+  await sendHowToVideo(ctx);
+});
+
+bot.callbackQuery("menu:about", async (ctx) => {
+  await ctx.answerCallbackQuery();
+  await sendAboutShop(ctx);
 });
 
 bot.callbackQuery("about:back", async (ctx) => {

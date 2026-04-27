@@ -143,13 +143,15 @@ export const BuyAccountOptions = ({
       {selectedMode ? (
         <div className="flex flex-col gap-3">
           <ModeTitle modeConfig={selectedMode} />
-          {!isCustomVirtsMode ? (
-            <AboutAccountsBlock
-              open={aboutByLevelOpen}
-              onToggle={() => setAboutByLevelOpen((o) => !o)}
-              showBalanceLine={false}
-            />
-          ) : null}
+          <AboutAccountsBlock
+            open={isCustomVirtsMode ? aboutByVirtsOpen : aboutByLevelOpen}
+            onToggle={() =>
+              isCustomVirtsMode
+                ? setAboutByVirtsOpen((o) => !o)
+                : setAboutByLevelOpen((o) => !o)
+            }
+            showBalanceLine={isCustomVirtsMode}
+          />
           <div className="mb-2 space-y-1">
             <AppText tag={TAG.p} variant="darkStrong" className="mb-1">
               {TEXT.labels.server}
@@ -183,11 +185,6 @@ export const BuyAccountOptions = ({
                   disableAutoScrollOnFocus
                   placeholder={BUY_ACCOUNT_OPTIONS_TEXT.customKkPricingPlaceholder}
                   variant="form"
-                />
-                <AboutAccountsBlock
-                  open={aboutByVirtsOpen}
-                  onToggle={() => setAboutByVirtsOpen((o) => !o)}
-                  showBalanceLine
                 />
               </div>
             ) : (

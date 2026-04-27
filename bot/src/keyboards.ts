@@ -12,14 +12,21 @@ import {
   LINK_ABOUT_REVIEWS,
 } from "./texts.js";
 
-/** Инлайн-кнопки под баннером (как в макете). */
+/**
+ * Главное меню: цвета через Bot API `style` (success / danger / primary), как у старых 🟢🔴🔵.
+ * См. https://core.telegram.org/bots/api#inlinekeyboardbutton
+ */
 export function mainMenuInlineKeyboard(miniAppUrl: string) {
+  const shopUrl = miniAppUrl.replace(/\/$/, "");
   return new InlineKeyboard()
-    .webApp(BTN_OPEN_SHOP, miniAppUrl)
+    .webApp(BTN_OPEN_SHOP, shopUrl)
+    .success()
     .row()
     .text(BTN_HOW_TO_ORDER, "menu:how")
+    .danger()
     .row()
-    .text(BTN_ABOUT, "menu:about");
+    .text(BTN_ABOUT, "menu:about")
+    .primary();
 }
 
 /** Под видео «Как оформить заказ». */

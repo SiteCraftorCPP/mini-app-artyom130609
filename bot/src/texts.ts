@@ -32,11 +32,11 @@ export const ABOUT_SHOP = [
   ABOUT_SHOP_LINES[3],
 ].join("\n");
 
-export const BTN_OPEN_SHOP = "🟢 Открыть магазин";
+export const BTN_OPEN_SHOP = "Открыть магазин";
 /** Кнопка в поле ввода (setChatMenuButton → Web App) — тот же URL, что у MINI_APP_URL. */
 export const BTN_MENU_SHOP = "Магазин";
-export const BTN_HOW_TO_ORDER = "🔴 Как оформить заказ";
-export const BTN_ABOUT = "🔵 О магазине";
+export const BTN_HOW_TO_ORDER = "Как оформить заказ";
+export const BTN_ABOUT = "О магазине";
 export const BTN_BACK = "Назад";
 export const BTN_ADMIN_MAIN = "Админ панель";
 /** Главная кнопка: актуальные оплаченные заказы. */
@@ -53,7 +53,7 @@ export const BTN_ORDER_PERIOD_STATS = "Статистика заказов";
 export const BTN_ADMIN_USER_STATS = "👥 Статистика пользователей";
 /** Седьмая: рассылки по базе пользователей. */
 export const BTN_ADMIN_BROADCASTS = "📣 Рассылка";
-export const BTN_BROADCAST_BUY_VIRTS = "🟢 Открыть приложение";
+export const BTN_BROADCAST_BUY_VIRTS = "Открыть приложение";
 export const BTN_BROADCAST_BACK = "🔙 Назад";
 /** Восьмая: поставки. */
 export const BTN_ADMIN_SUPPLIES = "📦 Поставки";
@@ -76,7 +76,7 @@ export const PENDING_ORDERS_HEADER = "📦 Актуальные заказы";
 export const STATS_HEADER = "💰 Сумма текущих заказов в рублях";
 
 /** Кнопка в уведомлении о выполнении заказа (пост с отзывами). */
-export const BTN_WRITE_REVIEW = "🟢 Написать отзыв";
+export const BTN_WRITE_REVIEW = "Написать отзыв";
 export const REVIEW_POST_URL = "https://t.me/artshopvirts_channel/85";
 
 const ORDER_COMPLETED_LINE_REVIEW =
@@ -234,7 +234,7 @@ export const VIDEO_CAPTION_HTML = `<b>${escHtml(VIDEO_CAPTION)}</b>`;
 /**
  * Подпись инлайн-кнопки (без @никнейма — он только в URL: MANAGER_TELEGRAM_URL / t.me/artshopvirts_man).
  */
-export const BTN_WRITE_MANAGER = "🟢 Написать менеджеру";
+export const BTN_WRITE_MANAGER = "Написать менеджеру";
 
 /**
  * Сообщение о продаже виртов — в том же стиле, что «заказ оформлен» + кнопка к менеджеру.
