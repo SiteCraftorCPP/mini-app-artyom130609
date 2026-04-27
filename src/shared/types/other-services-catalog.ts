@@ -6,6 +6,7 @@ export type OtherServiceItem = {
   id: string;
   description: string;
   price: string;
+  payment?: string;
   delivery: OtherServicesDelivery;
   autoText?: string;
   manualAdminHint?: string;

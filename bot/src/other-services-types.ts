@@ -9,6 +9,7 @@ export type OtherServiceItem = {
   id: string;
   description: string;
   price: string;
+  payment?: string;
   delivery: OtherServicesDelivery;
   /** Текст при `auto` — заранее в админке, покупатель видит после оплаты/оформления. */
   autoText?: string;

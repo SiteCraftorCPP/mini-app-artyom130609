@@ -150,6 +150,7 @@ export function addItem(
   input: {
     description: string;
     price: string;
+    payment?: string;
     delivery: OtherServicesDelivery;
     autoText?: string;
     manualAdminHint?: string;
@@ -166,6 +167,7 @@ export function addItem(
     id: genId("i"),
     description: input.description.trim(),
     price: input.price.trim(),
+    ...(input.payment ? { payment: input.payment.trim() } : {}),
     delivery: input.delivery,
     ...(input.delivery === "auto" && input.autoText
       ? { autoText: input.autoText.trim() }

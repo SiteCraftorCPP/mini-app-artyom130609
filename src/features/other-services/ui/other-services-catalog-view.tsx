@@ -66,6 +66,11 @@ function ServiceItemCard({ item }: { item: OtherServiceItem }) {
         >
           {item.price}
         </AppText>
+        {item.payment ? (
+          <AppText tag={TAG.p} variant="primaryMedium" size="small" className="!text-left text-white/75">
+            Оплата: {item.payment}
+          </AppText>
+        ) : null}
         <div className="flex flex-wrap items-center gap-2">
           <span className="rounded border border-white/20 bg-white/5 px-2 py-0.5 text-[11px] text-[#8C8C8C]">
             {deliveryRu(item.delivery)}
@@ -113,11 +118,6 @@ export const OtherServicesCatalogView = ({ catalog }: Props) => {
   const games = catalog.games;
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
 
-  const current: OtherServiceGame = useMemo(() => {
-    const key = selectedKey ?? games[0]!.projectKey;
-    return games.find((g) => g.projectKey === key) ?? games[0]!;
-  }, [games, selectedKey]);
-
   if (games.length === 0) {
     return (
       <div className="px-4 pb-4">
@@ -132,6 +132,11 @@ export const OtherServicesCatalogView = ({ catalog }: Props) => {
       </div>
     );
   }
+
+  const current: OtherServiceGame = useMemo(() => {
+    const key = selectedKey ?? games[0]!.projectKey;
+    return games.find((g) => g.projectKey === key) ?? games[0]!;
+  }, [games, selectedKey]);
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4 px-4 pb-4">

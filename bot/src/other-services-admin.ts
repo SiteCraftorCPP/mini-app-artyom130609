@@ -62,12 +62,21 @@ type WizState =
       description: string;
     }
   | {
+      step: "itemPayment";
+      projectKey: string;
+      mainId: string;
+      subId: string;
+      description: string;
+      price: string;
+    }
+  | {
       step: "itemAutoText";
       projectKey: string;
       mainId: string;
       subId: string;
       description: string;
       price: string;
+      payment: string;
     }
   | {
       step: "itemManualHint";
@@ -76,12 +85,20 @@ type WizState =
       subId: string;
       description: string;
       price: string;
+      payment: string;
     };
 
 const awaitingOs = new Map<number, WizState>();
 const pendingItemBeforeDelivery = new Map<
   number,
-  { projectKey: string; mainId: string; subId: string; description: string; price: string }
+  {
+    projectKey: string;
+    mainId: string;
+    subId: string;
+    description: string;
+    price: string;
+    payment: string;
+  }
 >();
 
 function assertCb(s: string) {
@@ -245,7 +262,8 @@ export function installOtherServicesAdmin(bot: Bot, adminIds: Set<number>) {
     const lines = s.items.map((it) => {
       const del =
         it.delivery === "manager" ? "→ менеджер" : it.delivery === "auto" ? "авто" : "вручную";
-      return `• <b>${it.price}</b> — ${it.description} (${del})`;
+      const payment = it.payment ? `; оплата: ${it.payment}` : "";
+      return `• <b>${it.price}</b> — ${it.description} (${del}${payment})`;
     });
     return `📂 <b>${s.name}</b>\n\n${lines.length ? lines.join("\n") : "Пока пусто."}\n\nДобавьте позицию или откройте существующую, чтобы удалить.`;
   }
@@ -570,7 +588,7 @@ export function installOtherServicesAdmin(bot: Bot, adminIds: Set<number>) {
       [
         "Введите <b>краткое описание</b> позиции (что покупают).",
         "",
-        "Далее: цена → выберите способ выдачи: менеджер / авто / вручную.",
+        "Далее: цена → метод оплаты → способ выдачи: менеджер / авто / вручную.",
       ].join("\n"),
       { parse_mode: "HTML", reply_markup: kbCancel() },
     );
@@ -633,6 +651,7 @@ export function installOtherServicesAdmin(bot: Bot, adminIds: Set<number>) {
         addItem(pend.projectKey, pend.mainId, pend.subId, {
           description: pend.description,
           price: pend.price,
+          payment: pend.payment,
           delivery: "manager",
         });
         await ctx.answerCallbackQuery();
@@ -650,6 +669,7 @@ export function installOtherServicesAdmin(bot: Bot, adminIds: Set<number>) {
           subId: pend.subId,
           description: pend.description,
           price: pend.price,
+          payment: pend.payment,
         });
         await ctx.answerCallbackQuery();
         await a.reply("Введите <b>текст автовыдачи</b> (увидит покупатель):", { parse_mode: "HTML", reply_markup: kbCancel() });
@@ -662,6 +682,7 @@ export function installOtherServicesAdmin(bot: Bot, adminIds: Set<number>) {
         subId: pend.subId,
         description: pend.description,
         price: pend.price,
+        payment: pend.payment,
       });
       await ctx.answerCallbackQuery();
       await a.reply(
@@ -727,12 +748,28 @@ export function installOtherServicesAdmin(bot: Bot, adminIds: Set<number>) {
       if (!desc) {
         return;
       }
-      pendingItemBeforeDelivery.set(ctx.from.id, {
+      awaitingOs.set(ctx.from.id, {
+        step: "itemPayment",
         projectKey: st.projectKey,
         mainId: st.mainId,
         subId: st.subId,
         description: desc,
         price: t,
+      });
+      await ctx.reply(
+        "Введите <b>метод оплаты</b> (например: <code>TON, USDT TRC20, СБП</code>):",
+        { parse_mode: "HTML", reply_markup: kbCancel() },
+      );
+      return;
+    }
+    if (st.step === "itemPayment") {
+      pendingItemBeforeDelivery.set(ctx.from.id, {
+        projectKey: st.projectKey,
+        mainId: st.mainId,
+        subId: st.subId,
+        description: st.description,
+        price: st.price,
+        payment: t,
       });
       awaitingOs.delete(ctx.from.id);
       const kb = new InlineKeyboard()
@@ -750,6 +787,7 @@ export function installOtherServicesAdmin(bot: Bot, adminIds: Set<number>) {
       addItem(st.projectKey, st.mainId, st.subId, {
         description: st.description,
         price: st.price,
+        payment: st.payment,
         delivery: "auto",
         autoText: t,
       });
@@ -765,6 +803,7 @@ export function installOtherServicesAdmin(bot: Bot, adminIds: Set<number>) {
       addItem(st.projectKey, st.mainId, st.subId, {
         description: st.description,
         price: st.price,
+        payment: st.payment,
         delivery: "manual",
         manualAdminHint: hint,
       });
