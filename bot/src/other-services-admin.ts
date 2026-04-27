@@ -32,6 +32,11 @@ const pendingPayMode = new Map<
   { g: number; m: number; sub?: number; desc: string }
 >();
 
+/** Сообщения об «других услугах» обрабатываются вторыми; админка должна сразу `next()`. */
+export function hasActiveOtherServicesWizard(userId: number): boolean {
+  return wizards.has(userId) || pendingPayMode.has(userId);
+}
+
 function esc(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
@@ -43,7 +48,7 @@ function buildRootKb(): InlineKeyboard {
     const lab = (g.name || "Игра").slice(0, 28);
     kb.text(`🎮 ${lab}`, `${PREFIX}g!${gi}`).row();
   });
-  kb.text("➕ Добавить игру (плашка в мини-аппе)", `${PREFIX}newg`).row();
+  kb.text("➕ Добавить игру", `${PREFIX}newg`).row();
   kb.text(BTN_BACK_TO_ADMIN, "admin:menu");
   return kb;
 }
@@ -51,29 +56,29 @@ function buildRootKb(): InlineKeyboard {
 function buildRootText(): string {
   const st = getOtherServicesV1();
   if (st.games.length === 0) {
-    return "🛎 <b>Другие услуги</b>\n\nПока нет игр. Нажмите <b>Добавить игру</b> — введёте название плашки, как в магазине.";
+    return "🛎 <b>Другие услуги</b>\n\nПока нет игр. Нажмите <b>Добавить игру</b> - введите название.";
   }
   const lines = st.games.map((g) => `• ${esc(g.name)}`);
-  return `🛎 <b>Другие услуги</b>\n\nИгр в каталоге: <b>${st.games.length}</b>.\n${lines.join("\n")}\n\nОткройте игру, чтобы править <b>разделы</b> → <b>подразделы</b> (необязательно) и <b>позиции</b> (описание + оплата: менеджер или текст).`;
+  return `🛎 <b>Другие услуги</b>\n\n${st.games.length} игр.\n${lines.join("\n")}`;
 }
 
 function gameView(gi: number): { text: string; kb: InlineKeyboard } {
   const st = getOtherServicesV1();
   const g = st.games[gi];
   if (!g) {
-    return { text: "Игра не найдена, откройте список снова.", kb: new InlineKeyboard().text("⬅️ К списку", `${PREFIX}0`) };
+    return { text: "Нет в списке.", kb: new InlineKeyboard().text("⬅️", `${PREFIX}0`) };
   }
   const lines = g.mainSections.map(
-    (m) => `• <b>${esc(m.name)}</b> (подразд.: ${m.subsections.length}, товаров: ${m.subsections.length ? "в подр." : m.items.length})`,
+    (m) => `• <b>${esc(m.name)}</b> — подр.: ${m.subsections.length}, товаров: ${m.subsections.length ? m.subsections.reduce((a, s) => a + s.items.length, 0) : m.items.length}`,
   );
-  const text = `🎮 <b>${esc(g.name)}</b>\n\n${lines.length ? lines.join("\n") : "Пока нет разделов."}\n\nСначала — <b>основной раздел</b>. Внутри: либо <b>подразделы</b> с товарами, либо сразу товары, но не вместе.`;
+  const text = `🎮 <b>${esc(g.name)}</b>\n\n${lines.length ? lines.join("\n") : "Нет разделов."}`;
   const kb = new InlineKeyboard();
   g.mainSections.forEach((m, mi) => {
     kb.text(`📁 ${m.name.slice(0, 24)}`, `${PREFIX}m!${gi}!${mi}`).row();
   });
-  kb.text("➕ Основной раздел", `${PREFIX}addm!${gi}`).row();
-  kb.text("🗑 Удалить эту игру", `${PREFIX}ydg!${gi}`).row();
-  kb.text("⬅️ К списку игр", `${PREFIX}0`);
+  kb.text("➕ Раздел", `${PREFIX}addm!${gi}`).row();
+  kb.text("🗑 Игра", `${PREFIX}ydg!${gi}`).row();
+  kb.text("⬅️", `${PREFIX}0`);
   return { text, kb };
 }
 
@@ -82,7 +87,7 @@ function mainView(gi: number, mi: number): { text: string; kb: InlineKeyboard } 
   const g = st.games[gi];
   const m = g?.mainSections[mi];
   if (!g || !m) {
-    return { text: "Раздел не найден.", kb: new InlineKeyboard().text("⬅️ Назад", `${PREFIX}g!${gi}`) };
+    return { text: "Нет.", kb: new InlineKeyboard().text("⬅️", `${PREFIX}g!${gi}`) };
   }
   const hasSub = m.subsections.length > 0;
   const hasM = m.items.length > 0;
@@ -93,7 +98,7 @@ function mainView(gi: number, mi: number): { text: string; kb: InlineKeyboard } 
       body += `• ${esc(s.name)} — ${s.items.length} п.\n`;
     });
   } else {
-    body += "Товары в разделе (без подразделов):\n";
+    body += "Товары:\n";
     m.items.forEach((it) => {
       const pm = it.paymentMode === "manager" ? "→ менеджер" : "инфо";
       body += `• ${esc(it.description.slice(0, 40))} (${pm})\n`;
@@ -102,7 +107,7 @@ function mainView(gi: number, mi: number): { text: string; kb: InlineKeyboard } 
       body += "Пока пусто.\n";
     }
   }
-  body += "\nПозиция = описание + <b>оплата</b> (кнопка на менеджера или инструкция текстом).";
+  body += "\n";
   const kb = new InlineKeyboard();
   if (hasSub) {
     m.subsections.forEach((s, si) => {
@@ -116,15 +121,12 @@ function mainView(gi: number, mi: number): { text: string; kb: InlineKeyboard } 
         kb.text(`🧾 ${t}`, `${PREFIX}ydim!${gi}!${mi}!${ii}`).row();
       });
     }
-    kb.text("➕ Товар (в этот раздел)", `${PREFIX}addim!${gi}!${mi}`).row();
+    kb.text("➕ Товар", `${PREFIX}addim!${gi}!${mi}`).row();
     if (!hasM) {
-      kb.text("➕ Подраздел (тогда товары только в нём)", `${PREFIX}adds!${gi}!${mi}`).row();
+      kb.text("➕ Подраздел", `${PREFIX}adds!${gi}!${mi}`).row();
     }
   }
-  if (hasSub) {
-    kb.text("➕ Товар (в выбранный подраздел — откройте подраздел)", `${PREFIX}noop`).row();
-  }
-  kb.text("🗑 Удалить раздел", `${PREFIX}ydm!${gi}!${mi}`).row();
+  kb.text("🗑 Раздел", `${PREFIX}ydm!${gi}!${mi}`).row();
   kb.text("⬅️ К игре", `${PREFIX}g!${gi}`);
   return { text: body, kb };
 }
@@ -133,7 +135,7 @@ function subView(gi: number, mi: number, si: number): { text: string; kb: Inline
   const st = getOtherServicesV1();
   const s = st.games[gi]?.mainSections[mi]?.subsections[si];
   if (!s) {
-    return { text: "Подраздел не найден.", kb: new InlineKeyboard().text("⬅️", `${PREFIX}m!${gi}!${mi}`) };
+    return { text: "Нет.", kb: new InlineKeyboard().text("⬅️", `${PREFIX}m!${gi}!${mi}`) };
   }
   let body = `📂 <b>${esc(s.name)}</b>\n\n`;
   s.items.forEach((it) => {
@@ -148,9 +150,9 @@ function subView(gi: number, mi: number, si: number): { text: string; kb: Inline
     const t = (it.description.slice(0, 16) + (it.description.length > 16 ? "…" : "")) as string;
     kb.text(`🧾 ${t}`, `${PREFIX}ydis!${gi}!${mi}!${si}!${ii}`).row();
   });
-  kb.text("➕ Товар (описание + оплата)", `${PREFIX}addis!${gi}!${mi}!${si}`).row();
-  kb.text("🗑 Удалить подраздел", `${PREFIX}yds!${gi}!${mi}!${si}`).row();
-  kb.text("⬅️ К разделу", `${PREFIX}m!${gi}!${mi}`);
+  kb.text("➕ Товар", `${PREFIX}addis!${gi}!${mi}!${si}`).row();
+  kb.text("🗑 Подраздел", `${PREFIX}yds!${gi}!${mi}!${si}`).row();
+  kb.text("⬅️", `${PREFIX}m!${gi}!${mi}`);
   return { text: body, kb };
 }
 
@@ -214,14 +216,6 @@ export function installOtherServicesAdmin(bot: Bot, adminIds: Set<number>) {
     }
   });
 
-  bot.callbackQuery(`${PREFIX}noop`, async (ctx) => {
-    const a = await requireAd(ctx);
-    if (a == null) {
-      return;
-    }
-    await ctx.answerCallbackQuery({ text: "Откройте подраздел, чтобы добавить товар", show_alert: true });
-  });
-
   bot.callbackQuery(`${PREFIX}0`, async (ctx) => {
     const a = await requireAd(ctx);
     if (a == null) {
@@ -247,10 +241,7 @@ export function installOtherServicesAdmin(bot: Bot, adminIds: Set<number>) {
       wizards.set(ctx.from.id, { k: "gameName" });
     }
     await ctx.answerCallbackQuery();
-    await a.reply("Введите <b>название на плашку</b> (как в магазине, одной строкой):", {
-      parse_mode: "HTML",
-      reply_markup: kbCancel(),
-    });
+    await a.reply("Введите <b>название</b>:", { parse_mode: "HTML", reply_markup: kbCancel() });
   });
 
   bot.callbackQuery(new RegExp(`^${PREFIX.replace("!", "\\!")}g!([0-9]+)$`), async (ctx) => {
@@ -320,7 +311,7 @@ export function installOtherServicesAdmin(bot: Bot, adminIds: Set<number>) {
       wizards.set(ctx.from.id, { k: "mainName", g: gi });
     }
     await ctx.answerCallbackQuery();
-    await a.reply("Введите <b>название основного раздела</b>:", { parse_mode: "HTML", reply_markup: kbCancel() });
+    await a.reply("Введите <b>название</b> раздела:", { parse_mode: "HTML", reply_markup: kbCancel() });
   });
 
   bot.callbackQuery(new RegExp(`^${PREFIX.replace("!", "\\!")}adds!([0-9]+)!([0-9]+)$`), async (ctx) => {
@@ -334,7 +325,7 @@ export function installOtherServicesAdmin(bot: Bot, adminIds: Set<number>) {
       wizards.set(ctx.from.id, { k: "subName", g: gi, m: mi });
     }
     await ctx.answerCallbackQuery();
-    await a.reply("Введите <b>название подраздела (плашка)</b>:", { parse_mode: "HTML", reply_markup: kbCancel() });
+    await a.reply("Введите <b>подраздел</b>:", { parse_mode: "HTML", reply_markup: kbCancel() });
   });
 
   bot.callbackQuery(new RegExp(`^${PREFIX.replace("!", "\\!")}addim!([0-9]+)!([0-9]+)$`), async (ctx) => {
@@ -348,7 +339,7 @@ export function installOtherServicesAdmin(bot: Bot, adminIds: Set<number>) {
       wizards.set(ctx.from.id, { k: "itemDesc", g: gi, m: mi });
     }
     await ctx.answerCallbackQuery();
-    await a.reply("Введите <b>описание товара</b> (текст для плашки/карточки):", { parse_mode: "HTML", reply_markup: kbCancel() });
+    await a.reply("Введите <b>описание</b>:", { parse_mode: "HTML", reply_markup: kbCancel() });
   });
 
   bot.callbackQuery(new RegExp(`^${PREFIX.replace("!", "\\!")}addis!([0-9]+)!([0-9]+)!([0-9]+)$`), async (ctx) => {
@@ -363,7 +354,7 @@ export function installOtherServicesAdmin(bot: Bot, adminIds: Set<number>) {
       wizards.set(ctx.from.id, { k: "itemDesc", g: gi, m: mi, sub: si });
     }
     await ctx.answerCallbackQuery();
-    await a.reply("Введите <b>описание товара</b>:", { parse_mode: "HTML", reply_markup: kbCancel() });
+    await a.reply("Введите <b>описание</b>:", { parse_mode: "HTML", reply_markup: kbCancel() });
   });
 
   bot.callbackQuery(new RegExp(`^${PREFIX.replace("!", "\\!")}pay!([01])$`), async (ctx) => {
@@ -377,7 +368,7 @@ export function installOtherServicesAdmin(bot: Bot, adminIds: Set<number>) {
     }
     const pend = pendingPayMode.get(uid);
     if (!pend) {
-      await ctx.answerCallbackQuery({ text: "Сначала введите описание", show_alert: true });
+      await ctx.answerCallbackQuery({ text: "Введите описание", show_alert: true });
       return;
     }
     const tag = ctx.match![1]!;
@@ -386,7 +377,7 @@ export function installOtherServicesAdmin(bot: Bot, adminIds: Set<number>) {
       const g = st.games[pend.g];
       const m = g?.mainSections[pend.m];
       if (!g || !m) {
-        await ctx.answerCallbackQuery({ text: "Каталог устарел, откройте список снова", show_alert: true });
+        await ctx.answerCallbackQuery({ text: "Обновите список", show_alert: true });
         return;
       }
       if (pend.sub == null) {
@@ -403,11 +394,11 @@ export function installOtherServicesAdmin(bot: Bot, adminIds: Set<number>) {
       await ctx.answerCallbackQuery();
       if (pend.sub == null) {
         const { text, kb } = mainView(gi, mi);
-        await a.reply("✅ Сохранено: <b>кнопка на менеджера</b> в мини-аппе.", { parse_mode: "HTML" });
+        await a.reply("✅ Ок", { parse_mode: "HTML" });
         await a.reply(text, { parse_mode: "HTML", reply_markup: kb });
       } else {
         const { text, kb } = subView(gi, mi, pend.sub!);
-        await a.reply("✅ Сохранено: <b>кнопка на менеджера</b> в мини-аппе.", { parse_mode: "HTML" });
+        await a.reply("✅ Ок", { parse_mode: "HTML" });
         await a.reply(text, { parse_mode: "HTML", reply_markup: kb });
       }
       return;
@@ -416,7 +407,7 @@ export function installOtherServicesAdmin(bot: Bot, adminIds: Set<number>) {
       wizards.set(uid, { k: "itemInfoText", g: pend.g, m: pend.m, sub: pend.sub, desc: pend.desc, pay: "info" });
       pendingPayMode.delete(uid);
       await ctx.answerCallbackQuery();
-      await a.reply("Введите <b>текст</b> (реквизиты, способ оплаты, инструкция) — увидит пользователь в карточке:", {
+      await a.reply("Введите <b>текст</b> для карточки:", {
         parse_mode: "HTML",
         reply_markup: kbCancel(),
       });
@@ -436,7 +427,7 @@ export function installOtherServicesAdmin(bot: Bot, adminIds: Set<number>) {
       .row()
       .text("Отмена", `${PREFIX}g!${gi}`);
     const g = getOtherServicesV1().games[gi];
-    await a.reply(`Удалить игру <b>${esc(g?.name ?? "")}</b> со всеми разделами?`, { parse_mode: "HTML", reply_markup: kb });
+    await a.reply(`Игра <b>${esc(g?.name ?? "")}</b> — удалить?`, { parse_mode: "HTML", reply_markup: kb });
   });
 
   bot.callbackQuery(new RegExp(`^${PREFIX.replace("!", "\\!")}dy!([0-9]+)$`), async (ctx) => {
@@ -474,7 +465,7 @@ export function installOtherServicesAdmin(bot: Bot, adminIds: Set<number>) {
       .row()
       .text("Отмена", `${PREFIX}m!${gi}!${mi}`);
     const m = getOtherServicesV1().games[gi]?.mainSections[mi];
-    await a.reply(`Удалить раздел <b>${esc(m?.name ?? "")}</b> со всем содержимым?`, { parse_mode: "HTML", reply_markup: kb });
+    await a.reply(`Раздел <b>${esc(m?.name ?? "")}</b> — удалить?`, { parse_mode: "HTML", reply_markup: kb });
   });
 
   bot.callbackQuery(new RegExp(`^${PREFIX.replace("!", "\\!")}dm!([0-9]+)!([0-9]+)$`), async (ctx) => {
@@ -515,7 +506,7 @@ export function installOtherServicesAdmin(bot: Bot, adminIds: Set<number>) {
       .row()
       .text("Отмена", `${PREFIX}s!${gi}!${mi}!${si}`);
     const s = getOtherServicesV1().games[gi]?.mainSections[mi]?.subsections[si];
-    await a.reply(`Удалить подраздел <b>${esc(s?.name ?? "")}</b>?`, { parse_mode: "HTML", reply_markup: kb });
+    await a.reply(`Подраздел <b>${esc(s?.name ?? "")}</b> — удалить?`, { parse_mode: "HTML", reply_markup: kb });
   });
 
   bot.callbackQuery(new RegExp(`^${PREFIX.replace("!", "\\!")}ds!([0-9]+)!([0-9]+)!([0-9]+)$`), async (ctx) => {
@@ -563,7 +554,7 @@ export function installOtherServicesAdmin(bot: Bot, adminIds: Set<number>) {
       .text("🗑 Удалить", `${PREFIX}Xim!${gi}!${mi}!${ii}`)
       .row()
       .text("Отмена", `${PREFIX}m!${gi}!${mi}`);
-    await a.reply(`Удалить позицию:\n${esc(it.description.slice(0, 120))}`, { parse_mode: "HTML", reply_markup: kb });
+    await a.reply(`${esc(it.description.slice(0, 80))}`, { parse_mode: "HTML", reply_markup: kb });
   });
 
   bot.callbackQuery(new RegExp(`^${PREFIX.replace("!", "\\!")}Xim!([0-9]+)!([0-9]+)!([0-9]+)$`), async (ctx) => {
@@ -613,7 +604,7 @@ export function installOtherServicesAdmin(bot: Bot, adminIds: Set<number>) {
       .text("🗑 Удалить", `${PREFIX}Xis!${gi}!${mi}!${si}!${ii}`)
       .row()
       .text("Отмена", `${PREFIX}s!${gi}!${mi}!${si}`);
-    await a.reply(`Удалить позицию:\n${esc(it.description.slice(0, 120))}`, { parse_mode: "HTML", reply_markup: kb });
+    await a.reply(`${esc(it.description.slice(0, 80))}`, { parse_mode: "HTML", reply_markup: kb });
   });
 
   bot.callbackQuery(new RegExp(`^${PREFIX.replace("!", "\\!")}Xis!([0-9]+)!([0-9]+)!([0-9]+)!([0-9]+)$`), async (ctx) => {
@@ -658,11 +649,17 @@ export function installOtherServicesAdmin(bot: Bot, adminIds: Set<number>) {
     const st0 = wizards.get(ctx.from.id);
     if (st0?.k === "gameName") {
       if (t.length < 1) {
+        await ctx.reply("Пусто. Введите название.");
         return;
       }
-      createGame(t);
-      clearWiz(ctx.from.id);
-      await ctx.reply("✅ Игра добавлена.", { reply_markup: new InlineKeyboard().text("⬅️ К списку", `${PREFIX}0`) });
+      try {
+        createGame(t);
+        clearWiz(ctx.from.id);
+        await ctx.reply("✅ Ок", { reply_markup: new InlineKeyboard().text("⬅️", `${PREFIX}0`) });
+      } catch (e) {
+        console.error("[os-admin] createGame", e);
+        await ctx.reply("Ошибка сохранения, попробуйте ещё раз.");
+      }
       return;
     }
     if (st0?.k === "mainName") {
@@ -672,7 +669,7 @@ export function installOtherServicesAdmin(bot: Bot, adminIds: Set<number>) {
         addMainSection(g.id, t);
       }
       clearWiz(ctx.from.id);
-      await ctx.reply("✅ Раздел создан.", { reply_markup: new InlineKeyboard().text("⬅️ К игре", `${PREFIX}g!${gi}`) });
+      await ctx.reply("✅ Ок", { reply_markup: new InlineKeyboard().text("⬅️", `${PREFIX}g!${gi}`) });
       return;
     }
     if (st0?.k === "subName") {
@@ -683,24 +680,24 @@ export function installOtherServicesAdmin(bot: Bot, adminIds: Set<number>) {
         const r = addSubsection(game.id, main.id, t);
         if (r == null) {
           clearWiz(ctx.from.id);
-          await ctx.reply("Сначала удалите <b>товары</b> из раздела, потом создавайте подразделы.", { parse_mode: "HTML" });
+      await ctx.reply("Удалите товары из раздела.", { parse_mode: "HTML" });
           return;
         }
       }
       clearWiz(ctx.from.id);
-      await ctx.reply("✅ Подраздел создан.", { reply_markup: new InlineKeyboard().text("⬅️ К разделу", `${PREFIX}m!${gi}!${mi}`) });
+      await ctx.reply("✅ Ок", { reply_markup: new InlineKeyboard().text("⬅️", `${PREFIX}m!${gi}!${mi}`) });
       return;
     }
     if (st0?.k === "itemDesc") {
       pendingPayMode.set(ctx.from.id, { g: st0.g, m: st0.m, sub: st0.sub, desc: t });
       wizards.delete(ctx.from.id);
       const kb = new InlineKeyboard()
-        .text("👤 Менеджер (кнопка в мини-аппе)", `${PREFIX}pay!0`)
+        .text("👤 Менеджер", `${PREFIX}pay!0`)
         .row()
-        .text("📝 Текст (реквизиты/инфо в карточке)", `${PREFIX}pay!1`)
+        .text("📝 Текст", `${PREFIX}pay!1`)
         .row()
         .text("❌ Отмена", CB_CANCEL);
-      await ctx.reply("Как оформить <b>оплату</b> для этой позиции?", { parse_mode: "HTML", reply_markup: kb });
+      await ctx.reply("Оплата:", { parse_mode: "HTML", reply_markup: kb });
       return;
     }
     if (st0?.k === "itemInfoText") {
@@ -721,7 +718,7 @@ export function installOtherServicesAdmin(bot: Bot, adminIds: Set<number>) {
       const mi = st0.m;
       const ssub = st0.sub;
       clearWiz(ctx.from.id);
-      await ctx.reply("✅ Позиция сохранена.");
+      await ctx.reply("✅ Ок");
       if (ssub == null) {
         const { text, kb } = mainView(gi, mi);
         await ctx.reply(text, { parse_mode: "HTML", reply_markup: kb });

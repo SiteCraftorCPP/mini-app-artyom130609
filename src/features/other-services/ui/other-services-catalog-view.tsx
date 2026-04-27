@@ -74,15 +74,6 @@ function ServiceItemCard({ item }: { item: OtherServiceItem }) {
               </AppText>
             </a>
           </Button>
-        ) : !item.paymentInfo ? (
-          <AppText
-            tag={TAG.p}
-            variant="primaryMedium"
-            size="small"
-            className="!text-left text-white/50"
-          >
-            Оплата: информация в карточке
-          </AppText>
         ) : null}
       </div>
     </li>
@@ -159,7 +150,7 @@ function MainSectionBlock({ main }: { main: OtherServiceMain }) {
               size="small"
               className="!text-left text-white/45"
             >
-              Пока пусто.
+              Пусто.
             </AppText>
           ) : (
             <ul className="flex flex-col gap-2">
@@ -177,7 +168,7 @@ function MainSectionBlock({ main }: { main: OtherServiceMain }) {
             size="small"
             className="!text-left text-white/45"
           >
-            Пока пусто.
+            Пусто.
           </AppText>
         ) : (
           <ul className="flex flex-col gap-2">
@@ -200,11 +191,9 @@ export const OtherServicesCatalogView = ({ catalog }: Props) => {
   if (games.length === 0) {
     return (
       <div className="px-4 pb-4">
-        <div className="mb-3 rounded-[14px] border border-white/10 bg-white/[0.04] p-3">
-          <AppText tag={TAG.p} variant="primaryMedium" size="small" className="!text-left text-white/60">
-            Каталог пуст. Когда админ добавит «игры» и позиции, здесь появятся плашки в стиле магазина.
-          </AppText>
-        </div>
+        <AppText tag={TAG.p} variant="primaryMedium" size="small" className="!text-left text-white/50">
+          Каталог пуст.
+        </AppText>
       </div>
     );
   }
@@ -216,17 +205,6 @@ export const OtherServicesCatalogView = ({ catalog }: Props) => {
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-5 px-3 pb-4 sm:px-4">
-      <div className="px-0.5">
-        <AppText
-          tag={TAG.p}
-          variant="primaryMedium"
-          size="small"
-          className="!text-balance !text-left text-white/75"
-        >
-          Выберите плашку, затем раздел и карточку. Оплата — кнопка к менеджеру или текст внутри карточки.
-        </AppText>
-      </div>
-
       <div className="hide-scrollbar -mx-1 flex min-w-0 flex-nowrap gap-2.5 overflow-x-auto px-1 pb-1">
         {games.map((g, idx) => {
           const isActive = (selectedId ?? games[0]!.id) === g.id;
@@ -266,16 +244,9 @@ export const OtherServicesCatalogView = ({ catalog }: Props) => {
       </div>
 
       {current.mainSections.length === 0 ? (
-        <div className="rounded-[14px] border border-amber-500/20 bg-amber-500/5 p-3">
-          <AppText
-            tag={TAG.p}
-            variant="primaryMedium"
-            size="small"
-            className="!text-left text-amber-100/80"
-          >
-            В этой «игре» ещё нет разделов. Настройка в админке.
-          </AppText>
-        </div>
+        <AppText tag={TAG.p} variant="primaryMedium" size="small" className="!text-left text-white/45">
+          Пусто.
+        </AppText>
       ) : null}
 
       <ul className="flex flex-col gap-8">

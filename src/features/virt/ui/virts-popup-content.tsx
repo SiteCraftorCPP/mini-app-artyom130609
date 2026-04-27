@@ -53,7 +53,7 @@ export const VirtsPopupContent = ({
             tag={TAG.p}
             className="text-balance text-red-300/90"
           >
-            {catalogQuery.error?.message ?? "Не удалось загрузить каталог услуг."}
+            {catalogQuery.error?.message ?? "Ошибка загрузки."}
           </AppText>
         </div>
       );

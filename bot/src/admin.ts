@@ -62,6 +62,7 @@ import {
 } from "./supplies-store.js";
 
 import { addPromoCode, deletePromoCode, getAllPromoCodes } from "./promo-codes-store.js";
+import { hasActiveOtherServicesWizard } from "./other-services-admin.js";
 
 const CB = {
   list: "admin:lst",
@@ -1828,7 +1829,10 @@ export function installAdminModule(bot: Bot<Context>, adminIds: Set<number>) {
     if (!adminIds.has(ctx.from.id)) {
       return next();
     }
-    
+    if (hasActiveOtherServicesWizard(ctx.from.id)) {
+      return next();
+    }
+
     if (awaitingBroadcastTextByUserId.get(ctx.from.id)) {
       clearAwaitingBroadcast(ctx.from.id);
       const msgId = ctx.message.message_id;

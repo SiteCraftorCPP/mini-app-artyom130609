@@ -464,8 +464,8 @@ bot.command("start", async (ctx) => {
   await sendWelcome(ctx);
 });
 
-installOtherServicesAdmin(bot, BOT_ADMIN_IDS);
 installAdminModule(bot, BOT_ADMIN_IDS);
+installOtherServicesAdmin(bot, BOT_ADMIN_IDS);
 
 async function buildHowToOrderCaptionBlocks(ctx: Context): Promise<{
   text: string;
