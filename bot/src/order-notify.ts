@@ -39,6 +39,7 @@ import { consumePromoCode, getAllPromoCodes } from "./promo-codes-store.js";
 import { parseRublesAmountFromUserText } from "./money-input.js";
 import {
   buildPaymentUrl,
+  createFreeKassaOrderPayUrl,
   formatAmountForFk,
   isFreeKassaNotifyIp,
   parseFreeKassaFormBody,
@@ -1046,14 +1047,47 @@ export function startOrderNotifyHttpServer(
         const oa = formatAmountForFk(amountNum);
         const sign = signPaymentForm(merchantId, oa, secret1, "RUB", merchantOrderId);
         const i = fkMethodId(body.method);
-        const payUrl = buildPaymentUrl({
-          m: merchantId,
-          oa,
-          o: merchantOrderId,
-          currency: "RUB",
-          s: sign,
-          i,
-        });
+        const apiKey = process.env.FREEKASSA_API_KEY?.trim();
+        const clientIp = getClientIp(req).trim() || "0.0.0.0";
+        const payerEmail = `u${telegramUserId}@invalid`;
+
+        let payUrl: string;
+        if (apiKey) {
+          const shopIdNum = Number.parseInt(merchantId, 10);
+          if (!Number.isFinite(shopIdNum) || shopIdNum <= 0) {
+            res.writeHead(500, { "Content-Type": "application/json", ...corsNotifyHeaders });
+            res.end(JSON.stringify({ error: "freekassa merchant id" }));
+            return;
+          }
+          try {
+            const created = await createFreeKassaOrderPayUrl({
+              apiKey,
+              shopId: shopIdNum,
+              paymentId: merchantOrderId,
+              i,
+              email: payerEmail,
+              ip: clientIp,
+              amountRub: amountNum,
+              currency: "RUB",
+            });
+            payUrl = created.payUrl;
+          } catch (e) {
+            const msg = e instanceof Error ? e.message : String(e);
+            console.error("[payment] FK API orders/create", msg);
+            res.writeHead(502, { "Content-Type": "application/json", ...corsNotifyHeaders });
+            res.end(JSON.stringify({ error: "freekassa api" }));
+            return;
+          }
+        } else {
+          payUrl = buildPaymentUrl({
+            m: merchantId,
+            oa,
+            o: merchantOrderId,
+            currency: "RUB",
+            s: sign,
+            i,
+          });
+        }
         const kind = parseOrderKind(body.orderKind) ?? "virt";
         const transfer =
           body.transferMethod?.trim() ||
@@ -1359,7 +1393,7 @@ export function startOrderNotifyHttpServer(
         `HTTP мини-апп → продать: POST http://${bind}:${port}/notify/sell-virt-webapp { initData }`,
       );
       console.log(
-        `FreeKassa: prepare POST http://${bind}:${port}/notify/payment/prepare; callback GET|POST /notify/freekassa (URL оповещения в ЛК, секрет 2)`,
+        `FreeKassa: prepare POST http://${bind}:${port}/notify/payment/prepare (при FREEKASSA_API_KEY — api.fk.life/orders/create; иначе pay.fk.money); callback GET|POST /notify/freekassa (URL оповещения в ЛК, секрет 2)`,
       );
     }
     if (secret) {

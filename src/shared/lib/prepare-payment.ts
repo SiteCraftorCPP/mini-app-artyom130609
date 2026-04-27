@@ -48,6 +48,12 @@ function mapPrepareError(status: number, body: string): string {
   if (code === "freekassa not configured") {
     return "На сервере не задан FREEKASSA_SECRET1 в .env у бота — попросите администратора.";
   }
+  if (code === "freekassa api") {
+    return "Платёжка отклонила создание заказа. Проверьте FREEKASSA_API_KEY и ID способов в .env; если не поможет — напишите в поддержку.";
+  }
+  if (code === "freekassa merchant id") {
+    return "Неверный FREEKASSA_MERCHANT_ID на сервере.";
+  }
   if (code === "no bot token") {
     return "Сервер бота без TELEGRAM_BOT_TOKEN — настройка на стороне хоста.";
   }
