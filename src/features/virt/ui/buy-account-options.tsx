@@ -36,6 +36,74 @@ type BuyAccountOptionsProps = {
 const accountOptionClassName =
   "tw-bg-gradient-account-option h-41 flex-1 flex-col gap-3 rounded-xl px-4 py-5 shadow-none hover:brightness-105";
 
+type AboutAccountsBlockProps = {
+  open: boolean;
+  onToggle: () => void;
+  showBalanceLine: boolean;
+};
+
+const AboutAccountsBlock = ({
+  open,
+  onToggle,
+  showBalanceLine,
+}: AboutAccountsBlockProps) => {
+  return (
+    <div className="space-y-2">
+      <Button
+        type="button"
+        variant="ghost"
+        className="tw-bg-gradient-account-option hover:brightness-105 h-auto min-h-10 w-full justify-center rounded-md px-4 py-2 text-white"
+        aria-expanded={open}
+        onClick={onToggle}
+      >
+        <AppText variant="darkCyanStrong" size="popupBody">
+          {BUY_ACCOUNT_OPTIONS_TEXT.aboutAccountsButton}
+        </AppText>
+      </Button>
+      {open ? (
+        <div className="border-app-border-soft rounded-md border bg-black/25 px-3 py-2.5">
+          <AppText
+            tag={TAG.p}
+            variant="primaryStrong"
+            size="small"
+            className="mb-1.5"
+          >
+            {BUY_ACCOUNT_OPTIONS_TEXT.aboutAccountsTitle}
+          </AppText>
+          <ul className="list-none space-y-1.5 pl-0 text-left">
+            <li className="flex gap-2">
+              <span className="text-white/80" aria-hidden>
+                –
+              </span>
+              <AppText tag={TAG.span} variant="primaryMedium" size="small">
+                {BUY_ACCOUNT_OPTIONS_TEXT.aboutAccountsBodyLine1}
+              </AppText>
+            </li>
+            <li className="flex gap-2">
+              <span className="text-white/80" aria-hidden>
+                –
+              </span>
+              <AppText tag={TAG.span} variant="primaryMedium" size="small">
+                {BUY_ACCOUNT_OPTIONS_TEXT.aboutAccountsBodyLine2}
+              </AppText>
+            </li>
+            {showBalanceLine ? (
+              <li className="flex gap-2">
+                <span className="text-white/80" aria-hidden>
+                  –
+                </span>
+                <AppText tag={TAG.span} variant="primaryMedium" size="small">
+                  {BUY_ACCOUNT_OPTIONS_TEXT.aboutAccountsBodyLine3}
+                </AppText>
+              </li>
+            ) : null}
+          </ul>
+        </div>
+      ) : null}
+    </div>
+  );
+};
+
 export const BuyAccountOptions = ({
   onBackStateChange,
   virt,
@@ -66,7 +134,8 @@ export const BuyAccountOptions = ({
     ? `${selectedOption.label} - ${formatNumberWithSpaces(selectedOption.amountRub)} ${CURRENCY.RUB}`
     : undefined;
 
-  const [aboutAccountsOpen, setAboutAccountsOpen] = useState(false);
+  const [aboutByLevelOpen, setAboutByLevelOpen] = useState(false);
+  const [aboutByVirtsOpen, setAboutByVirtsOpen] = useState(false);
 
   return (
     <div className="flex flex-col gap-4 px-4 pb-6">
@@ -74,57 +143,13 @@ export const BuyAccountOptions = ({
       {selectedMode ? (
         <div className="flex flex-col gap-3">
           <ModeTitle modeConfig={selectedMode} />
-          <div className="space-y-2">
-            <Button
-              type="button"
-              variant="ghost"
-              className="tw-bg-gradient-account-option hover:brightness-105 h-auto min-h-10 w-full justify-center rounded-md px-4 py-2 text-white"
-              aria-expanded={aboutAccountsOpen}
-              onClick={() => setAboutAccountsOpen((o) => !o)}
-            >
-              <AppText variant="darkCyanStrong" size="popupBody">
-                {BUY_ACCOUNT_OPTIONS_TEXT.aboutAccountsButton}
-              </AppText>
-            </Button>
-            {aboutAccountsOpen ? (
-              <div className="border-app-border-soft rounded-md border bg-black/25 px-3 py-2.5">
-                <AppText
-                  tag={TAG.p}
-                  variant="primaryStrong"
-                  size="small"
-                  className="mb-1.5"
-                >
-                  {BUY_ACCOUNT_OPTIONS_TEXT.aboutAccountsTitle}
-                </AppText>
-                <ul className="list-none space-y-1.5 pl-0 text-left">
-                  <li className="flex gap-2">
-                    <span className="text-white/80" aria-hidden>
-                      –
-                    </span>
-                    <AppText tag={TAG.span} variant="primaryMedium" size="small">
-                      {BUY_ACCOUNT_OPTIONS_TEXT.aboutAccountsBodyLine1}
-                    </AppText>
-                  </li>
-                  <li className="flex gap-2">
-                    <span className="text-white/80" aria-hidden>
-                      –
-                    </span>
-                    <AppText tag={TAG.span} variant="primaryMedium" size="small">
-                      {BUY_ACCOUNT_OPTIONS_TEXT.aboutAccountsBodyLine2}
-                    </AppText>
-                  </li>
-                  <li className="flex gap-2">
-                    <span className="text-white/80" aria-hidden>
-                      –
-                    </span>
-                    <AppText tag={TAG.span} variant="primaryMedium" size="small">
-                      {BUY_ACCOUNT_OPTIONS_TEXT.aboutAccountsBodyLine3}
-                    </AppText>
-                  </li>
-                </ul>
-              </div>
-            ) : null}
-          </div>
+          {!isCustomVirtsMode ? (
+            <AboutAccountsBlock
+              open={aboutByLevelOpen}
+              onToggle={() => setAboutByLevelOpen((o) => !o)}
+              showBalanceLine={false}
+            />
+          ) : null}
           <div className="mb-2 space-y-1">
             <AppText tag={TAG.p} variant="darkStrong" className="mb-1">
               {TEXT.labels.server}
@@ -158,6 +183,11 @@ export const BuyAccountOptions = ({
                   disableAutoScrollOnFocus
                   placeholder={BUY_ACCOUNT_OPTIONS_TEXT.customKkPricingPlaceholder}
                   variant="form"
+                />
+                <AboutAccountsBlock
+                  open={aboutByVirtsOpen}
+                  onToggle={() => setAboutByVirtsOpen((o) => !o)}
+                  showBalanceLine
                 />
               </div>
             ) : (
