@@ -27,10 +27,10 @@ import {
 } from "./custom-emoji-stickers.js";
 import {
   getAboutStickerFileIdsFromEnv,
-  getHowStickerFileIdFromEnv,
+  getHowToOrderHelpCustomEmojiIdFromEnv,
   getWelcomeStickerFileIdsFromEnv,
 } from "./sticker-env.js";
-import { ABOUT_CUSTOM_EMOJI_ORDER, CUSTOM_EMOJI_IDS, WELCOME_HAND_POINTER_IDS } from "./sticker-ids.js";
+import { ABOUT_CUSTOM_EMOJI_ORDER, WELCOME_HAND_POINTER_IDS } from "./sticker-ids.js";
 import { installAdminModule } from "./admin.js";
 import {
   pickVirtOrderDetailsFromRecord,
@@ -42,7 +42,8 @@ import {
   ABOUT_SHOP_HTML,
   ABOUT_SHOP_LINES,
   BTN_MENU_SHOP,
-  VIDEO_CAPTION,
+  HOW_TO_ORDER_HELP_TEXT,
+  HOW_TO_ORDER_INTRO,
   VIDEO_CAPTION_HTML,
   WELCOME_HTML,
   WELCOME_LINE_1,
@@ -457,39 +458,57 @@ bot.command("start", async (ctx) => {
 
 installAdminModule(bot, BOT_ADMIN_IDS);
 
+async function buildHowToOrderCaptionBlocks(ctx: Context): Promise<{
+  text: string;
+  entities: import("@grammyjs/types").MessageEntity[];
+} | null> {
+  const helpId = getHowToOrderHelpCustomEmojiIdFromEnv().trim();
+  if (!isLikelyCustomEmojiIdString(helpId)) {
+    return null;
+  }
+  const pr = await buildCustomEmojiPrefixCaption(ctx, [helpId]);
+  if (!pr) {
+    return null;
+  }
+  const sub = joinCaptionWithBody(pr, HOW_TO_ORDER_HELP_TEXT, " ");
+  const intro = `${HOW_TO_ORDER_INTRO}\n\n`;
+  const text = intro + sub.text;
+  const shiftedCustom = sub.entities
+    .filter((e): e is import("@grammyjs/types").MessageEntity & { type: "custom_emoji" } => e.type === "custom_emoji")
+    .map((e) => ({ ...e, offset: e.offset + intro.length }));
+  return {
+    text,
+    entities: captionEntitiesAllBoldExcludingCustomEmoji(text, shiftedCustom),
+  };
+}
+
 async function sendHowToVideo(ctx: Context) {
   const howKb = howToOrderManagerKeyboard();
-  const howToken = (getHowStickerFileIdFromEnv() ?? CUSTOM_EMOJI_IDS.lightning).trim();
   const path = resolveInstructionVideoPath();
+  const cap = await buildHowToOrderCaptionBlocks(ctx);
+
   if (!path) {
-    await ctx.reply(
-      "Видео «Как оформить заказ» пока не загружено: bot/images/ или задайте INSTRUCTION_VIDEO_PATH в .env.",
-      { reply_markup: howKb },
-    );
-    return;
-  }
-  if (isLikelyCustomEmojiIdString(howToken)) {
-    const pr = await buildCustomEmojiPrefixCaption(ctx, [howToken]);
-    const cap = pr ? joinCaptionWithBody(pr, VIDEO_CAPTION, "\n\n") : null;
-    if (!cap) {
-      await ctx.replyWithVideo(new InputFile(path), {
-        caption: VIDEO_CAPTION_HTML,
-        parse_mode: "HTML" as const,
+    if (cap) {
+      await ctx.reply(cap.text, {
+        entities: cap.entities,
         reply_markup: howKb,
       });
     } else {
-      const videoEntities = captionEntitiesAllBoldExcludingCustomEmoji(
-        cap.text,
-        cap.entities,
-      );
-      await ctx.replyWithVideo(new InputFile(path), {
-        caption: cap.text,
-        caption_entities: videoEntities,
+      await ctx.reply(VIDEO_CAPTION_HTML, {
+        parse_mode: "HTML" as const,
         reply_markup: howKb,
       });
     }
+    return;
+  }
+
+  if (cap) {
+    await ctx.replyWithVideo(new InputFile(path), {
+      caption: cap.text,
+      caption_entities: cap.entities,
+      reply_markup: howKb,
+    });
   } else {
-    await sendVisualTokensInOrder(ctx, [howToken]);
     await ctx.replyWithVideo(new InputFile(path), {
       caption: VIDEO_CAPTION_HTML,
       parse_mode: "HTML" as const,

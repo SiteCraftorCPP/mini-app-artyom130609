@@ -218,11 +218,14 @@ export const STAT_PERIOD_TITLES = [
   "За определённый период",
 ] as const;
 
-export const VIDEO_CAPTION = [
-  "Ознакомление: как оформить заказ",
-  "",
-  "🔤 Есть трудности с оформлением заказа? Напишите менеджеру — кнопка ниже",
-].join("\n");
+export const HOW_TO_ORDER_INTRO = "Ознакомление: как оформить заказ";
+
+/** Текст под custom emoji в «Как оформить заказ» (ему предшествует HOW_TO_ORDER_HELP_CUSTOM_EMOJI_ID). */
+export const HOW_TO_ORDER_HELP_TEXT =
+  "Есть трудности с оформлением заказа? Напишите менеджеру — кнопка ниже";
+
+/** Склейка для HTML/фоллбэка без custom emoji. */
+export const VIDEO_CAPTION = [HOW_TO_ORDER_INTRO, "", HOW_TO_ORDER_HELP_TEXT].join("\n");
 
 /** Кнопка под видео «Как оформить заказ» (URL в LINK_ABOUT_MANAGER). */
 export const BTN_HOW_TO_ORDER_MANAGER = "Написать менеджеру";

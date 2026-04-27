@@ -28,6 +28,12 @@ export function getHowStickerFileIdFromEnv(): string | undefined {
   return s || undefined;
 }
 
+/** Custom emoji перед строкой «Есть трудности с оформлением заказа?…» (как оформить заказ). */
+export function getHowToOrderHelpCustomEmojiIdFromEnv(): string {
+  const raw = process.env.HOW_TO_ORDER_HELP_CUSTOM_EMOJI_ID?.trim();
+  return raw || "5210880311801423356";
+}
+
 export function getAboutStickerFileIdsFromEnv(): string[] | undefined {
   return parseFileIdList(process.env.ABOUT_STICKER_FILE_IDS);
 }
