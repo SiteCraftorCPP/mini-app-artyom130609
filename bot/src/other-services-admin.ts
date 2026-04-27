@@ -6,6 +6,7 @@ import {
   addMainSection,
   addSubsection,
   createGame,
+  getActiveOtherServicesStorePath,
   getOtherServicesV1,
   removeGame,
   removeItemFromMain,
@@ -657,7 +658,7 @@ export function installOtherServicesAdmin(bot: Bot, adminIds: Set<number>) {
         clearWiz(ctx.from.id);
         await ctx.reply("✅ Ок", { reply_markup: new InlineKeyboard().text("⬅️", `${PREFIX}0`) });
       } catch (e) {
-        console.error("[os-admin] createGame", e);
+        console.error("[os-admin] createGame", getActiveOtherServicesStorePath(), e);
         await ctx.reply("Ошибка сохранения, попробуйте ещё раз.");
       }
       return;

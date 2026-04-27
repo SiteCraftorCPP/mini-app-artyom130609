@@ -1,6 +1,7 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { mkdirSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
+import { homedir } from "node:os";
 import { fileURLToPath } from "node:url";
 
 import type {
@@ -12,8 +13,102 @@ import type {
 } from "./other-services-types.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const DATA_DIR = resolve(__dirname, "../data");
-const STORE_PATH = resolve(DATA_DIR, "other-services.v1.json");
+
+const BUILTIN_DEFAULT = resolve(__dirname, "../data", "other-services.v1.json");
+
+/**
+ * Каталог «Другие услуги» — JSON на диске.
+ * На сервере: если `bot/data` нельзя писать (EACCES), задай в `.env` либо
+ * `OTHER_SERVICES_V1_PATH=/var/lib/.../other-services.v1.json`, либо `BOT_DATA_DIR=/var/lib/...`
+ * (файл будет `.../other-services.v1.json`).
+ * Если env не задан, при EACCES на встроенном пути пишем в `~/.artshopvirts/other-services.v1.json`.
+ */
+function envPrimaryPath(): string {
+  const fromEnv = process.env.OTHER_SERVICES_V1_PATH?.trim();
+  if (fromEnv) {
+    return resolve(fromEnv);
+  }
+  const dir = process.env.BOT_DATA_DIR?.trim();
+  if (dir) {
+    return resolve(dir, "other-services.v1.json");
+  }
+  return BUILTIN_DEFAULT;
+}
+
+function homeFallbackPath(): string {
+  return join(homedir(), ".artshopvirts", "other-services.v1.json");
+}
+
+function useAutoHomeOnEacces(): boolean {
+  return !process.env.OTHER_SERVICES_V1_PATH?.trim() && !process.env.BOT_DATA_DIR?.trim();
+}
+
+/** Текущий путь: после первого чтения/успешной записи стабилен. */
+let storeFilePath: string | null = null;
+
+function isEacces(e: unknown): boolean {
+  return e !== null && typeof e === "object" && (e as NodeJS.ErrnoException).code === "EACCES";
+}
+
+/**
+ * Куда смотрим при load и куда пишем по умолчанию (пока нет EACCES-fallback).
+ */
+function pickReadPath(): string {
+  if (storeFilePath) {
+    return storeFilePath;
+  }
+  const primary = envPrimaryPath();
+  const homeF = homeFallbackPath();
+  if (existsSync(primary)) {
+    storeFilePath = primary;
+    return primary;
+  }
+  if (existsSync(homeF)) {
+    storeFilePath = homeF;
+    return homeF;
+  }
+  storeFilePath = primary;
+  return primary;
+}
+
+function ensureDirForFile(filePath: string) {
+  const d = dirname(filePath);
+  if (!existsSync(d)) {
+    mkdirSync(d, { recursive: true, mode: 0o755 });
+  }
+}
+
+function writeStoreJsonTo(path: string, data: OtherServicesStoreV1) {
+  ensureDirForFile(path);
+  writeFileSync(path, JSON.stringify(data, null, 2), { encoding: "utf8", mode: 0o644 });
+}
+
+function save(data: OtherServicesStoreV1) {
+  const payload = { ...data, v: 1 as const };
+  const target = storeFilePath ?? pickReadPath();
+  try {
+    writeStoreJsonTo(target, payload);
+  } catch (e) {
+    if (isEacces(e) && useAutoHomeOnEacces() && target === BUILTIN_DEFAULT) {
+      const alt = homeFallbackPath();
+      try {
+        writeStoreJsonTo(alt, payload);
+        storeFilePath = alt;
+        console.warn(
+          "[other-services] EACCES on %s — using %s. Set OTHER_SERVICES_V1_PATH or chown bot/data.",
+          BUILTIN_DEFAULT,
+          alt,
+        );
+        return;
+      } catch (e2) {
+        console.error("[other-services] fallback write failed", e2);
+        throw e2;
+      }
+    }
+    throw e;
+  }
+  storeFilePath = target;
+}
 
 function genId(prefix: string): string {
   return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
@@ -117,23 +212,21 @@ function migrateStore(raw: unknown): OtherServicesStoreV1 {
 }
 
 function safeLoad(): OtherServicesStoreV1 {
-  if (!existsSync(STORE_PATH)) {
+  const p = pickReadPath();
+  if (!existsSync(p)) {
     return { v: 1, games: [] };
   }
   try {
-    const raw = readFileSync(STORE_PATH, "utf8");
-    const p = JSON.parse(raw) as unknown;
-    return migrateStore(p);
+    const raw = readFileSync(p, "utf8");
+    const parsed = JSON.parse(raw) as unknown;
+    return migrateStore(parsed);
   } catch {
     return { v: 1, games: [] };
   }
 }
 
-function save(data: OtherServicesStoreV1) {
-  if (!existsSync(DATA_DIR)) {
-    mkdirSync(DATA_DIR, { recursive: true });
-  }
-  writeFileSync(STORE_PATH, JSON.stringify(data, null, 2), "utf8");
+export function getActiveOtherServicesStorePath(): string {
+  return storeFilePath ?? pickReadPath();
 }
 
 export function getOtherServicesV1(): OtherServicesStoreV1 {
