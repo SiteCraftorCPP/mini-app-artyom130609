@@ -1,15 +1,12 @@
 /** Согласовано с `bot/src/other-services-types.ts` и JSON `get_other_services`. */
 
-export type OtherServicesDelivery = "manager" | "auto" | "manual";
+export type OtherServicePaymentMode = "manager" | "info";
 
 export type OtherServiceItem = {
   id: string;
   description: string;
-  price: string;
-  payment?: string;
-  delivery: OtherServicesDelivery;
-  autoText?: string;
-  manualAdminHint?: string;
+  paymentMode: OtherServicePaymentMode;
+  paymentInfo?: string;
 };
 
 export type OtherServiceSubsection = {
@@ -22,10 +19,12 @@ export type OtherServiceMain = {
   id: string;
   name: string;
   subsections: OtherServiceSubsection[];
+  items: OtherServiceItem[];
 };
 
 export type OtherServiceGame = {
-  projectKey: string;
+  id: string;
+  name: string;
   mainSections: OtherServiceMain[];
 };
 

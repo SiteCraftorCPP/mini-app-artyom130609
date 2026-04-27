@@ -1,50 +1,41 @@
 import { useMemo, useState } from "react";
 
+import type { VirtGradientToken } from "@/entities/virt";
 import { AppText } from "@/ui/app-text";
 import { TAG } from "@/ui/app-text/model";
 import { Button } from "@/ui/button";
 import { SUPPORT_CHAT_URL } from "@/shared/constants/common";
+import { VIRT_GRADIENT_CLASSES } from "@/shared/constants/virt-gradients";
 import type {
   OtherServiceGame,
   OtherServiceItem,
+  OtherServiceMain,
+  OtherServiceSubsection,
   OtherServicesCatalogV1,
-  OtherServicesDelivery,
 } from "@/shared/types/other-services-catalog";
 import { cn } from "@/shared/utils";
-import { VIRTS_ICONS, type VirtProjectIconKey } from "@/shared/constants/virt-icons";
 
-const GAME_TITLES: Record<string, string> = {
-  "black-russia": "Black Russia",
-  "matryoshka-rp": "Матрешка РП",
-  "gta-v-rp": "GTA V RP",
-  "majestic-rp": "Majestic RP",
-  "arizona-rp": "Arizona RP",
-  "radmir-rp": "Radmir RP",
-  "province-rp": "Province RP",
-  "amazing-rp": "Amazing RP",
-  "grand-mobile-rp": "Grand Mobile RP",
-};
+const PLAQUE_GRADIENTS: VirtGradientToken[] = [
+  "blue",
+  "dark",
+  "pink",
+  "purple",
+  "red",
+  "yellow",
+  "orange",
+  "gold",
+  "grey",
+];
 
-function gameTitle(pk: string): string {
-  return GAME_TITLES[pk] ?? pk;
-}
-
-function logoFor(pk: string): string | undefined {
-  const k = pk as VirtProjectIconKey;
-  if (k in VIRTS_ICONS) {
-    return VIRTS_ICONS[k];
+function initialsFromName(name: string): string {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 0) {
+    return "?";
   }
-  return undefined;
-}
-
-function deliveryRu(d: OtherServicesDelivery): string {
-  if (d === "manager") {
-    return "Через менеджера";
+  if (parts.length === 1) {
+    return parts[0]!.slice(0, 2).toUpperCase();
   }
-  if (d === "auto") {
-    return "Автоматически";
-  }
-  return "Вручную (данные после оплаты)";
+  return `${parts[0]!.charAt(0)}${parts[1]!.charAt(0)}`.toUpperCase();
 }
 
 function ServiceItemCard({ item }: { item: OtherServiceItem }) {
@@ -58,56 +49,144 @@ function ServiceItemCard({ item }: { item: OtherServiceItem }) {
         <AppText variant="primaryStrong" size="medium" className="!whitespace-pre-wrap !text-left">
           {item.description}
         </AppText>
-        <AppText
-          tag={TAG.p}
-          variant="primaryMedium"
-          size="popupBody"
-          className="!text-left text-[#00FF00]"
-        >
-          {item.price}
-        </AppText>
-        {item.payment ? (
-          <AppText tag={TAG.p} variant="primaryMedium" size="small" className="!text-left text-white/75">
-            Оплата: {item.payment}
-          </AppText>
-        ) : null}
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="rounded border border-white/20 bg-white/5 px-2 py-0.5 text-[11px] text-[#8C8C8C]">
-            {deliveryRu(item.delivery)}
-          </span>
-        </div>
-        {item.delivery === "auto" && item.autoText ? (
-          <div className="rounded-md border border-white/10 bg-[#0d1819] p-2">
+        {item.paymentMode === "info" && item.paymentInfo ? (
+          <div className="rounded-md border border-cyan-500/25 bg-[#0a1415] p-2.5">
             <AppText
               tag={TAG.p}
               variant="primaryMedium"
               size="small"
               className="!whitespace-pre-wrap !text-left text-white/90"
             >
-              {item.autoText}
+              {item.paymentInfo}
             </AppText>
           </div>
         ) : null}
-        {item.delivery === "manager" ? (
-          <Button asChild variant="popupSubmit" size="popupSubmit" className="h-9 w-full justify-center">
+        {item.paymentMode === "manager" ? (
+          <Button
+            asChild
+            variant="popupSubmit"
+            size="popupSubmit"
+            className="h-9 w-full justify-center"
+          >
             <a href={SUPPORT_CHAT_URL} target="_blank" rel="noreferrer">
               <AppText variant="primaryStrong" size="small">
                 Написать менеджеру
               </AppText>
             </a>
           </Button>
-        ) : null}
-        {item.delivery === "manual" ? (
+        ) : !item.paymentInfo ? (
           <AppText
             tag={TAG.p}
             variant="primaryMedium"
             size="small"
-            className="!text-left text-[#8C8C8C]"
+            className="!text-left text-white/50"
           >
-            Реквизиты или доступ пришлём в Telegram после оформления.
+            Оплата: информация в карточке
           </AppText>
         ) : null}
       </div>
+    </li>
+  );
+}
+
+function SubChipRow({
+  subsections,
+  activeId,
+  onSelect,
+}: {
+  subsections: OtherServiceSubsection[];
+  activeId: string;
+  onSelect: (id: string) => void;
+}) {
+  return (
+    <div className="hide-scrollbar mb-2 flex min-w-0 flex-nowrap gap-2 overflow-x-auto pb-1">
+      {subsections.map((s) => {
+        const isOn = s.id === activeId;
+        return (
+          <button
+            key={s.id}
+            type="button"
+            onClick={() => {
+              onSelect(s.id);
+            }}
+            className={cn(
+              "shrink-0 rounded-full border px-3 py-1.5 text-left transition",
+              isOn
+                ? "border-cyan-400/70 bg-cyan-500/20 shadow-[0_0_0_1px_rgba(34,211,238,0.15)]"
+                : "border-white/10 bg-white/5 hover:bg-white/10",
+            )}
+          >
+            <AppText variant="primaryStrong" size="small" className="!max-w-[10rem] !truncate !leading-tight">
+              {s.name}
+            </AppText>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function MainSectionBlock({ main }: { main: OtherServiceMain }) {
+  const hasSub = main.subsections.length > 0;
+  const [subId, setSubId] = useState(() => (hasSub ? main.subsections[0]!.id : ""));
+
+  const activeSub: OtherServiceSubsection | undefined = useMemo(() => {
+    if (!hasSub) {
+      return undefined;
+    }
+    return main.subsections.find((s) => s.id === subId) ?? main.subsections[0];
+  }, [hasSub, main.subsections, subId]);
+
+  return (
+    <li className="min-w-0">
+      <div className="mb-3">
+        <AppText variant="primaryStrong" size="headerInfo" className="!text-left !tracking-tight !text-base">
+          {main.name}
+        </AppText>
+        <div className="mt-1 h-px w-full max-w-full bg-gradient-to-r from-cyan-500/50 via-white/10 to-transparent" />
+      </div>
+      {hasSub && activeSub ? (
+        <>
+          <SubChipRow
+            subsections={main.subsections}
+            activeId={activeSub.id}
+            onSelect={setSubId}
+          />
+          {activeSub.items.length === 0 ? (
+            <AppText
+              tag={TAG.p}
+              variant="primaryMedium"
+              size="small"
+              className="!text-left text-white/45"
+            >
+              Пока пусто.
+            </AppText>
+          ) : (
+            <ul className="flex flex-col gap-2">
+              {activeSub.items.map((it) => (
+                <ServiceItemCard key={it.id} item={it} />
+              ))}
+            </ul>
+          )}
+        </>
+      ) : !hasSub ? (
+        main.items.length === 0 ? (
+          <AppText
+            tag={TAG.p}
+            variant="primaryMedium"
+            size="small"
+            className="!text-left text-white/45"
+          >
+            Пока пусто.
+          </AppText>
+        ) : (
+          <ul className="flex flex-col gap-2">
+            {main.items.map((it) => (
+              <ServiceItemCard key={it.id} item={it} />
+            ))}
+          </ul>
+        )
+      ) : null}
     </li>
   );
 }
@@ -116,106 +195,92 @@ type Props = { catalog: OtherServicesCatalogV1 };
 
 export const OtherServicesCatalogView = ({ catalog }: Props) => {
   const games = catalog.games;
-  const [selectedKey, setSelectedKey] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
   if (games.length === 0) {
     return (
       <div className="px-4 pb-4">
-        <AppText
-          tag={TAG.p}
-          variant="primaryMedium"
-          size="small"
-          className="!text-left text-[#8C8C8C]"
-        >
-          Пока нет опубликованных услуг. Загляните позже.
-        </AppText>
+        <div className="mb-3 rounded-[14px] border border-white/10 bg-white/[0.04] p-3">
+          <AppText tag={TAG.p} variant="primaryMedium" size="small" className="!text-left text-white/60">
+            Каталог пуст. Когда админ добавит «игры» и позиции, здесь появятся плашки в стиле магазина.
+          </AppText>
+        </div>
       </div>
     );
   }
 
   const current: OtherServiceGame = useMemo(() => {
-    const key = selectedKey ?? games[0]!.projectKey;
-    return games.find((g) => g.projectKey === key) ?? games[0]!;
-  }, [games, selectedKey]);
+    const k = selectedId ?? games[0]!.id;
+    return games.find((g) => g.id === k) ?? games[0]!;
+  }, [games, selectedId]);
 
   return (
-    <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4 px-4 pb-4">
-      <AppText
-        tag={TAG.p}
-        variant="primaryMedium"
-        size="small"
-        className="!text-balance !text-left text-white/80"
-      >
-        Выберите проект, затем раздел — оформление зависит от типа выдачи (менеджер, автоматически, вручную).
-      </AppText>
-      <div className="hide-scrollbar flex min-w-0 flex-nowrap gap-2 overflow-x-auto pb-1">
-        {games.map((g) => {
-          const active = (selectedKey ?? games[0]!.projectKey) === g.projectKey;
-          const src = logoFor(g.projectKey);
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-5 px-3 pb-4 sm:px-4">
+      <div className="px-0.5">
+        <AppText
+          tag={TAG.p}
+          variant="primaryMedium"
+          size="small"
+          className="!text-balance !text-left text-white/75"
+        >
+          Выберите плашку, затем раздел и карточку. Оплата — кнопка к менеджеру или текст внутри карточки.
+        </AppText>
+      </div>
+
+      <div className="hide-scrollbar -mx-1 flex min-w-0 flex-nowrap gap-2.5 overflow-x-auto px-1 pb-1">
+        {games.map((g, idx) => {
+          const isActive = (selectedId ?? games[0]!.id) === g.id;
+          const grad = PLAQUE_GRADIENTS[idx % PLAQUE_GRADIENTS.length]!;
           return (
-            <button
-              key={g.projectKey}
+            <Button
+              key={g.id}
               type="button"
+              variant="virtCard"
+              size="virtCard"
               onClick={() => {
-                setSelectedKey(g.projectKey);
+                setSelectedId(g.id);
               }}
-              className={cn(
-                "flex shrink-0 items-center gap-2 rounded-full border px-2 py-1.5 transition",
-                active
-                  ? "border-cyan-400/60 bg-cyan-500/15"
-                  : "border-white/10 bg-white/5 hover:bg-white/10",
-              )}
+              className="min-w-[8.2rem] max-w-[13rem] shrink-0"
             >
-              {src ? (
-                <img src={src} alt="" className="size-7 shrink-0 object-contain" />
-              ) : null}
-              <AppText
-                variant="primaryStrong"
-                size="small"
-                className="!max-w-[8rem] !truncate"
+              <span
+                className={cn(
+                  "m-px flex min-h-14 w-full min-w-0 items-center gap-2.5 rounded-[10px] px-2.5 py-2.5",
+                  VIRT_GRADIENT_CLASSES[grad],
+                  isActive && "ring-2 ring-cyan-300/50 ring-offset-0 ring-offset-black/5",
+                )}
               >
-                {gameTitle(g.projectKey)}
-              </AppText>
-            </button>
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-black/20 text-[11px] font-bold text-white/95">
+                  {initialsFromName(g.name)}
+                </span>
+                <AppText
+                  variant="primaryStrong"
+                  size="small"
+                  className="!line-clamp-2 min-w-0 !flex-1 !text-left !leading-tight"
+                >
+                  {g.name}
+                </AppText>
+              </span>
+            </Button>
           );
         })}
       </div>
+
       {current.mainSections.length === 0 ? (
-        <AppText tag={TAG.p} variant="primaryMedium" size="small" className="!text-left text-[#8C8C8C]">
-          Для этой игры ещё не добавлены разделы.
-        </AppText>
+        <div className="rounded-[14px] border border-amber-500/20 bg-amber-500/5 p-3">
+          <AppText
+            tag={TAG.p}
+            variant="primaryMedium"
+            size="small"
+            className="!text-left text-amber-100/80"
+          >
+            В этой «игре» ещё нет разделов. Настройка в админке.
+          </AppText>
+        </div>
       ) : null}
-      <ul className="flex flex-col gap-4">
+
+      <ul className="flex flex-col gap-8">
         {current.mainSections.map((main) => (
-          <li key={main.id} className="min-w-0">
-            <div className="mb-2">
-              <AppText variant="primaryStrong" size="medium" className="!text-left">
-                {main.name}
-              </AppText>
-            </div>
-            <ul className="flex flex-col gap-3">
-              {main.subsections.map((sub) => (
-                <li key={sub.id} className="min-w-0">
-                  <div className="mb-1.5">
-                    <AppText variant="primaryMedium" size="small" className="!text-left text-[#8C8C8C]">
-                      {sub.name}
-                    </AppText>
-                  </div>
-                  {sub.items.length === 0 ? (
-                    <AppText tag={TAG.p} variant="primaryMedium" size="small" className="!text-left text-white/50">
-                      Пока пусто.
-                    </AppText>
-                  ) : (
-                    <ul className="flex flex-col gap-2">
-                      {sub.items.map((it) => (
-                        <ServiceItemCard key={it.id} item={it} />
-                      ))}
-                    </ul>
-                  )}
-                </li>
-              ))}
-            </ul>
-          </li>
+          <MainSectionBlock key={main.id} main={main} />
         ))}
       </ul>
     </div>
