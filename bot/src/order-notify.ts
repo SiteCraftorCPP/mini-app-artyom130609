@@ -980,6 +980,46 @@ export function startOrderNotifyHttpServer(
     );
   }
 
+  let cachedBotUsername: string | null = null;
+  let botUsernameResolvePromise: Promise<string> | null = null;
+
+  async function resolveReferralBotUsername(): Promise<string> {
+    if (cachedBotUsername) {
+      return cachedBotUsername;
+    }
+
+    const fromEnvRaw =
+      process.env.TELEGRAM_BOT_USERNAME?.trim() ||
+      process.env.VITE_BOT_ADDRESS?.trim();
+    const fromEnv = fromEnvRaw?.replace(/^@/, "");
+    if (fromEnv) {
+      cachedBotUsername = fromEnv;
+      return fromEnv;
+    }
+
+    if (!botUsernameResolvePromise) {
+      botUsernameResolvePromise = bot.api
+        .getMe()
+        .then((me) => {
+          const username = me.username?.trim().replace(/^@/, "") || "";
+          if (!username) {
+            throw new Error("Bot username is empty in getMe()");
+          }
+          cachedBotUsername = username;
+          return username;
+        })
+        .catch((e) => {
+          console.error("[referral] failed to resolve bot username:", e);
+          return "MiniAppArtyom130609_BOT";
+        })
+        .finally(() => {
+          botUsernameResolvePromise = null;
+        });
+    }
+
+    return botUsernameResolvePromise;
+  }
+
   const server = createServer(async (req, res) => {
     const url = req.url?.split("?")[0] ?? "";
 
@@ -1362,7 +1402,7 @@ export function startOrderNotifyHttpServer(
 
         if (body.action === "get_referral") {
           const refUser = getReferralUser(telegramUserId);
-          const botUsername = process.env.VITE_BOT_ADDRESS?.trim() || "MiniAppArtyom130609_BOT";
+          const botUsername = await resolveReferralBotUsername();
           const refLink = `https://t.me/${botUsername}?start=ref_${telegramUserId}`;
 
           res.writeHead(200, { "Content-Type": "application/json", ...corsNotifyHeaders });
