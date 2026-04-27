@@ -27,17 +27,6 @@ const PLAQUE_GRADIENTS: VirtGradientToken[] = [
   "grey",
 ];
 
-function initialsFromName(name: string): string {
-  const parts = name.trim().split(/\s+/);
-  if (parts.length === 0) {
-    return "?";
-  }
-  if (parts.length === 1) {
-    return parts[0]!.slice(0, 2).toUpperCase();
-  }
-  return `${parts[0]!.charAt(0)}${parts[1]!.charAt(0)}`.toUpperCase();
-}
-
 function ServiceItemCard({ item }: { item: OtherServiceItem }) {
   return (
     <li className="tw-bg-gradient-card-border flex flex-col gap-2 rounded-[12px] p-px">
@@ -50,7 +39,7 @@ function ServiceItemCard({ item }: { item: OtherServiceItem }) {
           {item.description}
         </AppText>
         {item.paymentMode === "info" && item.paymentInfo ? (
-          <div className="rounded-md border border-cyan-500/25 bg-[#0a1415] p-2.5">
+          <div className="rounded-md border border-white/10 bg-black/20 p-2.5">
             <AppText
               tag={TAG.p}
               variant="primaryMedium"
@@ -103,7 +92,7 @@ function SubChipRow({
             className={cn(
               "shrink-0 rounded-full border px-3 py-1.5 text-left transition",
               isOn
-                ? "border-cyan-400/70 bg-cyan-500/20 shadow-[0_0_0_1px_rgba(34,211,238,0.15)]"
+                ? "border-white/30 bg-white/10"
                 : "border-white/10 bg-white/5 hover:bg-white/10",
             )}
           >
@@ -130,11 +119,14 @@ function MainSectionBlock({ main }: { main: OtherServiceMain }) {
 
   return (
     <li className="min-w-0">
-      <div className="mb-3">
-        <AppText variant="primaryStrong" size="headerInfo" className="!text-left !tracking-tight !text-base">
+      <div className="mb-3 border-b border-white/10 pb-2">
+        <AppText
+          variant="primaryStrong"
+          size="headerInfo"
+          className="!text-left !tracking-tight !text-base"
+        >
           {main.name}
         </AppText>
-        <div className="mt-1 h-px w-full max-w-full bg-gradient-to-r from-cyan-500/50 via-white/10 to-transparent" />
       </div>
       {hasSub && activeSub ? (
         <>
@@ -204,52 +196,55 @@ export const OtherServicesCatalogView = ({ catalog }: Props) => {
   }, [games, selectedId]);
 
   return (
-    <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-5 px-3 pb-4 sm:px-4">
-      <div className="hide-scrollbar -mx-1 flex min-w-0 flex-nowrap gap-2.5 overflow-x-auto px-1 pb-1">
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4 pb-4">
+      <ul className="flex flex-col gap-2 px-4">
         {games.map((g, idx) => {
           const isActive = (selectedId ?? games[0]!.id) === g.id;
           const grad = PLAQUE_GRADIENTS[idx % PLAQUE_GRADIENTS.length]!;
           return (
-            <Button
-              key={g.id}
-              type="button"
-              variant="virtCard"
-              size="virtCard"
-              onClick={() => {
-                setSelectedId(g.id);
-              }}
-              className="min-w-[8.2rem] max-w-[13rem] shrink-0"
-            >
-              <span
-                className={cn(
-                  "m-px flex min-h-14 w-full min-w-0 items-center gap-2.5 rounded-[10px] px-2.5 py-2.5",
-                  VIRT_GRADIENT_CLASSES[grad],
-                  isActive && "ring-2 ring-cyan-300/50 ring-offset-0 ring-offset-black/5",
-                )}
+            <li key={g.id} className="w-full min-w-0">
+              <Button
+                type="button"
+                variant="virtCard"
+                size="virtCard"
+                onClick={() => {
+                  setSelectedId(g.id);
+                }}
+                className="w-full"
               >
-                <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-black/20 text-[11px] font-bold text-white/95">
-                  {initialsFromName(g.name)}
-                </span>
-                <AppText
-                  variant="primaryStrong"
-                  size="small"
-                  className="!line-clamp-2 min-w-0 !flex-1 !text-left !leading-tight"
+                <span
+                  className={cn(
+                    "m-px flex w-full min-w-0 items-center rounded-[10px] px-3 py-3",
+                    VIRT_GRADIENT_CLASSES[grad],
+                    isActive && "ring-1 ring-white/35",
+                  )}
                 >
-                  {g.name}
-                </AppText>
-              </span>
-            </Button>
+                  <AppText
+                    variant="primaryStrong"
+                    size="xxxl"
+                    className="!line-clamp-3 min-w-0 w-full !text-left !leading-snug"
+                  >
+                    {g.name}
+                  </AppText>
+                </span>
+              </Button>
+            </li>
           );
         })}
-      </div>
+      </ul>
 
       {current.mainSections.length === 0 ? (
-        <AppText tag={TAG.p} variant="primaryMedium" size="small" className="!text-left text-white/45">
+        <AppText
+          tag={TAG.p}
+          variant="primaryMedium"
+          size="small"
+          className="!px-4 !text-left text-white/40"
+        >
           Пусто.
         </AppText>
       ) : null}
 
-      <ul className="flex flex-col gap-8">
+      <ul className="flex flex-col gap-8 px-4">
         {current.mainSections.map((main) => (
           <MainSectionBlock key={main.id} main={main} />
         ))}

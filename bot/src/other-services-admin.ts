@@ -47,7 +47,7 @@ function buildRootKb(): InlineKeyboard {
   const st = getOtherServicesV1();
   st.games.forEach((g, gi) => {
     const lab = (g.name || "Игра").slice(0, 28);
-    kb.text(`🎮 ${lab}`, `${PREFIX}g!${gi}`).row();
+    kb.text(lab.slice(0, 32), `${PREFIX}g!${gi}`).row();
   });
   kb.text("➕ Добавить игру", `${PREFIX}newg`).row();
   kb.text(BTN_BACK_TO_ADMIN, "admin:menu");
@@ -57,10 +57,10 @@ function buildRootKb(): InlineKeyboard {
 function buildRootText(): string {
   const st = getOtherServicesV1();
   if (st.games.length === 0) {
-    return "🛎 <b>Другие услуги</b>\n\nПока нет игр. Нажмите <b>Добавить игру</b> - введите название.";
+    return "<b>Другие услуги</b>\n\nПока нет игр. Нажмите <b>Добавить игру</b> - введите название.";
   }
   const lines = st.games.map((g) => `• ${esc(g.name)}`);
-  return `🛎 <b>Другие услуги</b>\n\n${st.games.length} игр.\n${lines.join("\n")}`;
+  return `<b>Другие услуги</b>\n\n${st.games.length} игр.\n${lines.join("\n")}`;
 }
 
 function gameView(gi: number): { text: string; kb: InlineKeyboard } {
@@ -72,7 +72,7 @@ function gameView(gi: number): { text: string; kb: InlineKeyboard } {
   const lines = g.mainSections.map(
     (m) => `• <b>${esc(m.name)}</b> — подр.: ${m.subsections.length}, товаров: ${m.subsections.length ? m.subsections.reduce((a, s) => a + s.items.length, 0) : m.items.length}`,
   );
-  const text = `🎮 <b>${esc(g.name)}</b>\n\n${lines.length ? lines.join("\n") : "Нет разделов."}`;
+  const text = `<b>${esc(g.name)}</b>\n\n${lines.length ? lines.join("\n") : "Нет разделов."}`;
   const kb = new InlineKeyboard();
   g.mainSections.forEach((m, mi) => {
     kb.text(`📁 ${m.name.slice(0, 24)}`, `${PREFIX}m!${gi}!${mi}`).row();
@@ -395,11 +395,9 @@ export function installOtherServicesAdmin(bot: Bot, adminIds: Set<number>) {
       await ctx.answerCallbackQuery();
       if (pend.sub == null) {
         const { text, kb } = mainView(gi, mi);
-        await a.reply("✅ Ок", { parse_mode: "HTML" });
         await a.reply(text, { parse_mode: "HTML", reply_markup: kb });
       } else {
         const { text, kb } = subView(gi, mi, pend.sub!);
-        await a.reply("✅ Ок", { parse_mode: "HTML" });
         await a.reply(text, { parse_mode: "HTML", reply_markup: kb });
       }
       return;
@@ -654,9 +652,16 @@ export function installOtherServicesAdmin(bot: Bot, adminIds: Set<number>) {
         return;
       }
       try {
-        createGame(t);
+        const created = createGame(t);
         clearWiz(ctx.from.id);
-        await ctx.reply("✅ Ок", { reply_markup: new InlineKeyboard().text("⬅️", `${PREFIX}0`) });
+        const st = getOtherServicesV1();
+        const gi = st.games.findIndex((g) => g.id === created.id);
+        if (gi < 0) {
+          await ctx.reply("Ошибка.");
+          return;
+        }
+        const { text, kb } = gameView(gi);
+        await ctx.reply(text, { parse_mode: "HTML", reply_markup: kb });
       } catch (e) {
         console.error("[os-admin] createGame", getActiveOtherServicesStorePath(), e);
         await ctx.reply("Ошибка сохранения, попробуйте ещё раз.");
@@ -665,12 +670,21 @@ export function installOtherServicesAdmin(bot: Bot, adminIds: Set<number>) {
     }
     if (st0?.k === "mainName") {
       const gi = st0.g;
-      const g = getOtherServicesV1().games[gi];
-      if (g) {
-        addMainSection(g.id, t);
+      const g0 = getOtherServicesV1().games[gi];
+      if (g0) {
+        addMainSection(g0.id, t);
       }
       clearWiz(ctx.from.id);
-      await ctx.reply("✅ Ок", { reply_markup: new InlineKeyboard().text("⬅️", `${PREFIX}g!${gi}`) });
+      const u = getOtherServicesV1();
+      const game = u.games[gi];
+      if (game && game.mainSections.length > 0) {
+        const mi = game.mainSections.length - 1;
+        const { text, kb } = mainView(gi, mi);
+        await ctx.reply(text, { parse_mode: "HTML", reply_markup: kb });
+      } else {
+        const { text, kb } = gameView(gi);
+        await ctx.reply(text, { parse_mode: "HTML", reply_markup: kb });
+      }
       return;
     }
     if (st0?.k === "subName") {
@@ -681,12 +695,21 @@ export function installOtherServicesAdmin(bot: Bot, adminIds: Set<number>) {
         const r = addSubsection(game.id, main.id, t);
         if (r == null) {
           clearWiz(ctx.from.id);
-      await ctx.reply("Удалите товары из раздела.", { parse_mode: "HTML" });
+          await ctx.reply("Удалите товары из раздела.", { parse_mode: "HTML" });
           return;
         }
       }
       clearWiz(ctx.from.id);
-      await ctx.reply("✅ Ок", { reply_markup: new InlineKeyboard().text("⬅️", `${PREFIX}m!${gi}!${mi}`) });
+      const u = getOtherServicesV1();
+      const m = u.games[gi]?.mainSections[mi];
+      const si = m && m.subsections.length > 0 ? m.subsections.length - 1 : 0;
+      if (m && m.subsections[si]) {
+        const { text, kb } = subView(gi, mi, si);
+        await ctx.reply(text, { parse_mode: "HTML", reply_markup: kb });
+        return;
+      }
+      const { text, kb } = mainView(gi, mi);
+      await ctx.reply(text, { parse_mode: "HTML", reply_markup: kb });
       return;
     }
     if (st0?.k === "itemDesc") {
@@ -719,7 +742,6 @@ export function installOtherServicesAdmin(bot: Bot, adminIds: Set<number>) {
       const mi = st0.m;
       const ssub = st0.sub;
       clearWiz(ctx.from.id);
-      await ctx.reply("✅ Ок");
       if (ssub == null) {
         const { text, kb } = mainView(gi, mi);
         await ctx.reply(text, { parse_mode: "HTML", reply_markup: kb });
