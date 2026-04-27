@@ -27,6 +27,8 @@ type PopupAppProps = {
   dialogVariant?: PopupAppDialogVariant;
   open?: boolean;
   setOpen?: Dispatch<SetStateAction<boolean>>;
+  /** Если задан, вызывается вместо прямой передачи `setOpen` в `Dialog` (например, сброс вложенного state перед закрытием). */
+  onOpenChange?: (open: boolean) => void;
   slot?: ReactNode;
   title?: string;
 };
@@ -39,6 +41,7 @@ export const PopupApp = ({
   dialogVariant = "popup",
   open,
   setOpen,
+  onOpenChange: onOpenChangeProp,
   slot,
   title,
 }: PopupAppProps) => {
@@ -51,8 +54,10 @@ export const PopupApp = ({
     [isControlled, setOpen],
   );
 
+  const onOpenChange = onOpenChangeProp ?? resolvedSetOpen;
+
   return (
-    <Dialog open={resolvedOpen} onOpenChange={resolvedSetOpen}>
+    <Dialog open={resolvedOpen} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent
         variant={dialogVariant}

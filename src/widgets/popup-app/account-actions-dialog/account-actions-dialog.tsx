@@ -53,24 +53,32 @@ export const AccountActionsDialog = ({
       : null,
   );
 
-  const isHistoryDetail = actionId === "orderHistory" && selectedOrderId;
   const isCurrentDetail =
     actionId === "currentOrders" && Boolean(focusedCurrentOrderId);
+
+  const handlePopupOpenChange = (next: boolean) => {
+    if (!next) {
+      if (actionId === "orderHistory" && selectedOrderId) {
+        setSelectedOrderId(null);
+        return;
+      }
+    }
+    setOpen(next);
+  };
 
   return (
     <PopupApp
       open={open}
       setOpen={setOpen}
+      onOpenChange={handlePopupOpenChange}
       contentClassName="!min-h-0"
       slot={
         <PopupAppHeader
           title={action.title}
           onBack={
-            isHistoryDetail
-              ? () => setSelectedOrderId(null)
-              : isCurrentDetail
-                ? () => setFocusedCurrentOrderId(null)
-                : undefined
+            isCurrentDetail
+              ? () => setFocusedCurrentOrderId(null)
+              : undefined
           }
         />
       }
