@@ -988,15 +988,6 @@ export function startOrderNotifyHttpServer(
       return cachedBotUsername;
     }
 
-    const fromEnvRaw =
-      process.env.TELEGRAM_BOT_USERNAME?.trim() ||
-      process.env.VITE_BOT_ADDRESS?.trim();
-    const fromEnv = fromEnvRaw?.replace(/^@/, "");
-    if (fromEnv) {
-      cachedBotUsername = fromEnv;
-      return fromEnv;
-    }
-
     if (!botUsernameResolvePromise) {
       botUsernameResolvePromise = bot.api
         .getMe()
@@ -1008,9 +999,17 @@ export function startOrderNotifyHttpServer(
           cachedBotUsername = username;
           return username;
         })
-        .catch((e) => {
-          console.error("[referral] failed to resolve bot username:", e);
-          return "MiniAppArtyom130609_BOT";
+        .catch(async (e) => {
+          console.error("[referral] failed to resolve bot username via getMe():", e);
+          const fromEnvRaw =
+            process.env.TELEGRAM_BOT_USERNAME?.trim() ||
+            process.env.VITE_BOT_ADDRESS?.trim();
+          const fromEnv = fromEnvRaw?.replace(/^@/, "");
+          if (fromEnv) {
+            cachedBotUsername = fromEnv;
+            return fromEnv;
+          }
+          return "artshopvirts_bot";
         })
         .finally(() => {
           botUsernameResolvePromise = null;
