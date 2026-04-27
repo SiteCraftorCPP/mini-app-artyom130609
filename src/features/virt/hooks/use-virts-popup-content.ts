@@ -1,7 +1,6 @@
 import {
   useGetBuyAccounts,
   useGetBuyVirts,
-  useGetOtherServices,
   useGetSellVirts,
 } from "@/entities/virt";
 
@@ -23,9 +22,6 @@ export const useVirtsPopupContent = ({
   const sellVirtsQuery = useGetSellVirts({
     enabled: enabled && type === "sell",
   });
-  const otherServicesQuery = useGetOtherServices({
-    enabled: enabled && type === "services",
-  });
 
   const activeQuery =
     type === "buy"
@@ -34,7 +30,7 @@ export const useVirtsPopupContent = ({
         ? buyAccountsQuery
         : type === "sell"
           ? sellVirtsQuery
-          : otherServicesQuery;
+          : buyVirtsQuery;
 
   return {
     data: activeQuery.data,

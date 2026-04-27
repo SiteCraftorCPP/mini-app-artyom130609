@@ -32,6 +32,7 @@ import {
 } from "./sticker-env.js";
 import { ABOUT_CUSTOM_EMOJI_ORDER, WELCOME_HAND_POINTER_IDS } from "./sticker-ids.js";
 import { installAdminModule } from "./admin.js";
+import { installOtherServicesAdmin } from "./other-services-admin.js";
 import {
   pickVirtOrderDetailsFromRecord,
   sendSellVirtMessage,
@@ -463,6 +464,7 @@ bot.command("start", async (ctx) => {
   await sendWelcome(ctx);
 });
 
+installOtherServicesAdmin(bot, BOT_ADMIN_IDS);
 installAdminModule(bot, BOT_ADMIN_IDS);
 
 async function buildHowToOrderCaptionBlocks(ctx: Context): Promise<{

@@ -19,4 +19,7 @@ export const QUERY_KEYS = {
   PROMO_CODES: {
     LIST: "promoCodesList",
   },
+  OTHER_SERVICES: {
+    CATALOG: "otherServicesCatalog",
+  },
 };

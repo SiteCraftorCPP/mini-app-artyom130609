@@ -57,6 +57,8 @@ export const BTN_BROADCAST_BUY_VIRTS = "Открыть приложение";
 export const BTN_BROADCAST_BACK = "🔙 Назад";
 /** Восьмая: поставки. */
 export const BTN_ADMIN_SUPPLIES = "📦 Поставки";
+/** Каталог «Другие услуги» для мини-аппа. */
+export const BTN_ADMIN_OTHER_SERVICES = "🛎 Другие услуги (каталог)";
 export const BTN_SUPPLIES_NEW = "➕ Новая поставка";
 export const BTN_SUPPLIES_ACTIVE = "🔥 Актуальная поставка";
 export const BTN_SUPPLIES_HISTORY = "📜 История поставок";

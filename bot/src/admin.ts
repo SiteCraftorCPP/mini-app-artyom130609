@@ -28,6 +28,7 @@ import {
   BTN_BROADCAST_BACK,
   BTN_BROADCAST_BUY_VIRTS,
   BTN_ADMIN_SUPPLIES,
+  BTN_ADMIN_OTHER_SERVICES,
   BTN_SUPPLIES_ACTIVE,
   BTN_SUPPLIES_BACK,
   BTN_SUPPLIES_CANCEL_INPUT,
@@ -205,6 +206,8 @@ function adminMenuKeyboard() {
     .text(BTN_ADMIN_BROADCASTS, CB.broadcasts)
     .row()
     .text(BTN_ADMIN_SUPPLIES, CB.supplies)
+    .row()
+    .text(BTN_ADMIN_OTHER_SERVICES, "admin:os")
     .row()
     .text("🔗 Реферальная система", "ref:menu")
     .row()

@@ -1389,6 +1389,14 @@ export function startOrderNotifyHttpServer(
           return;
         }
 
+        if (body.action === "get_other_services") {
+          const { getOtherServicesV1 } = await import("./other-services-store.js");
+          const catalog = getOtherServicesV1();
+          res.writeHead(200, { "Content-Type": "application/json", ...corsNotifyHeaders });
+          res.end(JSON.stringify({ ok: true, catalog }));
+          return;
+        }
+
         console.info("[sell] HTTP /notify/sell-virt-webapp", { telegramUserId });
         await sendSellVirtMessage(bot, telegramUserId);
         res.writeHead(200, {

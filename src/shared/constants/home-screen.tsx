@@ -11,8 +11,8 @@ export const HOME_SCREEN_TEXT = {
   popups: {
     ctaLabel: "Скоро будет доступно",
     close: "Закрыть",
-    /** Сообщение в popup «Другие услуги» (список плашек в коде закомментирован). */
-    servicesBody: "Мы дорабатываем раздел - загляните позже.",
+    /** Текст в popup «Другие услуги» — список из каталога (бот / get_other_services). */
+    servicesBody: "",
   },
 } as const;
 
@@ -38,7 +38,7 @@ export const HOME_ACTIONS_TEXT = {
   services: {
     title: "Другие услуги",
     description:
-      "Внутри popup будут дополнительные сервисы: буст, сопровождение сделки и поддержка.",
+      "Доп. услуги по играм: цены, способ выдачи. Каталог настраивается в админке бота.",
     accent: "services",
   },
 } as const;
