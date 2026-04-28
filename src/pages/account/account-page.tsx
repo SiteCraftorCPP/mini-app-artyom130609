@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useLocation, useSearchParams } from "react-router-dom";
 
 import { ACCOUNT_PAGE_TEXT } from "@/shared/constants/text";
 
@@ -10,29 +10,23 @@ import { UserInfo } from "@/widgets/user-info";
 
 type ProfileDeepLinkAction = "currentOrders" | "orderHistory";
 
-function readProfileDeepLink(): {
-  deepLinkActionId: ProfileDeepLinkAction | null;
-  orderId: string | null;
-} {
-  if (typeof window === "undefined") {
-    return { deepLinkActionId: null, orderId: null };
-  }
-  const p = new URLSearchParams(window.location.search);
-  const open = p.get("open");
-  const orderId = p.get("orderId");
-  const deepLinkActionId: ProfileDeepLinkAction | null =
-    open === "currentOrders" || open === "orderHistory" ? open : null;
-  return { deepLinkActionId, orderId };
-}
-
 export const AccountPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [{ deepLinkActionId, orderId: orderIdFromLink }] = useState(
-    () => readProfileDeepLink(),
-  );
+  const location = useLocation();
+  const [deepLink, setDeepLink] = useState<{
+    deepLinkActionId: ProfileDeepLinkAction;
+    orderIdFromLink: string | null;
+  } | null>(null);
 
   useEffect(() => {
-    if (!searchParams.has("open") && !searchParams.has("orderId")) return;
+    const open = searchParams.get("open");
+    const orderId = searchParams.get("orderId");
+    if (open === "currentOrders" || open === "orderHistory") {
+      setDeepLink({ deepLinkActionId: open, orderIdFromLink: orderId });
+    }
+    if (!searchParams.has("open") && !searchParams.has("orderId")) {
+      return;
+    }
     setSearchParams(
       (prev) => {
         const next = new URLSearchParams(prev);
@@ -44,6 +38,13 @@ export const AccountPage = () => {
     );
   }, [searchParams, setSearchParams]);
 
+  const deepLinkActionId = deepLink?.deepLinkActionId ?? null;
+  const orderIdFromLink = deepLink?.orderIdFromLink ?? null;
+
+  const menuKey = deepLinkActionId
+    ? `${deepLinkActionId}-${orderIdFromLink ?? ""}-${location.key}`
+    : location.key;
+
   return (
     <div className="space-y-4">
       <h1 className="sr-only">{ACCOUNT_PAGE_TEXT.pageTitle}</h1>
@@ -51,6 +52,7 @@ export const AccountPage = () => {
       <LogoCard />
       <UserInfo />
       <AccountMenu
+        key={menuKey}
         deepLinkActionId={deepLinkActionId}
         orderIdFromLink={orderIdFromLink}
       />

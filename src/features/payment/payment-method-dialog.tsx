@@ -12,6 +12,7 @@ import {
   requestPaymentPrepare,
 } from "@/shared/lib/prepare-payment";
 import { showErrorMessage, showSuccessMessage } from "@/shared/lib/notify";
+import { savePostPaymentNotice } from "@/features/payment/post-payment-notice-storage";
 import { Button } from "@/shared/ui/button";
 import {
   Dialog,
@@ -172,8 +173,16 @@ export function PaymentMethodDialog({
           amountRub,
           context,
         );
-        const { payUrl } = await requestPaymentPrepare(body);
-        const opened = openPaymentUrl(payUrl);
+        const res = await requestPaymentPrepare(body);
+        savePostPaymentNotice({
+          orderNumber: res.orderNumber,
+          orderKind: context.orderKind,
+          otherMode:
+            context.orderKind === "other_service"
+              ? context.otherService.mode
+              : undefined,
+        });
+        const opened = openPaymentUrl(res.payUrl);
         if (opened) {
           resetAndClose(false);
         } else {

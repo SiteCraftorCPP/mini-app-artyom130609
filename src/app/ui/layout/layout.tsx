@@ -2,6 +2,7 @@ import { Outlet, useLocation } from "react-router-dom";
 
 import { BgLayout } from "@/ui/bg-layout";
 
+import { PostPaymentReturnDialog } from "@/features/payment/post-payment-return-dialog";
 import { AppHeader } from "@/widgets/app-header";
 import { BottomNavigation } from "@/widgets/bottom-navigation";
 import { ROUTERS } from "@/shared/constants/routers";
@@ -25,6 +26,7 @@ export const Layout = () => {
         </main>
 
         <BottomNavigation />
+        <PostPaymentReturnDialog />
       </>
     </BgLayout>
   );
