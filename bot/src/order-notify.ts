@@ -31,6 +31,7 @@ import {
   buildAccountAppOrderCaptionHtml,
   buildAccountManagerOrderCaptionHtml,
   buildOrderCompletedBuyerCaptionHtml,
+  buildOrderCompletedOtherServiceBuyerCaptionHtml,
   buildSellVirtCaptionHtml,
   buildVirtOrderCaptionHtml,
   getOrderCompletedReviewLineText,
@@ -657,6 +658,68 @@ export async function sendVirtOrderSuccess(
   }
 }
 
+/**
+ * «Другие услуги» · ручная выдача: после оплаты — то же фото/текст/кнопка, что у заказа аккаунта (мини-апп).
+ * Без повторного уведомления админам и без записи в активные заказы (уже сделано при webhook).
+ */
+export async function sendOtherServiceManualOrderPlaced(
+  bot: Bot,
+  miniAppUrl: string,
+  payload: { telegramUserId: number; orderId: string; orderNumber: string },
+): Promise<void> {
+  const orderKind: OrderKindForSuccessParts = "account";
+  const parts = getOrderSuccessThreeEmojisTextParts(payload.orderNumber, orderKind);
+  const ids = getOrderSuccessStickerIdsFromEnv();
+  const withEntities = await buildOrderSuccessThreeEmojisCaption(bot.api, ids, parts);
+
+  let caption: string;
+  let caption_entities: import("@grammyjs/types").MessageEntity[] | undefined;
+
+  if (withEntities) {
+    caption = withEntities.text;
+    caption_entities = captionEntitiesAllBoldExcludingCustomEmoji(
+      withEntities.text,
+      withEntities.entities,
+    );
+  } else {
+    caption = buildAccountAppOrderCaptionHtml(payload.orderNumber);
+  }
+
+  const reply_markup = buildOrderDetailsKeyboard(miniAppUrl);
+  const photo = resolveOrderSuccessPhoto();
+
+  if (!photo) {
+    console.warn(
+      "[other-service] нет ORDER_SUCCESS фото — «оформлен» не отправлен покупателю.",
+    );
+    return;
+  }
+
+  const sendPhotoOptions = {
+    caption,
+    reply_markup,
+    ...(caption_entities && caption_entities.length > 0
+      ? { caption_entities }
+      : { parse_mode: "HTML" as const }),
+  };
+
+  await retrySendPhoto(async () => {
+    if (photo.type === "url") {
+      await bot.api.sendPhoto(payload.telegramUserId, photo.url, sendPhotoOptions);
+    } else {
+      const buffer = readFileSync(photo.path);
+      await bot.api.sendPhoto(
+        payload.telegramUserId,
+        new InputFile(buffer, `${Date.now()}_${basename(photo.path)}`),
+        sendPhotoOptions,
+      );
+    }
+  }).catch((e) => {
+    console.error("[other-service] sendPhoto «оформлен»", e);
+    throw e;
+  });
+}
+
 const COMPLETED_ORDER_REVIEW_PHOTO_NAMES = [
   "photo_3.jpg",
   "photo_3.png",
@@ -727,27 +790,42 @@ function formatCompletedOrderRef(orderNumber: string): string {
  */
 export async function sendOrderCompletedToBuyer(
   bot: Bot,
-  payload: { telegramUserId: number; orderNumber: string; isAccount?: boolean; accountData?: string },
+  payload: {
+    telegramUserId: number;
+    orderNumber: string;
+    isAccount?: boolean;
+    accountData?: string;
+    /** «Другие услуги»: текст выдачи без префикса «Данные для входа в аккаунт» */
+    otherServiceBody?: string;
+  },
 ): Promise<void> {
   const ref = formatCompletedOrderRef(payload.orderNumber);
   const line1 = `Заказ ${ref} успешно выполнен!`;
   const line3 = getOrderCompletedReviewLineText();
   const ids = getOrderCompletedStickerIdsFromEnv();
+  const otherBody = payload.otherServiceBody?.trim();
   const useAccountLayout = Boolean(payload.isAccount && payload.accountData?.trim());
 
-  const withEm = useAccountLayout
+  const withEm = otherBody
     ? await buildOrderCompletedThreeEmojisCaption(bot.api, ids, {
-        kind: "account",
+        kind: "other_service",
         line1,
-        accountData: payload.accountData!.trim(),
+        bodyText: otherBody,
         line3,
       })
-    : await buildOrderCompletedThreeEmojisCaption(bot.api, ids, {
-        kind: "virt",
-        line1,
-        line2: "Вирты успешно зачислены на ваш банковский счёт.",
-        line3,
-      });
+    : useAccountLayout
+      ? await buildOrderCompletedThreeEmojisCaption(bot.api, ids, {
+          kind: "account",
+          line1,
+          accountData: payload.accountData!.trim(),
+          line3,
+        })
+      : await buildOrderCompletedThreeEmojisCaption(bot.api, ids, {
+          kind: "virt",
+          line1,
+          line2: "Вирты успешно зачислены на ваш банковский счёт.",
+          line3,
+        });
 
   let caption: string;
   let caption_entities: import("@grammyjs/types").MessageEntity[] | undefined;
@@ -758,11 +836,13 @@ export async function sendOrderCompletedToBuyer(
       withEm.entities,
     );
   } else {
-    caption = buildOrderCompletedBuyerCaptionHtml(
-      payload.orderNumber,
-      payload.isAccount,
-      payload.accountData,
-    );
+    caption = otherBody
+      ? buildOrderCompletedOtherServiceBuyerCaptionHtml(payload.orderNumber, otherBody)
+      : buildOrderCompletedBuyerCaptionHtml(
+          payload.orderNumber,
+          payload.isAccount,
+          payload.accountData,
+        );
   }
 
   const reply_markup = new InlineKeyboard().url(BTN_WRITE_REVIEW, REVIEW_POST_URL);
@@ -1360,8 +1440,12 @@ export function startOrderNotifyHttpServer(
           const os = pending.otherService;
           try {
             if (os.mode === "auto") {
-              const txt = os.deliverText?.trim() || "Оплата получена. Спасибо!";
-              await bot.api.sendMessage(pending.telegramUserId, txt, { parse_mode: "HTML" });
+              const txt = os.deliverText?.trim() || "Спасибо за оплату!";
+              await sendOrderCompletedToBuyer(bot, {
+                telegramUserId: pending.telegramUserId,
+                orderNumber: pending.orderNumber,
+                otherServiceBody: txt,
+              });
             } else {
               let telegramUsername = "user";
               try {
@@ -1409,15 +1493,11 @@ export function startOrderNotifyHttpServer(
                   console.warn(`[other-service] admin notify ${aid}`, e);
                 }
               }
-              await bot.api.sendMessage(
-                pending.telegramUserId,
-                [
-                  "✅ <b>Оплата получена.</b>",
-                  "",
-                  "Заказ передан оператору. Вы получите результат в этот чат после обработки.",
-                ].join("\n"),
-                { parse_mode: "HTML" },
-              );
+              await sendOtherServiceManualOrderPlaced(bot, miniAppUrl, {
+                telegramUserId: pending.telegramUserId,
+                orderId: pending.orderId.trim(),
+                orderNumber: pending.orderNumber,
+              });
             }
           } catch (e) {
             console.error("[freekassa] other_service", e);

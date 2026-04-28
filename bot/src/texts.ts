@@ -106,6 +106,23 @@ export function buildOrderCompletedBuyerCaption(orderNumber: string, isAccount?:
   ].join("\n");
 }
 
+/** «Другие услуги»: выполнен — без строки «Данные для входа в аккаунт», только текст выдачи. */
+export function buildOrderCompletedOtherServiceBuyerCaption(
+  orderNumber: string,
+  bodyText: string,
+): string {
+  const t = orderNumber.trim().replace(/^#+/, "");
+  const ref = `#${t}`;
+  const body = bodyText.trim();
+  return [
+    `✅ Заказ ${ref} успешно выполнен!`,
+    "",
+    body,
+    "",
+    `🪙 ${ORDER_COMPLETED_LINE_REVIEW}`,
+  ].join("\n");
+}
+
 /** Текст строки про отзыв (без ведущего эмодзи) — для caption_entities. */
 export function getOrderCompletedReviewLineText(): string {
   return ORDER_COMPLETED_LINE_REVIEW;
@@ -186,6 +203,13 @@ export function buildOrderCompletedBuyerCaptionHtml(
   accountData?: string,
 ): string {
   return `<b>${escHtml(buildOrderCompletedBuyerCaption(orderNumber, isAccount, accountData))}</b>`;
+}
+
+export function buildOrderCompletedOtherServiceBuyerCaptionHtml(
+  orderNumber: string,
+  bodyText: string,
+): string {
+  return `<b>${escHtml(buildOrderCompletedOtherServiceBuyerCaption(orderNumber, bodyText))}</b>`;
 }
 
 export function buildSellVirtCaptionHtml(orderRef: string): string {

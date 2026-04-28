@@ -271,7 +271,7 @@ export async function buildOrderManagerSuccessTwoEmojisCaption(
   return { text, entities: captionEntitiesAllBoldExcludingCustomEmoji(text, entities) };
 }
 
-/** Выполнение заказа (фото отзыва): (1) строка «Заказ #… выполнен», (2) вирты / данные аккаунта, (3) отзыв. */
+/** Выполнение заказа (фото отзыва): (1) строка «Заказ #… выполнен», (2) вирты / данные аккаунта / текст выдачи, (3) отзыв. */
 export type OrderCompletedThreeEmojisParts =
   | {
       kind: "virt";
@@ -283,6 +283,13 @@ export type OrderCompletedThreeEmojisParts =
       kind: "account";
       line1: string;
       accountData: string;
+      line3: string;
+    }
+  | {
+      kind: "other_service";
+      line1: string;
+      /** Без префикса «Данные для входа в аккаунт» — текст из админки / автовыдачи. */
+      bodyText: string;
       line3: string;
     };
 
@@ -313,7 +320,9 @@ export async function buildOrderCompletedThreeEmojisCaption(
   const middle =
     p.kind === "virt"
       ? h2 + " " + p.line2
-      : h2 + " " + "Данные для входа в аккаунт:\n" + p.accountData;
+      : p.kind === "account"
+        ? h2 + " " + "Данные для входа в аккаунт:\n" + p.accountData
+        : h2 + " " + p.bodyText;
 
   const text = h1 + "  " + p.line1 + "\n\n" + middle + "\n\n" + h3 + " " + p.line3;
   const off2 = (h1 + "  " + p.line1 + "\n\n").length;

@@ -781,10 +781,22 @@ async function clearReplyKeyboard(ctx: Context) {
 }
 
 export function installAdminModule(bot: Bot<Context>, adminIds: Set<number>) {
-  const sendBuyerCompleted = (telegramUserId: number, orderNumber: string, isAccount?: boolean, accountData?: string) => {
-    void sendOrderCompletedToBuyer(bot, { telegramUserId, orderNumber, isAccount, accountData }).catch(
-      (e) => console.error("[order-complete] уведомление покупателю:", e),
-    );
+  const sendBuyerCompleted = (
+    telegramUserId: number,
+    orderNumber: string,
+    opts: {
+      isAccount?: boolean;
+      accountData?: string;
+      otherServiceBody?: string;
+    } = {},
+  ) => {
+    void sendOrderCompletedToBuyer(bot, {
+      telegramUserId,
+      orderNumber,
+      isAccount: opts.isAccount,
+      accountData: opts.accountData,
+      otherServiceBody: opts.otherServiceBody,
+    }).catch((e) => console.error("[order-complete] уведомление покупателю:", e));
   };
   /** Ожидание ввода чистой прибыли после «Подтвердить выдачу». */
   const awaitingProfitByUserId = new Map<number, string>();
@@ -1769,9 +1781,13 @@ export function installAdminModule(bot: Bot<Context>, adminIds: Set<number>) {
     if (ctx.from) {
       clearAwaitingOrderLookup(ctx.from.id);
       
-      if (order.categoryLabel === "Аккаунт") {
+      if (order.categoryLabel === "Аккаунт" || order.categoryLabel === "Другие услуги") {
         awaitingAccountDataByUserId.set(ctx.from.id, ref);
-        await a.reply("Введите данные для входа в аккаунт:\nСервер:\nNick-Name:\nПароль:", {
+        const prompt =
+          order.categoryLabel === "Аккаунт"
+            ? "Введите данные для входа в аккаунт:\nСервер:\nNick-Name:\nПароль:"
+            : "Введите текст, который получит покупатель в чате (товар / данные по заказу):";
+        await a.reply(prompt, {
           reply_markup: profitCancelKeyboard(),
         });
       } else {
@@ -2195,14 +2211,27 @@ export function installAdminModule(bot: Bot<Context>, adminIds: Set<number>) {
     if (completedOrder) {
       const uid = Number(completedOrder.telegramUserId);
       if (Number.isFinite(uid) && uid > 0) {
-        const isAccount = completedOrder.categoryLabel === "Аккаунт";
-        const accountData = pendingAccountData.get(pendingOrderId);
-        sendBuyerCompleted(
-          uid,
-          completedOrder.publicOrderId ?? pendingOrderId,
-          isAccount,
-          accountData
-        );
+        const cat = completedOrder.categoryLabel;
+        const accountOrDelivery = pendingAccountData.get(pendingOrderId);
+        if (cat === "Аккаунт") {
+          sendBuyerCompleted(uid, completedOrder.publicOrderId ?? pendingOrderId, {
+            isAccount: true,
+            accountData: accountOrDelivery,
+          });
+        } else if (cat === "Другие услуги") {
+          const body = accountOrDelivery?.trim();
+          if (body) {
+            sendBuyerCompleted(uid, completedOrder.publicOrderId ?? pendingOrderId, {
+              otherServiceBody: body,
+            });
+          } else {
+            console.warn(
+              "[order-complete] Другие услуги: нет текста выдачи, покупателю не отправлено",
+            );
+          }
+        } else {
+          sendBuyerCompleted(uid, completedOrder.publicOrderId ?? pendingOrderId, {});
+        }
         pendingAccountData.delete(pendingOrderId);
       }
     }
