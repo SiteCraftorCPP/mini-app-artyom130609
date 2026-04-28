@@ -10,7 +10,10 @@ import { InputFile } from "grammy";
 import { InlineKeyboard } from "grammy";
 import { Freekassa } from "@boarteam/freekassa-sdk";
 
-import { getTelegramUserIdFromWebAppInitData } from "./telegram-webapp-init-data.js";
+import {
+  getTelegramUserIdFromWebAppInitData,
+  parseValidatedWebAppUser,
+} from "./telegram-webapp-init-data.js";
 import { captionEntitiesAllBoldExcludingCustomEmoji } from "./caption-bold-helpers.js";
 import {
   buildOrderCompletedThreeEmojisCaption,
@@ -90,6 +93,9 @@ export type VirtOrderSuccessPayload = {
   bankAccount?: string;
   amountRub?: number;
   promoCode?: string;
+  /** Из initData / ctx при создании заказа — для строки покупателя в админке. */
+  telegramUsername?: string;
+  telegramFirstName?: string;
 };
 
 /**
@@ -321,22 +327,40 @@ async function buildActiveOrderRow(
   const id = payload.orderId.trim();
   const publicOrderId = formatOrderNumberForCaption(payload.orderNumber);
   const kind = payload.orderKind ?? "virt";
-  let telegramUsername = "user";
-  try {
-    const chat = await bot.api.getChat(payload.telegramUserId);
-    if (chat.type === "private" && "username" in chat && chat.username) {
-      telegramUsername = chat.username;
-    } else {
-      console.warn(
-        "[virt-order] getChat не вернул username для",
-        payload.telegramUserId,
-        chat,
-      );
-    }
-  } catch (e) {
-    console.error("[virt-order] getChat failed for", payload.telegramUserId, e);
-    /* getChat may fail; stub ok */
+
+  const stripAtLocal = (s: string) => s.replace(/^@/, "").trim();
+
+  let telegramUsername = "";
+  const fromPayloadUser = payload.telegramUsername?.trim()
+    ? stripAtLocal(payload.telegramUsername)
+    : "";
+  const fromPayloadFirst = payload.telegramFirstName?.trim() ?? "";
+  if (fromPayloadUser) {
+    telegramUsername = fromPayloadUser;
+  } else if (fromPayloadFirst) {
+    telegramUsername = fromPayloadFirst;
   }
+
+  if (!telegramUsername) {
+    try {
+      const chat = await bot.api.getChat(payload.telegramUserId);
+      if (chat.type === "private" && "username" in chat && chat.username) {
+        telegramUsername = stripAtLocal(chat.username);
+      } else {
+        console.warn(
+          "[virt-order] getChat: нет username для",
+          payload.telegramUserId,
+        );
+      }
+    } catch (e) {
+      console.error("[virt-order] getChat failed for", payload.telegramUserId, e);
+    }
+  }
+
+  if (!telegramUsername) {
+    telegramUsername = "";
+  }
+
   return {
     id,
     publicOrderId,
@@ -1193,12 +1217,15 @@ export function startOrderNotifyHttpServer(
           res.end(JSON.stringify({ error: "amount" }));
           return;
         }
-        const telegramUserId = getTelegramUserIdFromWebAppInitData(body.initData, botToken);
-        if (telegramUserId === null) {
+        const webUser = parseValidatedWebAppUser(body.initData, botToken);
+        if (!webUser) {
           res.writeHead(401, { "Content-Type": "application/json", ...corsNotifyHeaders });
           res.end(JSON.stringify({ error: "bad initData" }));
           return;
         }
+        const telegramUserId = webUser.id;
+        const pendingTgUsername = webUser.username ?? undefined;
+        const pendingTgFirst = webUser.firstName ?? undefined;
         const orderId = `o-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
         const suffix = Date.now().toString(36).toUpperCase().slice(-6);
         const orderNumber = `#${suffix}`;
@@ -1361,6 +1388,8 @@ export function startOrderNotifyHttpServer(
             amountExpected: oa,
             sent: false,
             telegramUserId,
+            telegramUsername: pendingTgUsername,
+            telegramFirstName: pendingTgFirst,
             orderId,
             orderNumber,
             orderKind: "other_service",
@@ -1392,6 +1421,8 @@ export function startOrderNotifyHttpServer(
             amountExpected: oa,
             sent: false,
             telegramUserId,
+            telegramUsername: pendingTgUsername,
+            telegramFirstName: pendingTgFirst,
             orderId,
             orderNumber,
             orderKind: kind,
@@ -1514,14 +1545,22 @@ export function startOrderNotifyHttpServer(
                 console.error("[freekassa] notifyAdmins other_service auto", e);
               }
             } else {
-              let telegramUsername = "user";
-              try {
-                const chat = await bot.api.getChat(pending.telegramUserId);
-                if (chat.type === "private" && "username" in chat && chat.username) {
-                  telegramUsername = chat.username;
+              let telegramUsername = pending.telegramUsername?.trim() || "";
+              if (!telegramUsername) {
+                try {
+                  const chat = await bot.api.getChat(pending.telegramUserId);
+                  if (chat.type === "private" && "username" in chat && chat.username) {
+                    telegramUsername = chat.username;
+                  }
+                } catch {
+                  /* ok */
                 }
-              } catch {
-                /* ok */
+              }
+              if (!telegramUsername && pending.telegramFirstName?.trim()) {
+                telegramUsername = pending.telegramFirstName.trim();
+              }
+              if (!telegramUsername) {
+                telegramUsername = "";
               }
               addOrUpdateActiveOrder({
                 id: pending.orderId.trim(),
@@ -1585,6 +1624,12 @@ export function startOrderNotifyHttpServer(
           virtAmountLabel: pending.virtAmountLabel,
           transferMethod: pending.transferMethod,
           promoCode: pending.promoCode,
+          ...(pending.telegramUsername
+            ? { telegramUsername: pending.telegramUsername }
+            : {}),
+          ...(pending.telegramFirstName
+            ? { telegramFirstName: pending.telegramFirstName }
+            : {}),
         });
         markPendingSent(mOrder);
         res.writeHead(200, { "Content-Type": "text/plain" }).end("YES");
@@ -1625,15 +1670,13 @@ export function startOrderNotifyHttpServer(
           return;
         }
         const orderKind = parseOrderKind(body.orderKind);
-        const telegramUserId = getTelegramUserIdFromWebAppInitData(
-          body.initData,
-          botToken,
-        );
-        if (telegramUserId === null) {
+        const webUserInit = parseValidatedWebAppUser(body.initData, botToken);
+        if (!webUserInit) {
           console.warn("[virt-order] /notify/virt-order-webapp: initData невалиден");
           res.writeHead(401, corsNotifyHeaders).end("bad initData");
           return;
         }
+        const telegramUserId = webUserInit.id;
         const details = pickVirtOrderDetailsFromRecord(
           body as unknown as Record<string, unknown>,
         );
@@ -1651,6 +1694,8 @@ export function startOrderNotifyHttpServer(
           orderId: body.orderId,
           orderNumber: body.orderNumber,
           ...(orderKind ? { orderKind } : {}),
+          ...(webUserInit.username ? { telegramUsername: webUserInit.username } : {}),
+          ...(webUserInit.firstName ? { telegramFirstName: webUserInit.firstName } : {}),
           ...details,
         });
         res.writeHead(200, {

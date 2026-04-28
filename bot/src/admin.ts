@@ -100,14 +100,42 @@ function stripAt(name: string): string {
   return name.replace(/^@/, "");
 }
 
+/** Публичный @username или пусто, если в заказе только id / имя. */
+function buyerHandleFromOrder(o: AdminOrderRow): string {
+  const u = stripAt(o.telegramUsername).trim();
+  if (!u || u === "user") {
+    return "";
+  }
+  return u;
+}
+
+function formatBuyerDisplayAt(o: AdminOrderRow): string {
+  const h = buyerHandleFromOrder(o);
+  return h ? `@${h}` : `id:${o.telegramUserId}`;
+}
+
+function buildBuyerTgHref(o: AdminOrderRow): string {
+  const h = buyerHandleFromOrder(o);
+  if (h) {
+    return `https://t.me/${encodeURIComponent(h)}`;
+  }
+  const idNum = Number(o.telegramUserId);
+  if (Number.isFinite(idNum)) {
+    return `tg://user?id=${idNum}`;
+  }
+  return "https://t.me/";
+}
+
 function formatListButtonLabel(o: AdminOrderRow): string {
-  const u = stripAt(o.telegramUsername);
-  return `#${o.publicOrderId} (${o.categoryLabel}) - @${u}`;
+  return `#${o.publicOrderId} (${o.categoryLabel}) - ${formatBuyerDisplayAt(o)}`;
 }
 
 function buildOrderDetailHtml(o: AdminOrderRow): string {
-  const un = stripAt(o.telegramUsername);
-  const userLink = `https://t.me/${un}`;
+  const href = buildBuyerTgHref(o);
+  const h = buyerHandleFromOrder(o);
+  const display = h
+    ? `@${escapeHtml(h)}`
+    : `id\u00a0<code>${escapeHtml(o.telegramUserId)}</code>`;
   const idLine = escapeHtml(o.publicOrderId);
   const amountStr = o.amountRub.toFixed(2);
   const head = [
@@ -120,7 +148,7 @@ function buildOrderDetailHtml(o: AdminOrderRow): string {
   }
   return [
     ...head,
-    `Пользователь: <a href="${escapeHtml(userLink)}">@${escapeHtml(un)}</a> (<code>${escapeHtml(o.telegramUserId)}</code>)`,
+    `Пользователь: <a href="${escapeHtml(href)}">${display}</a> (<code>${escapeHtml(o.telegramUserId)}</code>)`,
     `Игра/Услуга: <code>${escapeHtml(o.game)}</code>`,
     `Сервер: <code>${escapeHtml(o.server)}</code>`,
     `Количество виртов: <code>${escapeHtml(o.virtAmountLabel)}</code>`,
@@ -137,7 +165,6 @@ function buildOrderDetailHtml(o: AdminOrderRow): string {
 }
 
 function buildOrderPlainForCopy(o: AdminOrderRow): string {
-  const un = stripAt(o.telegramUsername);
   const head = [
     `Детали заказа ${o.publicOrderId}:`,
     "",
@@ -148,7 +175,7 @@ function buildOrderPlainForCopy(o: AdminOrderRow): string {
   }
   return [
     ...head,
-    `Пользователь: @${un} (${o.telegramUserId})`,
+    `Пользователь: ${formatBuyerDisplayAt(o)} (${o.telegramUserId})`,
     `Игра/Услуга: ${o.game}`,
     `Сервер: ${o.server}`,
     `Количество виртов: ${o.virtAmountLabel}`,

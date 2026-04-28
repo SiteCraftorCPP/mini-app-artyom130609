@@ -7,7 +7,7 @@ type FlowDefaultProps = {
 
 export const FlowDefault = ({ flow }: FlowDefaultProps) => {
   return (
-    <ul className="flex flex-col gap-2 px-4 pb-4">
+    <ul className="scrollbar-app flex max-h-[min(70vh,560px)] min-h-0 flex-col gap-2 overflow-y-scroll px-4 pb-4">
       {flow.data?.map((virt) => (
         <li key={virt.id}>
           <VirtCard virt={virt} onClick={() => flow.onSelectVirt(virt.id)} />

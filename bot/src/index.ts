@@ -667,6 +667,8 @@ bot.on("message", async (ctx, next) => {
       telegramUserId: uid,
       orderId: parsed.orderId,
       orderNumber: parsed.orderNumber,
+      ...(ctx.from?.username ? { telegramUsername: ctx.from.username } : {}),
+      ...(ctx.from?.first_name ? { telegramFirstName: ctx.from.first_name } : {}),
       ...(orderKind ? { orderKind } : {}),
       ...details,
     });

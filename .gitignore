@@ -8,6 +8,9 @@ dist
 dist-ssr
 *.local
 
+# Данные каталога «Другие услуги» на сервере — не перетирать деплоем из репозитория
+bot/data/other-services.v1.json
+
 # Env (секреты)
 .env
 .env.development

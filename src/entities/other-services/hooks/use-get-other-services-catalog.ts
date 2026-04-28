@@ -1,8 +1,8 @@
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { useWebApp } from "@vkruglikov/react-telegram-web-app";
 
-import { BASE_API_URL } from "@/shared/constants/common";
 import { QUERY_KEYS } from "@/api/constants/queryKeys";
+import { resolveMiniappNotifyApiBase } from "@/shared/lib/fetch-miniapp-orders";
 import { TIMING } from "@/shared/constants/timing";
 import type {
   OtherServiceGame,
@@ -208,21 +208,17 @@ export const useGetOtherServicesCatalog = ({
   enabled = true,
 }: Params = {}): UseQueryResult<OtherServicesCatalogV1, Error> => {
   const webApp = useWebApp();
+  const initDataForKey = resolveInitData(webApp);
+  const catalogAuthKey = initDataForKey ? "tg" : "pending";
 
   return useQuery<OtherServicesCatalogV1, Error>({
-    queryKey: [QUERY_KEYS.OTHER_SERVICES.CATALOG],
+    queryKey: [QUERY_KEYS.OTHER_SERVICES.CATALOG, catalogAuthKey],
     queryFn: async () => {
       const initData = resolveInitData(webApp);
       if (!initData) {
         return { v: 1, games: [] };
       }
-      let apiUrl =
-        typeof window !== "undefined" && window.location?.origin
-          ? window.location.origin
-          : "";
-      if (BASE_API_URL) {
-        apiUrl = BASE_API_URL;
-      }
+      const apiUrl = resolveMiniappNotifyApiBase();
       const res = await fetch(`${apiUrl}/notify/sell-virt-webapp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },

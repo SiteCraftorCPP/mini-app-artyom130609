@@ -1,6 +1,7 @@
 import type { Order } from "@/entities/order/model";
 
-function resolveApiBase(): string {
+/** База для `/notify/sell-virt-webapp` (заказы, каталог «Другие услуги»). */
+export function resolveMiniappNotifyApiBase(): string {
   const notifyUrl = import.meta.env.VITE_VIRT_ORDER_NOTIFY_URL?.trim();
   if (notifyUrl) {
     return notifyUrl.replace(/\/$/, "");
@@ -24,7 +25,7 @@ export type MiniappOrdersBundle = {
 export async function fetchMiniappOrdersBundle(
   initData: string,
 ): Promise<MiniappOrdersBundle> {
-  const apiUrl = resolveApiBase();
+  const apiUrl = resolveMiniappNotifyApiBase();
   const res = await fetch(`${apiUrl}/notify/sell-virt-webapp`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -52,7 +53,7 @@ export async function fetchMiniappOrderById(
   initData: string,
   orderId: string,
 ): Promise<Order | null> {
-  const apiUrl = resolveApiBase();
+  const apiUrl = resolveMiniappNotifyApiBase();
   const res = await fetch(`${apiUrl}/notify/sell-virt-webapp`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
