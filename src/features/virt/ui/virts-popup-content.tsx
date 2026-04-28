@@ -16,6 +16,8 @@ type VirtsPopupContentProps = {
   /** Экран раздела «Другие услуги»: id выбранной игры или null — список разделов. */
   otherServicesDrilledGameId?: string | null;
   onOtherServicesDrillGame?: (gameId: string | null) => void;
+  otherServicesDrilledMainId?: string | null;
+  onOtherServicesDrillMain?: (mainId: string | null) => void;
 };
 
 export const VirtsPopupContent = ({
@@ -23,6 +25,8 @@ export const VirtsPopupContent = ({
   type,
   otherServicesDrilledGameId = null,
   onOtherServicesDrillGame = () => {},
+  otherServicesDrilledMainId = null,
+  onOtherServicesDrillMain = () => {},
 }: VirtsPopupContentProps) => {
   const { data, isLoading } = useVirtsPopupContent({ enabled, type });
   const catalogQuery = useGetOtherServicesCatalog({
@@ -67,7 +71,9 @@ export const VirtsPopupContent = ({
       <OtherServicesCatalogView
         catalog={catalogQuery.data}
         drilledGameId={otherServicesDrilledGameId}
+        drilledMainId={otherServicesDrilledMainId}
         onDrillGame={onOtherServicesDrillGame}
+        onDrillMain={onOtherServicesDrillMain}
       />
     );
   }

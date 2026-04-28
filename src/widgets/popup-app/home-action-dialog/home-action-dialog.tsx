@@ -42,10 +42,14 @@ export const HomeActionDialog = ({
   const [servicesDrillGameId, setServicesDrillGameId] = useState<string | null>(
     null,
   );
+  const [servicesDrillMainId, setServicesDrillMainId] = useState<string | null>(
+    null,
+  );
 
   useEffect(() => {
     if (!open) {
       setServicesDrillGameId(null);
+      setServicesDrillMainId(null);
     }
   }, [open]);
 
@@ -72,7 +76,8 @@ export const HomeActionDialog = ({
   const shouldShowBackButton =
     (Boolean(virtPopupFlow.activeVirtId) &&
       (isBuyVirtsAction || isSellVirtsAction || isBuyAccountAction)) ||
-    (isServicesAction && servicesDrillGameId !== null);
+    (isServicesAction &&
+      (servicesDrillGameId !== null || servicesDrillMainId !== null));
 
   let content: ReactNode;
   if (isBuyVirtsAction) {
@@ -87,7 +92,12 @@ export const HomeActionDialog = ({
         enabled={open}
         type={virtPopupType}
         otherServicesDrilledGameId={servicesDrillGameId}
-        onOtherServicesDrillGame={setServicesDrillGameId}
+        onOtherServicesDrillGame={(id) => {
+          setServicesDrillGameId(id);
+          setServicesDrillMainId(null);
+        }}
+        otherServicesDrilledMainId={servicesDrillMainId}
+        onOtherServicesDrillMain={setServicesDrillMainId}
       />
     );
   } else {
@@ -109,6 +119,10 @@ export const HomeActionDialog = ({
           onBack={
             shouldShowBackButton
               ? () => {
+                  if (isServicesAction && servicesDrillMainId !== null) {
+                    setServicesDrillMainId(null);
+                    return;
+                  }
                   if (isServicesAction && servicesDrillGameId !== null) {
                     setServicesDrillGameId(null);
                     return;

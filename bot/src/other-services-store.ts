@@ -8,6 +8,8 @@ import type {
   OtherServiceGame,
   OtherServiceItem,
   OtherServiceMain,
+  OtherServicePayOption,
+  OtherServicePaymentMode,
   OtherServicesStoreV1,
 } from "./other-services-types.js";
 
@@ -125,6 +127,31 @@ const LEGACY_GAME_LABEL: Record<string, string> = {
   "grand-mobile-rp": "Grand Mobile RP",
 };
 
+function migratePayOption(raw: unknown): OtherServicePayOption | null {
+  if (!raw || typeof raw !== "object") {
+    return null;
+  }
+  const o = raw as Record<string, unknown>;
+  const priceLabel = typeof o.priceLabel === "string" ? o.priceLabel.trim() : "";
+  const payUrl = typeof o.payUrl === "string" ? o.payUrl.trim() : "";
+  if (!priceLabel || !payUrl) {
+    return null;
+  }
+  return {
+    id: typeof o.id === "string" ? o.id : genId("p"),
+    priceLabel,
+    payUrl,
+    payLabel: typeof o.payLabel === "string" ? o.payLabel.trim() || undefined : undefined,
+  };
+}
+
+function migratePayOptions(arr: unknown): OtherServicePayOption[] {
+  if (!Array.isArray(arr)) {
+    return [];
+  }
+  return arr.map(migratePayOption).filter((x): x is OtherServicePayOption => x != null);
+}
+
 function migrateItem(raw: unknown): OtherServiceItem {
   if (!raw || typeof raw !== "object") {
     return { id: genId("i"), description: "", paymentMode: "manager" };
@@ -132,6 +159,15 @@ function migrateItem(raw: unknown): OtherServiceItem {
   const o = raw as Record<string, unknown>;
   const id = typeof o.id === "string" ? o.id : genId("i");
   const description = typeof o.description === "string" ? o.description : "";
+  if (o.paymentMode === "pay") {
+    const payOptions = migratePayOptions(o.payOptions);
+    return {
+      id,
+      description,
+      paymentMode: "pay",
+      payOptions: payOptions.length > 0 ? payOptions : undefined,
+    };
+  }
   if (o.paymentMode === "manager" || o.paymentMode === "info") {
     return {
       id,
@@ -201,7 +237,7 @@ function migrateMainEntry(raw: unknown): OtherServiceMain[] {
 
 function migrateGame(raw: unknown): OtherServiceGame {
   if (!raw || typeof raw !== "object") {
-    return { id: genId("g"), name: "Игра", mainSections: [] };
+    return { id: genId("g"), name: "Игра", items: [], mainSections: [] };
   }
   const o = raw as Record<string, unknown>;
   const id =
@@ -213,7 +249,8 @@ function migrateGame(raw: unknown): OtherServiceGame {
         ? (LEGACY_GAME_LABEL[o.projectKey] ?? o.projectKey)
         : "Игра";
   const mainSections = Array.isArray(o.mainSections) ? o.mainSections.flatMap(migrateMainEntry) : [];
-  return { id, name, mainSections };
+  const items = Array.isArray(o.items) ? o.items.map(migrateItem) : [];
+  return { id, name, items, mainSections };
 }
 
 function migrateStore(raw: unknown): OtherServicesStoreV1 {
@@ -259,7 +296,12 @@ export function getGameById(gameId: string): OtherServiceGame | undefined {
 
 export function createGame(name: string): OtherServiceGame {
   const s = safeLoad();
-  const g: OtherServiceGame = { id: genId("g"), name: name.trim() || "Без названия", mainSections: [] };
+  const g: OtherServiceGame = {
+    id: genId("g"),
+    name: name.trim() || "Без названия",
+    items: [],
+    mainSections: [],
+  };
   s.games.push(g);
   save(s);
   return g;
@@ -324,7 +366,14 @@ export function setMainDescription(gameId: string, mainId: string, text: string)
   return true;
 }
 
-function makeItem(input: { description: string; paymentMode: "manager" | "info"; paymentInfo?: string }): OtherServiceItem {
+export type OtherServiceItemInput = {
+  description: string;
+  paymentMode: OtherServicePaymentMode;
+  paymentInfo?: string;
+  payOptions?: Array<{ priceLabel: string; payUrl: string; payLabel?: string }>;
+};
+
+function makeItem(input: OtherServiceItemInput): OtherServiceItem {
   const it: OtherServiceItem = {
     id: genId("i"),
     description: input.description.trim(),
@@ -333,14 +382,53 @@ function makeItem(input: { description: string; paymentMode: "manager" | "info";
   if (input.paymentMode === "info" && input.paymentInfo?.trim()) {
     it.paymentInfo = input.paymentInfo.trim();
   }
+  if (input.paymentMode === "pay" && input.payOptions?.length) {
+    it.payOptions = input.payOptions.map((p) => ({
+      id: genId("p"),
+      priceLabel: p.priceLabel.trim(),
+      payUrl: p.payUrl.trim(),
+      payLabel: p.payLabel?.trim() || undefined,
+    }));
+  }
   return it;
+}
+
+/** Позиция на уровне раздела (без подразделов). */
+export function addItemToGame(gameId: string, input: OtherServiceItemInput): OtherServiceItem | null {
+  const s = safeLoad();
+  const g = s.games.find((x) => x.id === gameId);
+  if (!g) {
+    return null;
+  }
+  if (!g.items) {
+    g.items = [];
+  }
+  const it = makeItem(input);
+  g.items.push(it);
+  save(s);
+  return it;
+}
+
+export function removeItemFromGame(gameId: string, itemId: string): boolean {
+  const s = safeLoad();
+  const g = s.games.find((x) => x.id === gameId);
+  if (!g || !g.items) {
+    return false;
+  }
+  const n = g.items.length;
+  g.items = g.items.filter((i) => i.id !== itemId);
+  if (g.items.length === n) {
+    return false;
+  }
+  save(s);
+  return true;
 }
 
 /** Позиция внутри подраздела. */
 export function addItemToMain(
   gameId: string,
   mainId: string,
-  input: { description: string; paymentMode: "manager" | "info"; paymentInfo?: string },
+  input: OtherServiceItemInput,
 ): OtherServiceItem | null {
   const s = safeLoad();
   const g = s.games.find((x) => x.id === gameId);

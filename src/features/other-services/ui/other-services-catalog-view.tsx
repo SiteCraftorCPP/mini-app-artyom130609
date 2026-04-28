@@ -12,14 +12,68 @@ import {
 import type {
   OtherServiceItem,
   OtherServiceMain,
+  OtherServicePayOption,
   OtherServicesCatalogV1,
 } from "@/shared/types/other-services-catalog";
 import { cn } from "@/shared/utils";
 
-/** Как кнопка «Другие услуги» на `home-page.tsx`: зелёный градиент + иконка карты справа. */
 const SERVICES_PILL_GRADIENT =
   HOME_ACTION_GRADIENTS[HOME_ACTION_GRADIENT_TOKEN.green];
 const SERVICES_PILL_ICON = HOME_ACTION_ICON.services;
+
+/** Строки «Ключ: значение» или произвольный текст в одной колонке. */
+function descriptionToRows(description: string): { label: string; value: string }[] {
+  const lines = description
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter(Boolean);
+  if (lines.length === 0) {
+    return [];
+  }
+  const rows: { label: string; value: string }[] = [];
+  for (const line of lines) {
+    const idx = line.indexOf(":");
+    if (idx > 0 && idx < line.length - 1) {
+      rows.push({
+        label: line.slice(0, idx).trim(),
+        value: line.slice(idx + 1).trim(),
+      });
+    } else {
+      rows.push({ label: "", value: line });
+    }
+  }
+  if (rows.length > 0 && rows.every((r) => !r.label)) {
+    return [{ label: "Описание", value: rows.map((r) => r.value).join("\n") }];
+  }
+  return rows;
+}
+
+function PayOptionsBar({ options }: { options: OtherServicePayOption[] }) {
+  if (options.length === 0) {
+    return null;
+  }
+  return (
+    <ul className="mt-3 flex flex-col gap-2">
+      {options.map((o) => (
+        <li key={o.id} className="w-full min-w-0">
+          <a
+            href={o.payUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="flex w-full min-w-0 items-center justify-between gap-2 rounded-full border border-white/20 bg-gradient-to-r from-teal-500/95 via-emerald-600/90 to-teal-950/95 px-2 py-2 shadow-[0_8px_20px_rgba(0,0,0,0.35)] active:brightness-95"
+          >
+            <span className="min-w-0 max-w-[58%] truncate rounded-full bg-white/25 px-3 py-2 text-center text-sm font-bold text-white">
+              {o.priceLabel}
+            </span>
+            <span className="shrink-0 rounded-full bg-black/40 px-4 py-2 text-center text-sm font-bold text-white">
+              {o.payLabel ?? "Оплатить"}
+            </span>
+          </a>
+        </li>
+      ))}
+    </ul>
+  );
+}
 
 function SectionPill({
   title,
@@ -31,13 +85,10 @@ function SectionPill({
   onClick?: () => void;
 }) {
   const hasSubtitle = Boolean(subtitle?.trim());
-  /** Как `home-page.tsx`: общий `px-8` на плашке, текст не прижат к обводке слева. */
   const shellClass = cn(
     "relative flex w-full justify-start overflow-hidden rounded-full border border-white/30 px-8 text-left",
     SERVICES_PILL_GRADIENT,
-    hasSubtitle
-      ? "h-auto min-h-20 items-start py-3"
-      : "h-20 items-center",
+    hasSubtitle ? "h-auto min-h-20 items-start py-3" : "h-20 items-center",
   );
 
   const inner = (
@@ -96,34 +147,77 @@ function SectionPill({
 }
 
 function ServiceItemCard({ item }: { item: OtherServiceItem }) {
+  const rows = descriptionToRows(item.description);
+
   return (
     <li className="w-full min-w-0">
-      <div className="flex flex-col gap-3 rounded-[12px] border border-white/10 bg-white p-3 shadow-sm">
-        <AppText
-          variant="primaryStrong"
-          size="medium"
-          className="!whitespace-pre-wrap !text-left !text-neutral-900"
-        >
-          {item.description}
-        </AppText>
+      <div
+        className={cn(
+          "flex flex-col rounded-2xl border border-white/12 p-4",
+          "bg-[#1a1d1f] shadow-[0_10px_28px_rgba(0,0,0,0.45)]",
+        )}
+      >
+        {rows.length > 0 ? (
+          <ul className="flex flex-col gap-2.5">
+            {rows.map((r, i) => (
+              <li key={i} className="min-w-0">
+                {r.label ? (
+                  <div className="flex min-w-0 items-start justify-between gap-3">
+                    <AppText
+                      tag={TAG.p}
+                      variant="primaryMedium"
+                      size="small"
+                      className="!shrink-0 !text-left !text-white/55"
+                    >
+                      {r.label}:
+                    </AppText>
+                    <AppText
+                      tag={TAG.p}
+                      variant="primaryStrong"
+                      size="small"
+                      className="!min-w-0 !text-right !font-bold !text-white !whitespace-pre-wrap"
+                    >
+                      {r.value}
+                    </AppText>
+                  </div>
+                ) : (
+                  <AppText
+                    tag={TAG.p}
+                    variant="primaryStrong"
+                    size="medium"
+                    className="!whitespace-pre-wrap !text-left !font-bold !text-white"
+                  >
+                    {r.value}
+                  </AppText>
+                )}
+              </li>
+            ))}
+          </ul>
+        ) : null}
+
         {item.paymentMode === "info" && item.paymentInfo ? (
-          <div className="rounded-md border border-neutral-200 bg-neutral-50 p-2.5">
+          <div className="mt-3 border-t border-white/10 pt-3">
             <AppText
               tag={TAG.p}
               variant="primaryMedium"
               size="small"
-              className="!whitespace-pre-wrap !text-left !text-neutral-800"
+              className="!whitespace-pre-wrap !text-left !text-white/80"
             >
               {item.paymentInfo}
             </AppText>
           </div>
         ) : null}
+
+        {item.paymentMode === "pay" && item.payOptions?.length ? (
+          <PayOptionsBar options={item.payOptions} />
+        ) : null}
+
         {item.paymentMode === "manager" ? (
           <Button
             asChild
             variant="popupSubmit"
             size="popupSubmit"
-            className="h-9 w-full justify-center"
+            className="mt-3 h-9 w-full justify-center rounded-full border border-white/15 bg-teal-700/90 shadow-md hover:brightness-110"
           >
             <a href={SUPPORT_CHAT_URL} target="_blank" rel="noreferrer">
               <AppText variant="primaryStrong" size="small">
@@ -137,33 +231,33 @@ function ServiceItemCard({ item }: { item: OtherServiceItem }) {
   );
 }
 
-function MainSectionBlock({ main }: { main: OtherServiceMain }) {
+function ItemsList({ items }: { items: OtherServiceItem[] }) {
+  if (items.length === 0) {
+    return null;
+  }
   return (
-    <li className="min-w-0">
-      <div className="mb-3 w-full min-w-0">
-        <SectionPill title={main.name} subtitle={main.description} />
-      </div>
-      {main.items.length > 0 ? (
-        <ul className="flex flex-col gap-2">
-          {main.items.map((it) => (
-            <ServiceItemCard key={it.id} item={it} />
-          ))}
-        </ul>
-      ) : null}
-    </li>
+    <ul className="flex flex-col gap-3 px-4 pt-1">
+      {items.map((it) => (
+        <ServiceItemCard key={it.id} item={it} />
+      ))}
+    </ul>
   );
 }
 
 type Props = {
   catalog: OtherServicesCatalogV1;
   drilledGameId: string | null;
+  drilledMainId: string | null;
   onDrillGame: (gameId: string | null) => void;
+  onDrillMain: (mainId: string | null) => void;
 };
 
 export const OtherServicesCatalogView = ({
   catalog,
   drilledGameId,
+  drilledMainId,
   onDrillGame,
+  onDrillMain,
 }: Props) => {
   const games = catalog.games;
 
@@ -173,8 +267,23 @@ export const OtherServicesCatalogView = ({
       !games.some((g) => g.id === drilledGameId)
     ) {
       onDrillGame(null);
+      onDrillMain(null);
     }
-  }, [games, drilledGameId, onDrillGame]);
+  }, [games, drilledGameId, onDrillGame, onDrillMain]);
+
+  const activeGame =
+    drilledGameId === null
+      ? undefined
+      : games.find((g) => g.id === drilledGameId);
+
+  useEffect(() => {
+    if (!activeGame || drilledMainId === null) {
+      return;
+    }
+    if (!activeGame.mainSections.some((m) => m.id === drilledMainId)) {
+      onDrillMain(null);
+    }
+  }, [activeGame, drilledMainId, onDrillMain]);
 
   if (games.length === 0) {
     return null;
@@ -186,7 +295,13 @@ export const OtherServicesCatalogView = ({
         <ul className="flex flex-col gap-3 px-4 pt-1">
           {games.map((g) => (
             <li key={g.id} className="w-full min-w-0">
-              <SectionPill title={g.name} onClick={() => onDrillGame(g.id)} />
+              <SectionPill
+                title={g.name}
+                onClick={() => {
+                  onDrillGame(g.id);
+                  onDrillMain(null);
+                }}
+              />
             </li>
           ))}
         </ul>
@@ -194,18 +309,50 @@ export const OtherServicesCatalogView = ({
     );
   }
 
-  const activeGame = games.find((g) => g.id === drilledGameId);
   if (!activeGame) {
     return null;
   }
 
+  if (drilledMainId !== null) {
+    const main = activeGame.mainSections.find((m) => m.id === drilledMainId);
+    if (!main) {
+      return null;
+    }
+    return (
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-auto pb-4">
+        <ItemsList items={main.items} />
+      </div>
+    );
+  }
+
+  const subs = activeGame.mainSections;
+  const rootItems = activeGame.items ?? [];
+
+  if (subs.length === 0) {
+    return (
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-auto pb-4">
+        <ItemsList items={rootItems} />
+      </div>
+    );
+  }
+
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-auto pb-4">
-      <ul className="flex flex-col gap-8 px-4 pt-1">
-        {activeGame.mainSections.map((main) => (
-          <MainSectionBlock key={main.id} main={main} />
+      <ul className="flex flex-col gap-3 px-4 pt-1">
+        {subs.map((main: OtherServiceMain) => (
+          <li key={main.id} className="w-full min-w-0">
+            <SectionPill
+              title={main.name}
+              subtitle={main.description}
+              onClick={
+                main.items.length > 0
+                  ? () => onDrillMain(main.id)
+                  : undefined
+              }
+            />
+          </li>
         ))}
       </ul>
     </div>
   );
-};
+}

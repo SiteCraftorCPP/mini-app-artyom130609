@@ -8,16 +8,51 @@ import type {
   OtherServiceGame,
   OtherServiceItem,
   OtherServiceMain,
+  OtherServicePayOption,
   OtherServicesCatalogV1,
 } from "@/shared/types/other-services-catalog";
 
 type Params = { enabled?: boolean };
+
+function migratePayOption(raw: unknown): OtherServicePayOption | null {
+  if (!raw || typeof raw !== "object") {
+    return null;
+  }
+  const o = raw as Record<string, unknown>;
+  const priceLabel = typeof o.priceLabel === "string" ? o.priceLabel.trim() : "";
+  const payUrl = typeof o.payUrl === "string" ? o.payUrl.trim() : "";
+  if (!priceLabel || !payUrl) {
+    return null;
+  }
+  return {
+    id: typeof o.id === "string" ? o.id : "p0",
+    priceLabel,
+    payUrl,
+    payLabel: typeof o.payLabel === "string" ? o.payLabel.trim() || undefined : undefined,
+  };
+}
+
+function migratePayOptions(raw: unknown): OtherServicePayOption[] {
+  if (!Array.isArray(raw)) {
+    return [];
+  }
+  return raw.map(migratePayOption).filter((x): x is OtherServicePayOption => x != null);
+}
 
 function migrateItem(raw: unknown): OtherServiceItem {
   if (!raw || typeof raw !== "object") {
     return { id: "i0", description: "", paymentMode: "manager" };
   }
   const o = raw as Record<string, unknown>;
+  if (o.paymentMode === "pay") {
+    const payOptions = migratePayOptions(o.payOptions);
+    return {
+      id: typeof o.id === "string" ? o.id : "i0",
+      description: typeof o.description === "string" ? o.description : "",
+      paymentMode: "pay",
+      payOptions: payOptions.length > 0 ? payOptions : undefined,
+    };
+  }
   if (o.paymentMode === "manager" || o.paymentMode === "info") {
     return {
       id: typeof o.id === "string" ? o.id : "i0",
@@ -114,7 +149,7 @@ function migrateMainEntry(raw: unknown): OtherServiceMain[] {
 
 function migrateGame(raw: unknown): OtherServiceGame {
   if (!raw || typeof raw !== "object") {
-    return { id: "g0", name: "Игра", mainSections: [] };
+    return { id: "g0", name: "Игра", items: [], mainSections: [] };
   }
   const o = raw as Record<string, unknown>;
   const id =
@@ -125,9 +160,11 @@ function migrateGame(raw: unknown): OtherServiceGame {
       : typeof o.projectKey === "string"
         ? (LEGACY_LABEL[o.projectKey] ?? o.projectKey)
         : "Игра";
+  const items = Array.isArray(o.items) ? o.items.map(migrateItem) : [];
   return {
     id,
     name,
+    items,
     mainSections: Array.isArray(o.mainSections) ? o.mainSections.flatMap(migrateMainEntry) : [],
   };
 }
