@@ -80,7 +80,7 @@ export const Faq = ({ items }: FaqProps) => {
               </DialogHeader>
               <div
                 className={cn(
-                  "hide-scrollbar mt-3 flex min-h-0 w-full min-w-0 max-w-full flex-1 flex-col self-stretch touch-pan-y overflow-y-auto overflow-x-clip overscroll-contain px-4 pb-2",
+                  "scrollbar-app mt-3 flex min-h-0 w-full min-w-0 max-h-[min(72vh,560px)] max-w-full flex-1 flex-col self-stretch touch-pan-y overflow-y-scroll overflow-x-clip overscroll-contain px-4 pb-2",
                 )}
               >
                 <FaqAnswerText answer={active.answer} />

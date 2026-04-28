@@ -110,6 +110,9 @@ export const HomeActionDialog = ({
       contentBodyClassName={
         isFormCenteredFlow ? "flex flex-1 flex-col justify-start" : undefined
       }
+      scrollAreaVariant={
+        isBuyVirtsAction || isSellVirtsAction ? "visible" : "hidden"
+      }
       dialogVariant="popup"
       open={open}
       setOpen={setOpen}

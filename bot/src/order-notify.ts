@@ -36,8 +36,12 @@ import {
   buildVirtOrderCaptionHtml,
   getOrderCompletedReviewLineText,
 } from "./texts.js";
+import { bumpAdminOrderSequence } from "./admin-order-sequence.js";
 import {
   addOrUpdateActiveOrder,
+  getActiveOrders,
+  getAdminOrderByIdFromStore,
+  getClosedOrders,
   type AdminOrderRow,
 } from "./orders-store.js";
 import { findOtherServiceItem } from "./other-services-store.js";
@@ -489,6 +493,43 @@ async function retrySendPhoto(fn: () => Promise<void>, maxRetries = 10) {
   }
 }
 
+/** DTO для мини-аппа «Аккаунт» — совпадает с `AccountOrderMock` во фронте. */
+function adminRowToMiniappOrderJson(row: AdminOrderRow): Record<string, unknown> {
+  const pid = (row.publicOrderId || row.id || "").trim();
+  const num = pid.startsWith("#") ? pid : pid ? `#${pid}` : `#${row.id}`;
+  const parts = row.openedAtLine?.trim().split(/\s+/) ?? [];
+  const title = parts[0] ?? "—";
+  const time = parts.slice(1).join(" ") || "—";
+  let completedAt = "";
+  if (row.closedAtLine?.trim()) {
+    completedAt = row.closedAtLine.split(" · ")[0]?.trim() ?? row.closedAtLine;
+  }
+  return {
+    id: row.id,
+    publicOrderId: row.publicOrderId,
+    number: num,
+    categoryLabel: row.categoryLabel,
+    telegramUsername: row.telegramUsername,
+    telegramUserId: row.telegramUserId,
+    game: row.game || "—",
+    server: row.server || "—",
+    virtAmountLabel: row.virtAmountLabel,
+    transferMethod: row.transferMethod,
+    bankAccount: row.bankAccount,
+    accountNumber: row.bankAccount || row.virtAmountLabel || "—",
+    amountRub: row.amountRub,
+    openedAtLine: row.openedAtLine,
+    closedAtLine: row.closedAtLine,
+    title,
+    time,
+    paidAt: time,
+    completedAt,
+    promoCode: row.promoCode ?? "",
+    price: 0,
+    logo: "",
+  };
+}
+
 /** Как `resolveBotAdminIdSet` в index.ts — дублируем, чтобы не плодить циклы. */
 function resolveAdminTelegramIdsFromEnv(): number[] {
   const out: number[] = [];
@@ -518,10 +559,15 @@ export async function notifyAdminsNewOrder(
   if (admins.length === 0) {
     return;
   }
+  const seq = bumpAdminOrderSequence();
   const kind =
-    payload.orderKind === "account" ? "покупка аккаунта" : "покупка виртов";
+    payload.orderKind === "account"
+      ? "покупка аккаунта"
+      : payload.orderKind === "other_service"
+        ? "другие услуги"
+        : "покупка виртов";
   const lines: string[] = [
-    "🆕 Новый заказ",
+    `🆕 Новый заказ #${seq}`,
     "",
     `Тип: ${kind}`,
     `Номер: ${payload.orderNumber}`,
@@ -537,7 +583,11 @@ export async function notifyAdminsNewOrder(
     lines.push(`Сумма: ${payload.amountRub} ₽`);
   }
   if (payload.virtAmountLabel) {
-    lines.push(`Вирты: ${payload.virtAmountLabel}`);
+    lines.push(
+      payload.orderKind === "other_service"
+        ? `Услуга: ${payload.virtAmountLabel}`
+        : `Вирты: ${payload.virtAmountLabel}`,
+    );
   }
   if (payload.bankAccount) {
     lines.push(`Счёт: ${payload.bankAccount}`);
@@ -1446,6 +1496,23 @@ export function startOrderNotifyHttpServer(
                 orderNumber: pending.orderNumber,
                 otherServiceBody: txt,
               });
+              try {
+                await notifyAdminsNewOrder(bot, {
+                  telegramUserId: pending.telegramUserId,
+                  orderId: pending.orderId,
+                  orderNumber: pending.orderNumber,
+                  orderKind: "other_service",
+                  game: pending.game,
+                  server: pending.server,
+                  amountRub: pending.amountRub,
+                  virtAmountLabel: pending.virtAmountLabel,
+                  transferMethod:
+                    pending.transferMethod ?? "Другие услуги · автовыдача",
+                  promoCode: pending.promoCode,
+                });
+              } catch (e) {
+                console.error("[freekassa] notifyAdmins other_service auto", e);
+              }
             } else {
               let telegramUsername = "user";
               try {
@@ -1470,28 +1537,22 @@ export function startOrderNotifyHttpServer(
                 amountRub: pending.amountRub ?? 0,
                 openedAtLine: formatOpenedAtLine(),
               });
-              const admins = resolveAdminTelegramIdsFromEnv();
-              const admText = [
-                "🆕 Оплата «Другие услуги» (ручная выдача)",
-                "",
-                `Номер: ${pending.orderNumber}`,
-                `Сумма: ${pending.amountRub} ₽`,
-                `Покупатель TG: ${pending.telegramUserId}`,
-                `Раздел: ${os.gameName}`,
-                os.mainName ? `Подраздел: ${os.mainName}` : "",
-                "",
-                `Карточка: ${os.cardSummary.slice(0, 200)}`,
-              ]
-                .filter(Boolean)
-                .join("\n");
-              for (const aid of admins) {
-                try {
-                  await bot.api.sendMessage(aid, admText, {
-                    link_preview_options: { is_disabled: true },
-                  });
-                } catch (e) {
-                  console.warn(`[other-service] admin notify ${aid}`, e);
-                }
+              try {
+                await notifyAdminsNewOrder(bot, {
+                  telegramUserId: pending.telegramUserId,
+                  orderId: pending.orderId.trim(),
+                  orderNumber: pending.orderNumber,
+                  orderKind: "other_service",
+                  game: pending.game ?? os.gameName,
+                  server: pending.server ?? os.mainName ?? "—",
+                  amountRub: pending.amountRub,
+                  virtAmountLabel: os.cardSummary.slice(0, 400),
+                  transferMethod:
+                    pending.transferMethod ?? "Другие услуги · ручная выдача",
+                  promoCode: pending.promoCode,
+                });
+              } catch (e) {
+                console.error("[freekassa] notifyAdmins other_service manual", e);
               }
               await sendOtherServiceManualOrderPlaced(bot, miniAppUrl, {
                 telegramUserId: pending.telegramUserId,
@@ -1611,7 +1672,11 @@ export function startOrderNotifyHttpServer(
         return;
       }
       try {
-        const body = await readJsonBody<{ initData: string; action?: string }>(req);
+        const body = await readJsonBody<{
+          initData: string;
+          action?: string;
+          orderId?: string;
+        }>(req);
         if (typeof body.initData !== "string") {
           res.writeHead(400, corsNotifyHeaders).end("bad body");
           return;
@@ -1647,6 +1712,71 @@ export function startOrderNotifyHttpServer(
           const catalog = getOtherServicesV1();
           res.writeHead(200, { "Content-Type": "application/json", ...corsNotifyHeaders });
           res.end(JSON.stringify({ ok: true, catalog }));
+          return;
+        }
+
+        if (body.action === "get_my_orders") {
+          const admins = resolveAdminTelegramIdsFromEnv();
+          const isElevated = admins.includes(telegramUserId);
+          const activeAll = getActiveOrders();
+          const closedAll = getClosedOrders();
+          const uidStr = String(telegramUserId);
+          const active = isElevated
+            ? activeAll
+            : activeAll.filter((r) => String(r.telegramUserId) === uidStr);
+          const closed = isElevated
+            ? closedAll
+            : closedAll.filter((r) => String(r.telegramUserId) === uidStr);
+          res.writeHead(200, {
+            "Content-Type": "application/json",
+            ...corsNotifyHeaders,
+          });
+          res.end(
+            JSON.stringify({
+              ok: true,
+              isAdminView: isElevated,
+              active: active.map(adminRowToMiniappOrderJson),
+              closed: closed.map(adminRowToMiniappOrderJson),
+            }),
+          );
+          return;
+        }
+
+        if (body.action === "get_my_order") {
+          const orderId = body.orderId;
+          if (typeof orderId !== "string" || !orderId.trim()) {
+            res.writeHead(400, corsNotifyHeaders).end("bad body");
+            return;
+          }
+          const row = getAdminOrderByIdFromStore(orderId.trim());
+          if (!row) {
+            res.writeHead(404, {
+              "Content-Type": "application/json",
+              ...corsNotifyHeaders,
+            });
+            res.end(JSON.stringify({ ok: false, error: "not_found" }));
+            return;
+          }
+          const admins = resolveAdminTelegramIdsFromEnv();
+          const isElevated = admins.includes(telegramUserId);
+          if (!isElevated && String(row.telegramUserId) !== String(telegramUserId)) {
+            res.writeHead(403, {
+              "Content-Type": "application/json",
+              ...corsNotifyHeaders,
+            });
+            res.end(JSON.stringify({ ok: false, error: "forbidden" }));
+            return;
+          }
+          res.writeHead(200, {
+            "Content-Type": "application/json",
+            ...corsNotifyHeaders,
+          });
+          res.end(
+            JSON.stringify({
+              ok: true,
+              order: adminRowToMiniappOrderJson(row),
+            }),
+          );
           return;
         }
 

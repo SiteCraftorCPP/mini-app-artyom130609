@@ -176,6 +176,7 @@ export function PaymentMethodDialog({
         const res = await requestPaymentPrepare(body);
         savePostPaymentNotice({
           orderNumber: res.orderNumber,
+          orderId: res.orderId,
           orderKind: context.orderKind,
           otherMode:
             context.orderKind === "other_service"

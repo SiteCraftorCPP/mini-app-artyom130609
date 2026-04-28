@@ -500,3 +500,25 @@ input[type="number"]::-webkit-outer-spin-button {
 .hide-scrollbar::-webkit-scrollbar {
   display: none;
 }
+
+/* Вертикальный скролл (заметный трек) — Telegram WebView иногда прячет `thin` */
+.scrollbar-app {
+  scrollbar-gutter: stable;
+  scrollbar-width: auto;
+  scrollbar-color: rgba(168, 168, 168, 0.9) rgba(40, 40, 40, 0.55);
+}
+
+.scrollbar-app::-webkit-scrollbar {
+  width: 10px;
+}
+
+.scrollbar-app::-webkit-scrollbar-track {
+  background: rgba(40, 40, 40, 0.55);
+  border-radius: 6px;
+}
+
+.scrollbar-app::-webkit-scrollbar-thumb {
+  background: rgba(168, 168, 168, 0.8);
+  border-radius: 999px;
+  border: 2px solid rgba(26, 26, 26, 0.95);
+}

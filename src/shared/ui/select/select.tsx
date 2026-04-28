@@ -44,7 +44,9 @@ export const SelectContent = ({
         )}
         {...props}
       >
-        <SelectPrimitive.Viewport>{children}</SelectPrimitive.Viewport>
+        <SelectPrimitive.Viewport className="scrollbar-app max-h-[min(240px,50vh)] overflow-y-scroll">
+          {children}
+        </SelectPrimitive.Viewport>
       </SelectPrimitive.Content>
     </SelectPrimitive.Portal>
   );

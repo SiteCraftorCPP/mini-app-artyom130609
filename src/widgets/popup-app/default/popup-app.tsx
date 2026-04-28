@@ -23,6 +23,8 @@ type PopupAppProps = {
   contentClassName?: string;
   /** Классы для прокручиваемой области под шапкой (напр. `justify-center`). */
   contentBodyClassName?: string;
+  /** Видимый скроллбар (ТЗ мини-апп) вместо `hide-scrollbar`. */
+  scrollAreaVariant?: "hidden" | "visible";
   /** Вариант `DialogContent`: по умолчанию `popup`. */
   dialogVariant?: PopupAppDialogVariant;
   open?: boolean;
@@ -38,6 +40,7 @@ export const PopupApp = ({
   content,
   contentClassName,
   contentBodyClassName,
+  scrollAreaVariant = "hidden",
   dialogVariant = "popup",
   open,
   setOpen,
@@ -74,7 +77,10 @@ export const PopupApp = ({
         </DialogHeader>
         <div
           className={cn(
-            "hide-scrollbar mt-3 flex min-h-0 min-w-0 w-full max-w-full flex-1 flex-col touch-pan-y overflow-y-auto overscroll-contain",
+            "mt-3 flex min-h-0 min-w-0 w-full max-w-full flex-1 flex-col touch-pan-y overscroll-contain",
+            scrollAreaVariant === "visible"
+              ? "scrollbar-app overflow-y-scroll"
+              : "hide-scrollbar overflow-y-auto",
             contentBodyClassName,
           )}
         >

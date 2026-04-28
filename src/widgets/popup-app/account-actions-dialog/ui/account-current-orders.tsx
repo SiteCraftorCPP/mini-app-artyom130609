@@ -58,7 +58,7 @@ export const AccountCurrentOrders = ({
         >
           {ORDER_ADMIN_TEXT.pendingHeader}
         </AppText>
-        <ul className="flex min-w-0 flex-col gap-2">
+        <ul className="scrollbar-app flex max-h-[min(60vh,480px)] min-w-0 flex-col gap-2 overflow-y-auto">
           {orders.map((order) => (
             <li key={order.id} className="min-w-0">
               <Button
@@ -83,9 +83,7 @@ export const AccountCurrentOrders = ({
     );
   }
 
-  const [order] = orders;
-
-  if (!order) {
+  if (orders.length === 0) {
     return (
       <div className="px-4 pb-4">
         <AppText variant="popupBody" size="popupBody">
@@ -95,10 +93,30 @@ export const AccountCurrentOrders = ({
     );
   }
 
+  if (orders.length === 1) {
+    const [one] = orders;
+    return (
+      <div className="flex gap-3 px-4 pb-4">
+        <AccountOrderCard order={one} />
+        <AccountOrderInfoPanel order={one} />
+      </div>
+    );
+  }
+
   return (
-    <div className="flex gap-3 px-4 pb-4">
-      <AccountOrderCard order={order} />
-      <AccountOrderInfoPanel order={order} />
-    </div>
+    <ul className="scrollbar-app flex max-h-[min(70vh,520px)] min-h-0 flex-col gap-3 overflow-y-auto px-4 pb-4">
+      {orders.map((o) => (
+        <li key={o.id} className="flex min-w-0 items-center gap-3">
+          <AccountOrderCard order={o} onClick={() => onSelectOrder(o.id)} />
+          <AppText
+            variant="primaryStrong"
+            size="small"
+            className="min-w-0 flex-1 truncate text-left"
+          >
+            {o.number} · {o.game}
+          </AppText>
+        </li>
+      ))}
+    </ul>
   );
 };

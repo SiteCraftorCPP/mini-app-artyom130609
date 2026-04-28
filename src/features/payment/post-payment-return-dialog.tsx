@@ -1,6 +1,8 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
+import { QUERY_KEYS } from "@/api/constants/queryKeys";
 import {
   buildPostPaymentReturnBody,
   buildPostPaymentReturnTitle,
@@ -31,6 +33,7 @@ export function PostPaymentReturnDialog() {
   const [open, setOpen] = useState(false);
   const [notice, setNotice] = useState<StoredPostPaymentNotice | null>(null);
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   const tryOpenFromStorage = useCallback(() => {
     const n = readPostPaymentNotice();
@@ -74,11 +77,11 @@ export function PostPaymentReturnDialog() {
           <>
             <DialogHeader className="min-w-0 gap-3 pr-0">
               <DialogTitle className="sr-only">{title}</DialogTitle>
-              <PopupAppHeader title={title} />
+              <PopupAppHeader title={title} titleVariant="plain" />
             </DialogHeader>
             <div
               className={cn(
-                "hide-scrollbar mt-3 flex min-h-0 w-full min-w-0 max-w-full flex-1 flex-col self-stretch touch-pan-y overflow-y-auto overflow-x-clip overscroll-contain px-4 pb-2",
+                "scrollbar-app mt-3 flex min-h-0 w-full min-w-0 max-h-[min(72vh,560px)] max-w-full flex-1 flex-col self-stretch touch-pan-y overflow-y-scroll overflow-x-clip overscroll-contain px-4 pb-2",
               )}
             >
               <div className={bodyClass}>{body}</div>
@@ -87,7 +90,17 @@ export function PostPaymentReturnDialog() {
                 className="mt-6 min-h-12 w-full justify-center rounded-[14px] border border-app-border-soft px-4 tw-bg-popup-submit text-sm font-semibold text-white shadow-[0_8px_20px_var(--app-shadow)] hover:brightness-110 active:brightness-90"
                 onClick={() => {
                   handleOpenChange(false);
-                  navigate(`${ROUTERS.PROFILE}?open=orderHistory`);
+                  void queryClient.invalidateQueries({
+                    queryKey: [QUERY_KEYS.ORDERS.CURRENT],
+                  });
+                  void queryClient.invalidateQueries({
+                    queryKey: [QUERY_KEYS.ORDERS.BY_ID],
+                  });
+                  const oid = notice.orderId?.trim();
+                  const q = oid
+                    ? `open=currentOrders&orderId=${encodeURIComponent(oid)}`
+                    : "open=currentOrders";
+                  navigate(`${ROUTERS.PROFILE}?${q}`);
                 }}
               >
                 <AppText variant="primaryStrong" size="popupBody">

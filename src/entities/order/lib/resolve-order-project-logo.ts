@@ -8,5 +8,9 @@ export function resolveOrderProjectLogoUrl(order: Order): string {
   if (k && k in VIRTS_ICONS) {
     return VIRTS_ICONS[k as VirtProjectIconKey];
   }
-  return order.logo;
+  const logo = order.logo?.trim();
+  if (logo) {
+    return logo;
+  }
+  return VIRTS_ICONS["black-russia"];
 }

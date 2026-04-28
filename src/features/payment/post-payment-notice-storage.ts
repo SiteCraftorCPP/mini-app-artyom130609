@@ -3,6 +3,8 @@ const MAX_AGE_MS = 20 * 60 * 1000;
 
 export type StoredPostPaymentNotice = {
   orderNumber: string;
+  /** Внутренний id заказа в сторе бота — для deep link в мини-апп. */
+  orderId?: string;
   orderKind: "virt" | "account" | "other_service";
   otherMode?: "auto" | "manual";
   at: number;
@@ -42,6 +44,7 @@ export function readPostPaymentNotice(): StoredPostPaymentNotice | null {
     }
     return {
       orderNumber: j.orderNumber,
+      orderId: typeof j.orderId === "string" && j.orderId.trim() ? j.orderId.trim() : undefined,
       orderKind: j.orderKind,
       otherMode:
         j.otherMode === "auto" || j.otherMode === "manual"

@@ -58,7 +58,7 @@ export const AccountOrderHistory = ({
         >
           {ORDER_ADMIN_TEXT.history50Header}
         </AppText>
-        <ul className="flex min-h-0 min-w-0 max-h-[min(60vh,480px)] flex-col gap-2 overflow-y-auto">
+        <ul className="scrollbar-app flex min-h-0 min-w-0 max-h-[min(60vh,480px)] flex-col gap-2 overflow-y-auto">
           {orders.map((order) => (
             <li key={order.id} className="min-w-0">
               <Button
@@ -92,14 +92,16 @@ export const AccountOrderHistory = ({
   }
 
   return (
-    <div className="grid grid-cols-4 gap-x-3 gap-y-4 px-4 pb-4">
-      {orders.map((order) => (
-        <AccountOrderCard
-          key={order.id}
-          order={order}
-          onClick={() => onSelectOrder(order.id)}
-        />
-      ))}
+    <div className="scrollbar-app max-h-[min(60vh,480px)] overflow-y-auto px-4 pb-4">
+      <div className="grid grid-cols-4 gap-x-3 gap-y-4">
+        {orders.map((order) => (
+          <AccountOrderCard
+            key={order.id}
+            order={order}
+            onClick={() => onSelectOrder(order.id)}
+          />
+        ))}
+      </div>
     </div>
   );
 };
