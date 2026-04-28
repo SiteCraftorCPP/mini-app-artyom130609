@@ -16,9 +16,10 @@ import type {
 } from "@/shared/types/other-services-catalog";
 import { cn } from "@/shared/utils";
 
-const SECTION_GRADIENT = HOME_ACTION_GRADIENTS[HOME_ACTION_GRADIENT_TOKEN.aqua];
-/** Иконка в углу как у «Купить вирты» (сумка). */
-const PLASH_ICON = HOME_ACTION_ICON.currency;
+/** Как кнопка «Другие услуги» на `home-page.tsx`: зелёный градиент + иконка карты справа. */
+const SERVICES_PILL_GRADIENT =
+  HOME_ACTION_GRADIENTS[HOME_ACTION_GRADIENT_TOKEN.green];
+const SERVICES_PILL_ICON = HOME_ACTION_ICON.services;
 
 function SectionPill({
   title,
@@ -31,30 +32,46 @@ function SectionPill({
   active?: boolean;
   onClick?: () => void;
 }) {
+  const hasSubtitle = Boolean(subtitle?.trim());
+  /** Как на главной: одна строка по центру по вертикали; с подзаголовком — чуть выше, без обрезки иконки. */
+  const shellClass = cn(
+    "relative flex w-full justify-start overflow-hidden rounded-full border border-white/30 text-left",
+    SERVICES_PILL_GRADIENT,
+    hasSubtitle
+      ? "h-auto min-h-20 items-start py-3"
+      : "h-20 items-center",
+    active && "brightness-110",
+  );
+
   const inner = (
     <>
-      <span className="pointer-events-none absolute top-1/2 right-2 z-0 max-h-16 -translate-y-1/2 text-white/35 [&_svg]:max-h-16">
-        {PLASH_ICON}
-      </span>
-      <div className="relative z-10 min-w-0 pr-14">
+      <div
+        className={cn(
+          "relative z-10 min-w-0 max-w-[calc(100%-4.5rem)] pl-8 pr-2",
+          !hasSubtitle && "self-center py-0",
+        )}
+      >
         <AppText
-          className="!text-left text-[20px] font-bold leading-tight tracking-tight md:text-[22px]"
+          className="relative z-10 text-[22px] font-bold leading-tight tracking-tight"
           variant="heroButton"
           size="heroButton"
         >
           {title}
         </AppText>
-        {subtitle?.trim() ? (
+        {hasSubtitle ? (
           <AppText
             tag={TAG.p}
             variant="primaryMedium"
             size="small"
-            className="!mt-1 !line-clamp-3 !whitespace-pre-wrap !text-left !text-white/90"
+            className="!mt-1 !line-clamp-6 !whitespace-pre-wrap !text-left !text-white/90"
           >
-            {subtitle.trim()}
+            {subtitle!.trim()}
           </AppText>
         ) : null}
       </div>
+      <span className="pointer-events-none absolute top-0 right-0 z-0 block text-white [&_svg]:size-auto [&_svg]:max-h-none [&_svg]:max-w-none">
+        {SERVICES_PILL_ICON}
+      </span>
     </>
   );
 
@@ -65,11 +82,7 @@ function SectionPill({
         variant="brand"
         size="pill"
         onClick={onClick}
-        className={cn(
-          "relative flex min-h-20 w-full items-start justify-center overflow-visible border border-white/30 py-3 pl-6 pr-20 text-left",
-          SECTION_GRADIENT,
-          active && "ring-2 ring-white/45",
-        )}
+        className={shellClass}
       >
         {inner}
       </Button>
@@ -78,10 +91,7 @@ function SectionPill({
 
   return (
     <div
-      className={cn(
-        "relative flex min-h-20 w-full items-start justify-center overflow-visible rounded-full border border-white/30 py-3 pl-6 pr-20 text-left",
-        SECTION_GRADIENT,
-      )}
+      className={cn(shellClass, "shadow-[0_10px_30px_var(--app-shadow)]")}
     >
       {inner}
     </div>
@@ -162,20 +172,17 @@ export const OtherServicesCatalogView = ({ catalog }: Props) => {
   const games = catalog.games;
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  if (games.length === 0) {
-    return (
-      <div className="px-4 pb-4">
-        <AppText tag={TAG.p} variant="primaryMedium" size="small" className="!text-left text-white/50">
-          Каталог пуст.
-        </AppText>
-      </div>
-    );
-  }
-
   const current = useMemo(() => {
+    if (games.length === 0) return undefined;
     const k = selectedId ?? games[0]!.id;
     return games.find((g) => g.id === k) ?? games[0]!;
   }, [games, selectedId]);
+
+  if (games.length === 0) {
+    return null;
+  }
+
+  const activeGame = current ?? games[0]!;
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-auto pb-4">
@@ -196,7 +203,7 @@ export const OtherServicesCatalogView = ({ catalog }: Props) => {
         })}
       </ul>
 
-      {current.mainSections.length === 0 ? (
+      {activeGame.mainSections.length === 0 ? (
         <AppText
           tag={TAG.p}
           variant="primaryMedium"
@@ -208,7 +215,7 @@ export const OtherServicesCatalogView = ({ catalog }: Props) => {
       ) : null}
 
       <ul className="flex flex-col gap-8 px-4">
-        {current.mainSections.map((main) => (
+        {activeGame.mainSections.map((main) => (
           <MainSectionBlock key={main.id} main={main} />
         ))}
       </ul>
