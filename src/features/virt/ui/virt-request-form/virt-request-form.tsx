@@ -64,12 +64,11 @@ export const VirtRequestForm = ({ virt }: VirtRequestFormProps) => {
     <div className="flex min-h-0 flex-1 flex-col gap-3 px-4 pb-4">
       <VirtCard virt={virt} interactive={false} className="shadow-none shrink-0" />
 
-      <div className="scrollbar-app min-h-0 flex-1 overflow-y-scroll [-webkit-overflow-scrolling:touch]">
-        <Form {...form}>
-          <form
-            onSubmit={handleSubmit}
-            className="bg-surface-base text-text-inverse flex w-full flex-col rounded-xl p-4 shadow-[var(--shadow-popup-panel)]"
-          >
+      <Form {...form}>
+        <form
+          onSubmit={handleSubmit}
+          className="bg-surface-base text-text-inverse flex w-full flex-col rounded-xl p-4 shadow-[var(--shadow-popup-panel)]"
+        >
           <div className="flex flex-col gap-3">
             <FormField
               control={form.control}
@@ -217,7 +216,6 @@ export const VirtRequestForm = ({ virt }: VirtRequestFormProps) => {
           </div>
         </form>
       </Form>
-      </div>
       <PaymentMethodDialog
         open={paymentOpen}
         onOpenChange={setPaymentOpen}

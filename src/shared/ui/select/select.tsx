@@ -39,12 +39,12 @@ export const SelectContent = ({
       <SelectPrimitive.Content
         position={position}
         className={cn(
-          "bg-surface-base text-text-inverse relative z-50 max-h-60 min-w-[var(--radix-select-trigger-width)] overflow-hidden rounded-xl border border-app-border-soft p-1 shadow-[var(--shadow-popup-panel)]",
+          "bg-surface-base text-text-inverse relative z-50 min-w-[var(--radix-select-trigger-width)] overflow-hidden rounded-xl border border-app-border-soft p-1 shadow-[var(--shadow-popup-panel)]",
           className,
         )}
         {...props}
       >
-        <SelectPrimitive.Viewport className="scrollbar-app max-h-[min(240px,50vh)] overflow-y-scroll">
+        <SelectPrimitive.Viewport className="scrollbar-app max-h-[min(320px,52dvh)] min-h-0 touch-pan-y overflow-y-scroll overscroll-contain p-0.5 [-webkit-overflow-scrolling:touch]">
           {children}
         </SelectPrimitive.Viewport>
       </SelectPrimitive.Content>

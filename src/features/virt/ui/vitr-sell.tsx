@@ -40,7 +40,7 @@ export const VirtSell = ({ virt }: VirtSellProps) => {
   }, [webApp]);
 
   return (
-    <div className="scrollbar-app flex max-h-[min(78vh,620px)] min-h-0 flex-col items-center justify-start gap-4 overflow-y-scroll px-4 pb-6 [-webkit-overflow-scrolling:touch]">
+    <div className="flex flex-col items-center justify-center gap-4 px-4 pb-6">
       <VirtCard virt={virt} interactive={false} className="shadow-none" />
       <div className="flex flex-col items-center justify-center gap-4 px-4">
         <Button

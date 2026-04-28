@@ -110,9 +110,8 @@ export const HomeActionDialog = ({
       contentBodyClassName={
         isFormCenteredFlow ? "flex flex-1 flex-col justify-start" : undefined
       }
-      scrollAreaVariant={
-        isBuyVirtsAction || isSellVirtsAction ? "visible" : "hidden"
-      }
+      /** Видимый скролл только в выпадашках (сервер и т.д.), не на всём попапе — иначе двойной трек у края экрана. */
+      scrollAreaVariant="hidden"
       dialogVariant="popup"
       open={open}
       setOpen={setOpen}
