@@ -39,6 +39,15 @@ export type PaymentDialogContext =
       transferMethod: string;
       accountMode: string;
       accountOptionLabel: string;
+    }
+  | {
+      orderKind: "other_service";
+      otherService: {
+        itemId: string;
+        gameId: string;
+        mainId: string | null;
+        mode: "auto" | "manual";
+      };
     };
 
 type PaymentMethodDialogProps = {
@@ -79,16 +88,25 @@ function buildPrepareInput(
       promoCode: ctx.promoCode,
     };
   }
+  if (ctx.orderKind === "account") {
+    return {
+      initData,
+      orderKind: "account",
+      method,
+      amountRub,
+      game: ctx.game,
+      server: ctx.server,
+      transferMethod: ctx.transferMethod,
+      accountMode: ctx.accountMode,
+      accountOptionLabel: ctx.accountOptionLabel,
+    };
+  }
   return {
     initData,
-    orderKind: "account",
+    orderKind: "other_service",
     method,
     amountRub,
-    game: ctx.game,
-    server: ctx.server,
-    transferMethod: ctx.transferMethod,
-    accountMode: ctx.accountMode,
-    accountOptionLabel: ctx.accountOptionLabel,
+    otherService: ctx.otherService,
   };
 }
 
@@ -303,15 +321,17 @@ export function PaymentMethodDialog({
                   {m.label}
                 </Button>
               ))}
-              <Button
-                type="button"
-                size="default"
-                disabled={busy}
-                className={cn(methodBtnClass, "mt-0.5")}
-                onClick={() => setStep("kzt")}
-              >
-                {PAYMENT_TEXT.methodKzt}
-              </Button>
+              {context.orderKind !== "other_service" ? (
+                <Button
+                  type="button"
+                  size="default"
+                  disabled={busy}
+                  className={cn(methodBtnClass, "mt-0.5")}
+                  onClick={() => setStep("kzt")}
+                >
+                  {PAYMENT_TEXT.methodKzt}
+                </Button>
+              ) : null}
             </div>
           )}
         </div>

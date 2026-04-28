@@ -28,6 +28,13 @@ export type PaymentPrepareInput = {
   promoCode?: string;
   accountMode?: string;
   accountOptionLabel?: string;
+  /** Для orderKind === "other_service" */
+  otherService?: {
+    itemId: string;
+    gameId: string;
+    mainId: string | null;
+    mode: "auto" | "manual";
+  };
 };
 
 export type PaymentPrepareResult = {

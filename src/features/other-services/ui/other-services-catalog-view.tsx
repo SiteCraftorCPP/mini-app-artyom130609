@@ -1,8 +1,13 @@
-import { useEffect } from "react";
+import { useWebApp } from "@vkruglikov/react-telegram-web-app";
+import { useEffect, useMemo, useState } from "react";
 
 import { AppText } from "@/ui/app-text";
 import { TAG } from "@/ui/app-text/model";
 import { Button } from "@/ui/button";
+import {
+  PaymentMethodDialog,
+  type PaymentDialogContext,
+} from "@/features/payment/payment-method-dialog";
 import { SUPPORT_CHAT_URL } from "@/shared/constants/common";
 import {
   HOME_ACTION_GRADIENTS,
@@ -146,7 +151,17 @@ function SectionPill({
   );
 }
 
-function ServiceItemCard({ item }: { item: OtherServiceItem }) {
+function ServiceItemCard({
+  item,
+  onOpenOtherServicePay,
+}: {
+  item: OtherServiceItem;
+  onOpenOtherServicePay: (p: {
+    amountRub: number;
+    itemId: string;
+    mode: "auto" | "manual";
+  }) => void;
+}) {
   const rows = descriptionToRows(item.description);
 
   return (
@@ -226,19 +241,89 @@ function ServiceItemCard({ item }: { item: OtherServiceItem }) {
             </a>
           </Button>
         ) : null}
+
+        {item.paymentMode === "auto" || item.paymentMode === "manual" ? (
+          <div className="mt-3 border-t border-white/10 pt-3">
+            {item.amountRub != null &&
+            Number.isFinite(item.amountRub) &&
+            item.amountRub > 0 ? (
+              <>
+                <Button
+                  type="button"
+                  variant="popupSubmit"
+                  size="popupSubmit"
+                  className="h-10 w-full justify-center rounded-full border border-white/15 bg-gradient-to-r from-teal-600/95 to-emerald-800/95 shadow-md hover:brightness-110"
+                  onClick={() => {
+                    const mode = item.paymentMode;
+                    if (mode !== "auto" && mode !== "manual") {
+                      return;
+                    }
+                    onOpenOtherServicePay({
+                      amountRub: item.amountRub!,
+                      itemId: item.id,
+                      mode,
+                    });
+                  }}
+                >
+                  <AppText variant="primaryStrong" size="small">
+                    Оплатить{" "}
+                    {new Intl.NumberFormat("ru-RU").format(
+                      Math.round(item.amountRub * 100) / 100,
+                    )}{" "}
+                    ₽
+                  </AppText>
+                </Button>
+                <AppText
+                  tag={TAG.p}
+                  variant="primaryMedium"
+                  size="small"
+                  className="!mt-2 !text-center !text-white/65"
+                >
+                  {item.paymentMode === "auto"
+                    ? "После оплаты товар придёт вам в этот чат с ботом."
+                    : "После оплаты заказ уйдёт администратору; когда выдачу подтвердят — вы получите товар в чат."}
+                </AppText>
+              </>
+            ) : (
+              <AppText
+                tag={TAG.p}
+                variant="primaryMedium"
+                size="small"
+                className="!text-amber-200/90"
+              >
+                Сумма не настроена. Попросите администратора задать цену для этой
+                позиции.
+              </AppText>
+            )}
+          </div>
+        ) : null}
       </div>
     </li>
   );
 }
 
-function ItemsList({ items }: { items: OtherServiceItem[] }) {
+function ItemsList({
+  items,
+  onOpenOtherServicePay,
+}: {
+  items: OtherServiceItem[];
+  onOpenOtherServicePay: (p: {
+    amountRub: number;
+    itemId: string;
+    mode: "auto" | "manual";
+  }) => void;
+}) {
   if (items.length === 0) {
     return null;
   }
   return (
     <ul className="flex flex-col gap-3 px-4 pt-1">
       {items.map((it) => (
-        <ServiceItemCard key={it.id} item={it} />
+        <ServiceItemCard
+          key={it.id}
+          item={it}
+          onOpenOtherServicePay={onOpenOtherServicePay}
+        />
       ))}
     </ul>
   );
@@ -260,6 +345,58 @@ export const OtherServicesCatalogView = ({
   onDrillMain,
 }: Props) => {
   const games = catalog.games;
+  const webApp = useWebApp();
+  const initData = useMemo(() => {
+    const fromHook = webApp?.initData?.trim();
+    if (fromHook) {
+      return fromHook;
+    }
+    if (typeof window !== "undefined") {
+      const raw = (
+        window as { Telegram?: { WebApp?: { initData?: string } } }
+      ).Telegram?.WebApp?.initData?.trim();
+      if (raw) {
+        return raw;
+      }
+    }
+    return "";
+  }, [webApp?.initData]);
+
+  const [payState, setPayState] = useState<{
+    amountRub: number;
+    context: PaymentDialogContext;
+  } | null>(null);
+
+  const openOtherServicePay =
+    (gameId: string, mainId: string | null) =>
+    (p: { amountRub: number; itemId: string; mode: "auto" | "manual" }) => {
+      setPayState({
+        amountRub: p.amountRub,
+        context: {
+          orderKind: "other_service",
+          otherService: {
+            itemId: p.itemId,
+            gameId,
+            mainId,
+            mode: p.mode,
+          },
+        },
+      });
+    };
+
+  const paymentDialog = (
+    <PaymentMethodDialog
+      open={payState !== null}
+      onOpenChange={(v) => {
+        if (!v) {
+          setPayState(null);
+        }
+      }}
+      initData={initData}
+      amountRub={payState?.amountRub ?? 0}
+      context={payState?.context ?? null}
+    />
+  );
 
   useEffect(() => {
     if (
@@ -291,21 +428,24 @@ export const OtherServicesCatalogView = ({
 
   if (drilledGameId === null) {
     return (
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-auto pb-4">
-        <ul className="flex flex-col gap-3 px-4 pt-1">
-          {games.map((g) => (
-            <li key={g.id} className="w-full min-w-0">
-              <SectionPill
-                title={g.name}
-                onClick={() => {
-                  onDrillGame(g.id);
-                  onDrillMain(null);
-                }}
-              />
-            </li>
-          ))}
-        </ul>
-      </div>
+      <>
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-auto pb-4">
+          <ul className="flex flex-col gap-3 px-4 pt-1">
+            {games.map((g) => (
+              <li key={g.id} className="w-full min-w-0">
+                <SectionPill
+                  title={g.name}
+                  onClick={() => {
+                    onDrillGame(g.id);
+                    onDrillMain(null);
+                  }}
+                />
+              </li>
+            ))}
+          </ul>
+        </div>
+        {paymentDialog}
+      </>
     );
   }
 
@@ -319,9 +459,15 @@ export const OtherServicesCatalogView = ({
       return null;
     }
     return (
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-auto pb-4">
-        <ItemsList items={main.items} />
-      </div>
+      <>
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-auto pb-4">
+          <ItemsList
+            items={main.items}
+            onOpenOtherServicePay={openOtherServicePay(activeGame.id, main.id)}
+          />
+        </div>
+        {paymentDialog}
+      </>
     );
   }
 
@@ -330,29 +476,34 @@ export const OtherServicesCatalogView = ({
 
   if (subs.length === 0) {
     return (
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-auto pb-4">
-        <ItemsList items={rootItems} />
-      </div>
+      <>
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-auto pb-4">
+          <ItemsList
+            items={rootItems}
+            onOpenOtherServicePay={openOtherServicePay(activeGame.id, null)}
+          />
+        </div>
+        {paymentDialog}
+      </>
     );
   }
 
   return (
-    <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-auto pb-4">
-      <ul className="flex flex-col gap-3 px-4 pt-1">
-        {subs.map((main: OtherServiceMain) => (
-          <li key={main.id} className="w-full min-w-0">
-            <SectionPill
-              title={main.name}
-              subtitle={main.description}
-              onClick={
-                main.items.length > 0
-                  ? () => onDrillMain(main.id)
-                  : undefined
-              }
-            />
-          </li>
-        ))}
-      </ul>
-    </div>
+    <>
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-auto pb-4">
+        <ul className="flex flex-col gap-3 px-4 pt-1">
+          {subs.map((main: OtherServiceMain) => (
+            <li key={main.id} className="w-full min-w-0">
+              <SectionPill
+                title={main.name}
+                subtitle={main.description}
+                onClick={() => onDrillMain(main.id)}
+              />
+            </li>
+          ))}
+        </ul>
+      </div>
+      {paymentDialog}
+    </>
   );
 }

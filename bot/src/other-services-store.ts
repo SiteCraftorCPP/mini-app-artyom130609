@@ -159,6 +159,17 @@ function migrateItem(raw: unknown): OtherServiceItem {
   const o = raw as Record<string, unknown>;
   const id = typeof o.id === "string" ? o.id : genId("i");
   const description = typeof o.description === "string" ? o.description : "";
+  if (o.paymentMode === "auto" || o.paymentMode === "manual") {
+    const amountRub = typeof o.amountRub === "number" ? o.amountRub : undefined;
+    const deliverText = typeof o.deliverText === "string" ? o.deliverText : undefined;
+    return {
+      id,
+      description,
+      paymentMode: o.paymentMode,
+      deliverText: deliverText?.trim() || undefined,
+      amountRub: amountRub != null && Number.isFinite(amountRub) ? amountRub : undefined,
+    };
+  }
   if (o.paymentMode === "pay") {
     const payOptions = migratePayOptions(o.payOptions);
     return {
@@ -371,6 +382,8 @@ export type OtherServiceItemInput = {
   paymentMode: OtherServicePaymentMode;
   paymentInfo?: string;
   payOptions?: Array<{ priceLabel: string; payUrl: string; payLabel?: string }>;
+  deliverText?: string;
+  amountRub?: number;
 };
 
 function makeItem(input: OtherServiceItemInput): OtherServiceItem {
@@ -390,7 +403,49 @@ function makeItem(input: OtherServiceItemInput): OtherServiceItem {
       payLabel: p.payLabel?.trim() || undefined,
     }));
   }
+  if (input.paymentMode === "auto") {
+    if (input.deliverText?.trim()) {
+      it.deliverText = input.deliverText.trim();
+    }
+    if (input.amountRub != null && Number.isFinite(input.amountRub)) {
+      it.amountRub = input.amountRub;
+    }
+  }
+  if (input.paymentMode === "manual") {
+    if (input.amountRub != null && Number.isFinite(input.amountRub)) {
+      it.amountRub = input.amountRub;
+    }
+  }
   return it;
+}
+
+export function findOtherServiceItem(
+  gameId: string,
+  mainId: string | null | undefined,
+  itemId: string,
+): { game: OtherServiceGame; main: OtherServiceMain | null; item: OtherServiceItem } | null {
+  const s = safeLoad();
+  const g = s.games.find((x) => x.id === gameId);
+  if (!g) {
+    return null;
+  }
+  const mid = mainId?.trim() || null;
+  if (!mid) {
+    const it = g.items?.find((x) => x.id === itemId);
+    if (!it) {
+      return null;
+    }
+    return { game: g, main: null, item: it };
+  }
+  const m = g.mainSections.find((x) => x.id === mid);
+  if (!m) {
+    return null;
+  }
+  const it = m.items.find((x) => x.id === itemId);
+  if (!it) {
+    return null;
+  }
+  return { game: g, main: m, item: it };
 }
 
 /** Позиция на уровне раздела (без подразделов). */

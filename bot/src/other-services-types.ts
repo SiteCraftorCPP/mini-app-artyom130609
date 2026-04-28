@@ -1,11 +1,9 @@
 /**
  * Каталог «Другие услуги» (v1) — дубли в мини-аппе: `src/shared/types/other-services-catalog.ts`
- *
- * Раздел (game) → опционально позиции на уровне раздела (`items`, если нет подразделов)
- * → подразделы (main) → позиции (items).
  */
 
-export type OtherServicePaymentMode = "manager" | "info" | "pay";
+/** `info` / `pay` — legacy в старых JSON. */
+export type OtherServicePaymentMode = "manager" | "auto" | "manual" | "info" | "pay";
 
 export type OtherServicePayOption = {
   id: string;
@@ -18,10 +16,14 @@ export type OtherServiceItem = {
   id: string;
   description: string;
   paymentMode: OtherServicePaymentMode;
-  /** Показ в мини-аппе, если `paymentMode === "info"` */
+  /** Legacy: произвольный текст после «текста» в админке */
   paymentInfo?: string;
-  /** Если `paymentMode === "pay"` — кнопки «цена / оплатить» */
+  /** Legacy: внешние ссылки оплаты */
   payOptions?: OtherServicePayOption[];
+  /** Автовыдача: текст в ЛС после оплаты FreeKassa */
+  deliverText?: string;
+  /** Авто / ручная — сумма ₽ (оплата через FreeKassa в мини-аппе) */
+  amountRub?: number;
 };
 
 export type OtherServiceMain = {
@@ -33,9 +35,7 @@ export type OtherServiceMain = {
 
 export type OtherServiceGame = {
   id: string;
-  /** Название на плашке в мини-аппе */
   name: string;
-  /** Позиции без подразделов (пока `mainSections` пуст). */
   items: OtherServiceItem[];
   mainSections: OtherServiceMain[];
 };

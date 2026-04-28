@@ -35,7 +35,11 @@ import {
   buildVirtOrderCaptionHtml,
   getOrderCompletedReviewLineText,
 } from "./texts.js";
-import { addOrUpdateActiveOrder, type AdminOrderRow } from "./orders-store.js";
+import {
+  addOrUpdateActiveOrder,
+  type AdminOrderRow,
+} from "./orders-store.js";
+import { findOtherServiceItem } from "./other-services-store.js";
 import { consumePromoCode, getAllPromoCodes } from "./promo-codes-store.js";
 import { parseRublesAmountFromUserText } from "./money-input.js";
 import {
@@ -60,7 +64,7 @@ import {
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-export type OrderNotifyKind = "virt" | "account";
+export type OrderNotifyKind = "virt" | "account" | "other_service";
 
 export type VirtOrderSuccessPayload = {
   /** Номер заказа для текста (#JDHDH или JDHDH) */
@@ -865,7 +869,7 @@ export function pickVirtOrderDetailsFromRecord(
 }
 
 function parseOrderKind(raw: unknown): OrderNotifyKind | undefined {
-  if (raw === "virt" || raw === "account") {
+  if (raw === "virt" || raw === "account" || raw === "other_service") {
     return raw;
   }
   return undefined;
@@ -911,7 +915,7 @@ function amountsMatchFreekassa(expected: string, got: string): boolean {
 
 type PaymentPrepareJson = {
   initData: string;
-  orderKind: "virt" | "account";
+  orderKind: "virt" | "account" | "other_service";
   method: "sbp" | "mir" | "card_rub";
   amountRub: number;
   game?: string;
@@ -922,6 +926,14 @@ type PaymentPrepareJson = {
   promoCode?: string;
   accountMode?: string;
   accountOptionLabel?: string;
+  /** Заказ услуги из каталога «Другие услуги» */
+  otherService?: {
+    itemId: string;
+    gameId: string;
+    /** Пустая строка / отсутствует — позиция на уровне раздела */
+    mainId?: string | null;
+    mode: "auto" | "manual";
+  };
 };
 
 function fkMethodId(m: PaymentPrepareJson["method"]): number {
@@ -1031,7 +1043,11 @@ export function startOrderNotifyHttpServer(
           res.end(JSON.stringify({ error: "initData" }));
           return;
         }
-        if (body.orderKind !== "virt" && body.orderKind !== "account") {
+        if (
+          body.orderKind !== "virt" &&
+          body.orderKind !== "account" &&
+          body.orderKind !== "other_service"
+        ) {
           res.writeHead(400, { "Content-Type": "application/json", ...corsNotifyHeaders });
           res.end(JSON.stringify({ error: "orderKind" }));
           return;
@@ -1155,27 +1171,109 @@ export function startOrderNotifyHttpServer(
             i,
           });
         }
-        const kind = parseOrderKind(body.orderKind) ?? "virt";
-        const transfer =
-          body.transferMethod?.trim() ||
-          (kind === "account" && body.accountOptionLabel
-            ? `Аккаунт: ${body.accountMode ?? ""} ${body.accountOptionLabel}`.trim()
-            : "Оплата FreeKassa");
-        const payload: PendingPaymentOrder = {
-          amountExpected: oa,
-          sent: false,
-          telegramUserId,
-          orderId,
-          orderNumber,
-          orderKind: kind,
-          game: body.game,
-          server: body.server,
-          bankAccount: body.bankAccount,
-          amountRub: amountNum,
-          virtAmountLabel: body.virtAmountLabel,
-          transferMethod: transfer,
-          promoCode: body.promoCode?.trim() || undefined,
-        };
+        let payload: PendingPaymentOrder;
+        if (body.orderKind === "other_service") {
+          const osIn = body.otherService;
+          if (
+            !osIn ||
+            typeof osIn.itemId !== "string" ||
+            typeof osIn.gameId !== "string" ||
+            (osIn.mode !== "auto" && osIn.mode !== "manual")
+          ) {
+            res.writeHead(400, { "Content-Type": "application/json", ...corsNotifyHeaders });
+            res.end(JSON.stringify({ error: "otherService" }));
+            return;
+          }
+          const mainIdNorm =
+            osIn.mainId === undefined ||
+            osIn.mainId === null ||
+            String(osIn.mainId).trim() === ""
+              ? null
+              : String(osIn.mainId).trim();
+          const found = findOtherServiceItem(osIn.gameId, mainIdNorm, osIn.itemId);
+          if (!found) {
+            res.writeHead(404, { "Content-Type": "application/json", ...corsNotifyHeaders });
+            res.end(JSON.stringify({ error: "catalog item" }));
+            return;
+          }
+          const { item, game, main } = found;
+          if (osIn.mode === "auto") {
+            if (item.paymentMode !== "auto") {
+              res.writeHead(400, { "Content-Type": "application/json", ...corsNotifyHeaders });
+              res.end(JSON.stringify({ error: "mode item" }));
+              return;
+            }
+            if (!item.deliverText?.trim()) {
+              res.writeHead(400, { "Content-Type": "application/json", ...corsNotifyHeaders });
+              res.end(JSON.stringify({ error: "deliver" }));
+              return;
+            }
+          } else if (item.paymentMode !== "manual") {
+            res.writeHead(400, { "Content-Type": "application/json", ...corsNotifyHeaders });
+            res.end(JSON.stringify({ error: "mode item" }));
+            return;
+          }
+          const expectedRub = item.amountRub;
+          if (
+            expectedRub == null ||
+            !Number.isFinite(expectedRub) ||
+            Math.abs(expectedRub - amountNum) > 0.009
+          ) {
+            res.writeHead(400, { "Content-Type": "application/json", ...corsNotifyHeaders });
+            res.end(JSON.stringify({ error: "amount mismatch" }));
+            return;
+          }
+          const transferOs =
+            osIn.mode === "auto"
+              ? "Другие услуги · автовыдача"
+              : "Другие услуги · ручная выдача";
+          payload = {
+            amountExpected: oa,
+            sent: false,
+            telegramUserId,
+            orderId,
+            orderNumber,
+            orderKind: "other_service",
+            game: game.name,
+            server: main?.name ?? "—",
+            bankAccount: "",
+            amountRub: amountNum,
+            virtAmountLabel: item.description.slice(0, 400),
+            transferMethod: transferOs,
+            otherService: {
+              mode: osIn.mode,
+              deliverText: item.deliverText,
+              itemId: item.id,
+              gameId: game.id,
+              mainId: main?.id ?? null,
+              gameName: game.name,
+              mainName: main?.name ?? null,
+              cardSummary: item.description.slice(0, 300),
+            },
+          };
+        } else {
+          const kind = parseOrderKind(body.orderKind) ?? "virt";
+          const transfer =
+            body.transferMethod?.trim() ||
+            (kind === "account" && body.accountOptionLabel
+              ? `Аккаунт: ${body.accountMode ?? ""} ${body.accountOptionLabel}`.trim()
+              : "Оплата FreeKassa");
+          payload = {
+            amountExpected: oa,
+            sent: false,
+            telegramUserId,
+            orderId,
+            orderNumber,
+            orderKind: kind,
+            game: body.game,
+            server: body.server,
+            bankAccount: body.bankAccount,
+            amountRub: amountNum,
+            virtAmountLabel: body.virtAmountLabel,
+            transferMethod: transfer,
+            promoCode: body.promoCode?.trim() || undefined,
+          };
+        }
         putPendingPayment(merchantOrderId, payload);
         res.writeHead(200, { "Content-Type": "application/json", ...corsNotifyHeaders });
         res.end(
@@ -1258,7 +1356,82 @@ export function startOrderNotifyHttpServer(
         if (pending.promoCode) {
           consumePromoCode(pending.promoCode);
         }
-        const ok = parseOrderKind(pending.orderKind) ?? "virt";
+        if (pending.orderKind === "other_service" && pending.otherService) {
+          const os = pending.otherService;
+          try {
+            if (os.mode === "auto") {
+              const txt = os.deliverText?.trim() || "Оплата получена. Спасибо!";
+              await bot.api.sendMessage(pending.telegramUserId, txt, { parse_mode: "HTML" });
+            } else {
+              let telegramUsername = "user";
+              try {
+                const chat = await bot.api.getChat(pending.telegramUserId);
+                if (chat.type === "private" && "username" in chat && chat.username) {
+                  telegramUsername = chat.username;
+                }
+              } catch {
+                /* ok */
+              }
+              addOrUpdateActiveOrder({
+                id: pending.orderId.trim(),
+                publicOrderId: formatOrderNumberForCaption(pending.orderNumber),
+                categoryLabel: "Другие услуги",
+                telegramUsername,
+                telegramUserId: String(pending.telegramUserId),
+                game: os.gameName,
+                server: os.mainName ?? "—",
+                virtAmountLabel: os.cardSummary,
+                transferMethod: pending.transferMethod ?? "FreeKassa",
+                bankAccount: "",
+                amountRub: pending.amountRub ?? 0,
+                openedAtLine: formatOpenedAtLine(),
+              });
+              const admins = resolveAdminTelegramIdsFromEnv();
+              const admText = [
+                "🆕 Оплата «Другие услуги» (ручная выдача)",
+                "",
+                `Номер: ${pending.orderNumber}`,
+                `Сумма: ${pending.amountRub} ₽`,
+                `Покупатель TG: ${pending.telegramUserId}`,
+                `Раздел: ${os.gameName}`,
+                os.mainName ? `Подраздел: ${os.mainName}` : "",
+                "",
+                `Карточка: ${os.cardSummary.slice(0, 200)}`,
+              ]
+                .filter(Boolean)
+                .join("\n");
+              for (const aid of admins) {
+                try {
+                  await bot.api.sendMessage(aid, admText, {
+                    link_preview_options: { is_disabled: true },
+                  });
+                } catch (e) {
+                  console.warn(`[other-service] admin notify ${aid}`, e);
+                }
+              }
+              await bot.api.sendMessage(
+                pending.telegramUserId,
+                [
+                  "✅ <b>Оплата получена.</b>",
+                  "",
+                  "Заказ передан оператору. Вы получите результат в этот чат после обработки.",
+                ].join("\n"),
+                { parse_mode: "HTML" },
+              );
+            }
+          } catch (e) {
+            console.error("[freekassa] other_service", e);
+          }
+          markPendingSent(mOrder);
+          res.writeHead(200, { "Content-Type": "text/plain" }).end("YES");
+          return;
+        }
+        const ok = parseOrderKind(pending.orderKind);
+        if (ok !== "virt" && ok !== "account") {
+          markPendingSent(mOrder);
+          res.writeHead(200, { "Content-Type": "text/plain" }).end("YES");
+          return;
+        }
         await sendVirtOrderSuccess(bot, miniAppUrl, {
           telegramUserId: pending.telegramUserId,
           orderId: pending.orderId,

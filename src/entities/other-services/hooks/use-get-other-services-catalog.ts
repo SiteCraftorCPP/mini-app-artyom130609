@@ -44,6 +44,17 @@ function migrateItem(raw: unknown): OtherServiceItem {
     return { id: "i0", description: "", paymentMode: "manager" };
   }
   const o = raw as Record<string, unknown>;
+  if (o.paymentMode === "auto" || o.paymentMode === "manual") {
+    const amountRub = typeof o.amountRub === "number" ? o.amountRub : undefined;
+    const deliverText = typeof o.deliverText === "string" ? o.deliverText : undefined;
+    return {
+      id: typeof o.id === "string" ? o.id : "i0",
+      description: typeof o.description === "string" ? o.description : "",
+      paymentMode: o.paymentMode,
+      deliverText: deliverText?.trim() || undefined,
+      amountRub: amountRub != null && Number.isFinite(amountRub) ? amountRub : undefined,
+    };
+  }
   if (o.paymentMode === "pay") {
     const payOptions = migratePayOptions(o.payOptions);
     return {

@@ -1,6 +1,12 @@
 /** Согласовано с `bot/src/other-services-types.ts` и JSON `get_other_services`. */
 
-export type OtherServicePaymentMode = "manager" | "info" | "pay";
+/** `info` / `pay` — legacy. */
+export type OtherServicePaymentMode =
+  | "manager"
+  | "auto"
+  | "manual"
+  | "info"
+  | "pay";
 
 export type OtherServicePayOption = {
   id: string;
@@ -15,6 +21,8 @@ export type OtherServiceItem = {
   paymentMode: OtherServicePaymentMode;
   paymentInfo?: string;
   payOptions?: OtherServicePayOption[];
+  deliverText?: string;
+  amountRub?: number;
 };
 
 export type OtherServiceMain = {
@@ -27,7 +35,6 @@ export type OtherServiceMain = {
 export type OtherServiceGame = {
   id: string;
   name: string;
-  /** Позиции без подразделов (`mainSections` пуст). */
   items: OtherServiceItem[];
   mainSections: OtherServiceMain[];
 };

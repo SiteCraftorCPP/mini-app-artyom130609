@@ -13,6 +13,7 @@ import {
   removeMainSection,
   setMainDescription,
 } from "./other-services-store.js";
+import { parseRublesAmountFromUserText } from "./money-input.js";
 import { BTN_BACK_TO_ADMIN } from "./texts.js";
 
 const CB_ENTRY = "admin:os" as const;
@@ -22,11 +23,12 @@ const PREFIX = "o!";
 type Wiz =
   | { k: "gameName" }
   | { k: "mainName"; g: number }
-  | { k: "mainPlashText"; g: number; m: number }
+  | { k: "mainPlashAfterCreate"; g: number; m: number }
   | { k: "itemDesc"; g: number; m: number }
   | { k: "itemDescGame"; g: number }
-  | { k: "itemInfoText"; g: number; m: number | null; desc: string; pay: "info" }
-  | { k: "itemPayLinks"; g: number; m: number | null; desc: string };
+  | { k: "itemAutoDeliverText"; g: number; m: number | null; cardDesc: string }
+  | { k: "itemAutoAmount"; g: number; m: number | null; cardDesc: string; deliverText: string }
+  | { k: "itemManualAmount"; g: number; m: number | null; cardDesc: string };
 
 const wizards = new Map<number, Wiz>();
 const pendingPayMode = new Map<number, { g: number; m: number | null; desc: string }>();
@@ -60,37 +62,64 @@ function buildRootText(): string {
   return `<b>Другие услуги</b>\n\n${st.games.length} раздел(ов).\n${lines.join("\n")}`;
 }
 
+function paymentModeShort(pm: string): string {
+  if (pm === "manager") {
+    return "менеджер";
+  }
+  if (pm === "auto") {
+    return "авто";
+  }
+  if (pm === "manual") {
+    return "ручная";
+  }
+  if (pm === "pay") {
+    return "ссылка";
+  }
+  if (pm === "info") {
+    return "инфо";
+  }
+  return pm;
+}
+
 function gameView(gi: number): { text: string; kb: InlineKeyboard } {
   const st = getOtherServicesV1();
   const g = st.games[gi];
   if (!g) {
     return { text: "Нет в списке.", kb: new InlineKeyboard().text("⬅️", `${PREFIX}0`) };
   }
+  const hasSubs = g.mainSections.length > 0;
   const lines = g.mainSections.map(
     (m) => `• <b>${esc(m.name)}</b> — ${m.items.length} п.`,
   );
   let text = `<b>${esc(g.name)}</b>\n\n`;
   const giItems = g.items ?? [];
-  if (giItems.length > 0) {
-    text += `<b>Позиции раздела</b> (без подразделов): ${giItems.length}\n`;
+  if (!hasSubs && giItems.length > 0) {
+    text += `<b>Позиции раздела</b>: ${giItems.length}\n`;
     giItems.forEach((it) => {
-      const pm = it.paymentMode === "manager" ? "менеджер" : it.paymentMode === "pay" ? "оплата" : "инфо";
-      text += `• ${esc(it.description.slice(0, 40))} (${pm})\n`;
+      text += `• ${esc(it.description.slice(0, 40))} (${paymentModeShort(it.paymentMode)})\n`;
     });
     text += "\n";
   }
-  text += lines.length ? `${lines.join("\n")}\n\n` : `${g.mainSections.length ? "" : "Подразделов нет — можно добавлять описания в раздел.\n\n"}`;
+  if (hasSubs) {
+    text += `${lines.join("\n")}\n\n`;
+  } else {
+    text += "Нет подразделов — можно добавить подраздел или описание в раздел.\n\n";
+  }
   const kb = new InlineKeyboard();
-  giItems.forEach((it, ii) => {
-    const t =
-      (it.description.slice(0, 16) + (it.description.length > 16 ? "…" : "")) as string;
-    kb.text(t, `${PREFIX}ydig!${gi}!${ii}`).row();
-  });
+  if (!hasSubs) {
+    giItems.forEach((it, ii) => {
+      const t =
+        (it.description.slice(0, 16) + (it.description.length > 16 ? "…" : "")) as string;
+      kb.text(t, `${PREFIX}ydig!${gi}!${ii}`).row();
+    });
+  }
   g.mainSections.forEach((m, mi) => {
     kb.text(m.name.slice(0, 32), `${PREFIX}m!${gi}!${mi}`).row();
   });
   kb.text("➕ Добавить подраздел", `${PREFIX}addm!${gi}`).row();
-  kb.text("➕ ОПИСАНИЕ", `${PREFIX}addo!${gi}`).row();
+  if (!hasSubs) {
+    kb.text("➕ ОПИСАНИЕ", `${PREFIX}addo!${gi}`).row();
+  }
   kb.text("🗑 Удалить раздел", `${PREFIX}ydg!${gi}`).row();
   kb.text("⬅️", `${PREFIX}0`);
   return { text, kb };
@@ -109,9 +138,7 @@ function mainView(gi: number, mi: number): { text: string; kb: InlineKeyboard } 
   }
   body += "Позиции (описания):\n";
   m.items.forEach((it) => {
-    const pm =
-      it.paymentMode === "manager" ? "→ менеджер" : it.paymentMode === "pay" ? "→ оплата" : "инфо";
-    body += `• ${esc(it.description.slice(0, 40))} (${pm})\n`;
+    body += `• ${esc(it.description.slice(0, 40))} (${paymentModeShort(it.paymentMode)})\n`;
   });
   if (m.items.length === 0) {
     body += "Пока пусто.\n";
@@ -123,7 +150,6 @@ function mainView(gi: number, mi: number): { text: string; kb: InlineKeyboard } 
     kb.text(t, `${PREFIX}ydim!${gi}!${mi}!${ii}`).row();
   });
   kb.text("➕ ОПИСАНИЕ", `${PREFIX}addim!${gi}!${mi}`).row();
-  kb.text("Текст на плашке", `${PREFIX}maind!${gi}!${mi}`).row();
   kb.text("🗑 Удалить подраздел", `${PREFIX}ydm!${gi}!${mi}`).row();
   kb.text("⬅️ К разделу", `${PREFIX}g!${gi}`);
   return { text: body, kb };
@@ -305,23 +331,6 @@ export function installOtherServicesAdmin(bot: Bot, adminIds: Set<number>) {
     await a.reply("Введите <b>описание позиции</b>:", { parse_mode: "HTML", reply_markup: kbCancel() });
   });
 
-  bot.callbackQuery(new RegExp(`^${PREFIX.replace("!", "\\!")}maind!([0-9]+)!([0-9]+)$`), async (ctx) => {
-    const a = await requireAd(ctx);
-    if (a == null) {
-      return;
-    }
-    const gi = Number(ctx.match![1]!);
-    const mi = Number(ctx.match![2]!);
-    if (ctx.from) {
-      wizards.set(ctx.from.id, { k: "mainPlashText", g: gi, m: mi });
-    }
-    await ctx.answerCallbackQuery();
-    await a.reply("Введите <b>текст на плашке</b> (под названием). Пустое — сбросить.", {
-      parse_mode: "HTML",
-      reply_markup: kbCancel(),
-    });
-  });
-
   bot.callbackQuery(new RegExp(`^${PREFIX.replace("!", "\\!")}pay!([012])$`), async (ctx) => {
     const a = await requireAd(ctx);
     if (a == null) {
@@ -369,23 +378,28 @@ export function installOtherServicesAdmin(bot: Bot, adminIds: Set<number>) {
     }
 
     if (tag === "1") {
-      wizards.set(uid, { k: "itemInfoText", g: pend.g, m: pend.m, desc: pend.desc, pay: "info" });
+      wizards.set(uid, {
+        k: "itemAutoDeliverText",
+        g: pend.g,
+        m: pend.m,
+        cardDesc: pend.desc,
+      });
       pendingPayMode.delete(uid);
       await ctx.answerCallbackQuery();
-      await a.reply("Введите <b>текст</b> для карточки:", {
-        parse_mode: "HTML",
-        reply_markup: kbCancel(),
-      });
+      await a.reply(
+        "Введите <b>текст автовыдачи</b> — что получит покупатель в личку после успешной оплаты:",
+        { parse_mode: "HTML", reply_markup: kbCancel() },
+      );
       return;
     }
 
-    wizards.set(uid, { k: "itemPayLinks", g: pend.g, m: pend.m, desc: pend.desc });
+    wizards.set(uid, { k: "itemManualAmount", g: pend.g, m: pend.m, cardDesc: pend.desc });
     pendingPayMode.delete(uid);
     await ctx.answerCallbackQuery();
-    await a.reply(
-      "До <b>3</b> способов оплаты — каждая строка: <code>сумма | URL</code> (пример: <code>4 400 RUB | https://…</code>)",
-      { parse_mode: "HTML", reply_markup: kbCancel() },
-    );
+    await a.reply("Введите <b>сумму заказа в ₽</b> (например <code>1500</code>):", {
+      parse_mode: "HTML",
+      reply_markup: kbCancel(),
+    });
   });
 
   bot.callbackQuery(new RegExp(`^${PREFIX.replace("!", "\\!")}ydg!([0-9]+)$`), async (ctx) => {
@@ -597,24 +611,29 @@ export function installOtherServicesAdmin(bot: Bot, adminIds: Set<number>) {
       if (g0) {
         addMainSection(g0.id, t);
       }
-      clearWiz(ctx.from.id);
       const u = getOtherServicesV1();
       const game = u.games[gi];
       if (game && game.mainSections.length > 0) {
         const mi = game.mainSections.length - 1;
-        const { text, kb } = mainView(gi, mi);
-        await ctx.reply(text, { parse_mode: "HTML", reply_markup: kb });
+        if (ctx.from) {
+          wizards.set(ctx.from.id, { k: "mainPlashAfterCreate", g: gi, m: mi });
+        }
+        await ctx.reply(
+          "Подраздел создан. При желании введите <b>текст на плашке</b> под названием (или «-» чтобы пропустить).",
+          { parse_mode: "HTML", reply_markup: kbCancel() },
+        );
       } else {
+        clearWiz(ctx.from!.id);
         const { text, kb } = gameView(gi);
         await ctx.reply(text, { parse_mode: "HTML", reply_markup: kb });
       }
       return;
     }
-    if (st0?.k === "mainPlashText") {
+    if (st0?.k === "mainPlashAfterCreate") {
       const { g: gi, m: mi } = st0;
       const game = getOtherServicesV1().games[gi];
       const main = game?.mainSections[mi];
-      if (game && main) {
+      if (game && main && t !== "-" && t.trim() !== "") {
         setMainDescription(game.id, main.id, t);
       }
       clearWiz(ctx.from.id);
@@ -628,12 +647,12 @@ export function installOtherServicesAdmin(bot: Bot, adminIds: Set<number>) {
       const kb = new InlineKeyboard()
         .text("👤 Менеджер", `${PREFIX}pay!0`)
         .row()
-        .text("📝 Текст", `${PREFIX}pay!1`)
+        .text("⚡ Автовыдача", `${PREFIX}pay!1`)
         .row()
-        .text("💳 Оплата", `${PREFIX}pay!2`)
+        .text("📋 Ручная выдача", `${PREFIX}pay!2`)
         .row()
         .text("❌ Отмена", CB_CANCEL);
-      await ctx.reply("Оплата / выдача:", { parse_mode: "HTML", reply_markup: kb });
+      await ctx.reply("Способ выдачи после оплаты:", { parse_mode: "HTML", reply_markup: kb });
       return;
     }
     if (st0?.k === "itemDescGame") {
@@ -642,32 +661,60 @@ export function installOtherServicesAdmin(bot: Bot, adminIds: Set<number>) {
       const kb = new InlineKeyboard()
         .text("👤 Менеджер", `${PREFIX}pay!0`)
         .row()
-        .text("📝 Текст", `${PREFIX}pay!1`)
+        .text("⚡ Автовыдача", `${PREFIX}pay!1`)
         .row()
-        .text("💳 Оплата", `${PREFIX}pay!2`)
+        .text("📋 Ручная выдача", `${PREFIX}pay!2`)
         .row()
         .text("❌ Отмена", CB_CANCEL);
-      await ctx.reply("Оплата / выдача:", { parse_mode: "HTML", reply_markup: kb });
+      await ctx.reply("Способ выдачи после оплаты:", { parse_mode: "HTML", reply_markup: kb });
       return;
     }
-    if (st0?.k === "itemInfoText") {
-      pendingPayMode.delete(ctx.from.id);
+    if (st0?.k === "itemAutoDeliverText") {
+      if (t.length < 1) {
+        await ctx.reply("Введите текст выдачи или отмена.");
+        return;
+      }
+      wizards.set(ctx.from.id, {
+        k: "itemAutoAmount",
+        g: st0.g,
+        m: st0.m,
+        cardDesc: st0.cardDesc,
+        deliverText: t,
+      });
+      await ctx.reply("Введите <b>сумму в ₽</b> для оплаты (например <code>1500</code>):", {
+        parse_mode: "HTML",
+        reply_markup: kbCancel(),
+      });
+      return;
+    }
+    if (st0?.k === "itemAutoAmount") {
+      const n = parseRublesAmountFromUserText(t);
+      if (n === null || n <= 0) {
+        await ctx.reply("Неверная сумма. Пример: <code>1500</code>", { parse_mode: "HTML" });
+        return;
+      }
       const game = getOtherServicesV1().games[st0.g];
-      const main = st0.m === null ? null : game?.mainSections[st0.m];
-      if (game) {
-        if (st0.m === null) {
-          addItemToGame(game.id, {
-            description: st0.desc,
-            paymentMode: "info",
-            paymentInfo: t,
-          });
-        } else if (main) {
-          addItemToMain(game.id, main.id, {
-            description: st0.desc,
-            paymentMode: "info",
-            paymentInfo: t,
-          });
+      if (!game) {
+        clearWiz(ctx.from.id);
+        await ctx.reply("Раздел не найден.");
+        return;
+      }
+      const payload = {
+        description: st0.cardDesc,
+        paymentMode: "auto" as const,
+        deliverText: st0.deliverText,
+        amountRub: n,
+      };
+      if (st0.m === null) {
+        addItemToGame(game.id, payload);
+      } else {
+        const main = game.mainSections[st0.m];
+        if (!main) {
+          clearWiz(ctx.from.id);
+          await ctx.reply("Подраздел не найден.");
+          return;
         }
+        addItemToMain(game.id, main.id, payload);
       }
       const gi = st0.g;
       const mi = st0.m;
@@ -681,51 +728,33 @@ export function installOtherServicesAdmin(bot: Bot, adminIds: Set<number>) {
       }
       return;
     }
-    if (st0?.k === "itemPayLinks") {
+    if (st0?.k === "itemManualAmount") {
+      const n = parseRublesAmountFromUserText(t);
+      if (n === null || n <= 0) {
+        await ctx.reply("Неверная сумма.", { parse_mode: "HTML" });
+        return;
+      }
       const game = getOtherServicesV1().games[st0.g];
-      const main = st0.m === null ? null : game?.mainSections[st0.m];
-      const opts: { priceLabel: string; payUrl: string }[] = [];
-      for (const line of t.split(/\r?\n/)) {
-        const row = line.trim();
-        if (!row) {
-          continue;
-        }
-        const pipe = row.indexOf("|");
-        if (pipe < 1) {
-          continue;
-        }
-        const priceLabel = row.slice(0, pipe).trim();
-        const payUrl = row.slice(pipe + 1).trim();
-        if (priceLabel && payUrl) {
-          opts.push({ priceLabel, payUrl });
-        }
-        if (opts.length >= 3) {
-          break;
-        }
-      }
-      if (!game || opts.length === 0) {
+      if (!game) {
         clearWiz(ctx.from.id);
-        await ctx.reply("Нужна хотя бы одна строка вида <code>сумма | URL</code>.", {
-          parse_mode: "HTML",
-        });
+        await ctx.reply("Раздел не найден.");
         return;
       }
+      const payload = {
+        description: st0.cardDesc,
+        paymentMode: "manual" as const,
+        amountRub: n,
+      };
       if (st0.m === null) {
-        addItemToGame(game.id, {
-          description: st0.desc,
-          paymentMode: "pay",
-          payOptions: opts,
-        });
-      } else if (main) {
-        addItemToMain(game.id, main.id, {
-          description: st0.desc,
-          paymentMode: "pay",
-          payOptions: opts,
-        });
+        addItemToGame(game.id, payload);
       } else {
-        clearWiz(ctx.from.id);
-        await ctx.reply("Подраздел не найден.");
-        return;
+        const main = game.mainSections[st0.m];
+        if (!main) {
+          clearWiz(ctx.from.id);
+          await ctx.reply("Подраздел не найден.");
+          return;
+        }
+        addItemToMain(game.id, main.id, payload);
       }
       const gi = st0.g;
       const mi = st0.m;

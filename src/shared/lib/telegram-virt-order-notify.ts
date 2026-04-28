@@ -37,7 +37,7 @@ function resolveInitData(webApp: WebAppLike | null | undefined): string {
   return "";
 }
 
-export type VirtOrderNotifyKind = "virt" | "account";
+export type VirtOrderNotifyKind = "virt" | "account" | "other_service";
 
 export type VirtOrderNotifyDetails = {
   /** Название игры/услуги (карточка в мини-аппе) */

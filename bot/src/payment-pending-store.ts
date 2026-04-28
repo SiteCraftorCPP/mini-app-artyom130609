@@ -3,13 +3,24 @@
  * MERCHANT_ORDER_ID = то же, что `o` в pay.fk.money.
  * Поля как у `VirtOrderSuccessPayload` (без цикла импорта).
  */
+export type OtherServicePendingMeta = {
+  mode: "auto" | "manual";
+  deliverText?: string;
+  itemId: string;
+  gameId: string;
+  mainId: string | null;
+  gameName: string;
+  mainName: string | null;
+  cardSummary: string;
+};
+
 export type PendingPaymentOrder = {
   amountExpected: string;
   sent: boolean;
   telegramUserId: number;
   orderNumber: string;
   orderId: string;
-  orderKind?: "virt" | "account";
+  orderKind?: "virt" | "account" | "other_service";
   game?: string;
   server?: string;
   bankAccount?: string;
@@ -17,6 +28,7 @@ export type PendingPaymentOrder = {
   virtAmountLabel?: string;
   transferMethod?: string;
   promoCode?: string;
+  otherService?: OtherServicePendingMeta;
 };
 
 const byMerchant = new Map<string, PendingPaymentOrder>();
