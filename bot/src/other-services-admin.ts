@@ -11,7 +11,6 @@ import {
   removeItemFromGame,
   removeItemFromMain,
   removeMainSection,
-  setMainDescription,
 } from "./other-services-store.js";
 import { parseRublesAmountFromUserText } from "./money-input.js";
 import { BTN_BACK_TO_ADMIN } from "./texts.js";
@@ -23,7 +22,6 @@ const PREFIX = "o!";
 type Wiz =
   | { k: "gameName" }
   | { k: "mainName"; g: number }
-  | { k: "mainPlashAfterCreate"; g: number; m: number }
   | { k: "itemDesc"; g: number; m: number }
   | { k: "itemDescGame"; g: number }
   | { k: "itemAutoDeliverText"; g: number; m: number | null; cardDesc: string }
@@ -62,21 +60,21 @@ function buildRootText(): string {
   return `<b>Другие услуги</b>\n\n${st.games.length} раздел(ов).\n${lines.join("\n")}`;
 }
 
-function paymentModeShort(pm: string): string {
+function paymentModeAdmin(pm: string): string {
   if (pm === "manager") {
     return "менеджер";
   }
   if (pm === "auto") {
-    return "авто";
+    return "автовыдача";
   }
   if (pm === "manual") {
-    return "ручная";
+    return "ручная выдача";
   }
   if (pm === "pay") {
-    return "ссылка";
+    return "ссылка на оплату";
   }
   if (pm === "info") {
-    return "инфо";
+    return "только информация";
   }
   return pm;
 }
@@ -88,22 +86,26 @@ function gameView(gi: number): { text: string; kb: InlineKeyboard } {
     return { text: "Нет в списке.", kb: new InlineKeyboard().text("⬅️", `${PREFIX}0`) };
   }
   const hasSubs = g.mainSections.length > 0;
-  const lines = g.mainSections.map(
-    (m) => `• <b>${esc(m.name)}</b> — ${m.items.length} п.`,
-  );
-  let text = `<b>${esc(g.name)}</b>\n\n`;
   const giItems = g.items ?? [];
-  if (!hasSubs && giItems.length > 0) {
-    text += `<b>Позиции раздела</b>: ${giItems.length}\n`;
-    giItems.forEach((it) => {
-      text += `• ${esc(it.description.slice(0, 40))} (${paymentModeShort(it.paymentMode)})\n`;
+  const hasRootItems = giItems.length > 0;
+  let text = `<b>Название раздела:</b> ${esc(g.name)}\n\n`;
+  if (!hasSubs && hasRootItems) {
+    text += `<b>Позиции</b>\n`;
+    giItems.forEach((it, idx) => {
+      const snippet = esc(it.description.slice(0, 500));
+      text += `<b>Позиция ${idx + 1}:</b> ${snippet}\n`;
+      text += `<b>Метод оплаты:</b> ${esc(paymentModeAdmin(it.paymentMode))}\n\n`;
     });
-    text += "\n";
   }
   if (hasSubs) {
-    text += `${lines.join("\n")}\n\n`;
-  } else {
-    text += "Нет подразделов — можно добавить подраздел или описание в раздел.\n\n";
+    text += `<b>Подразделы</b>\n`;
+    g.mainSections.forEach((m) => {
+      text += `• <b>${esc(m.name)}</b> — ${m.items.length} поз.\n`;
+    });
+    text += "\n";
+  } else if (!hasRootItems) {
+    text +=
+      "Добавьте <b>подраздел</b> или <b>позицию</b> (кнопка «ОПИСАНИЕ»). Одновременно в разделе могут быть либо подразделы, либо позиции.\n\n";
   }
   const kb = new InlineKeyboard();
   if (!hasSubs) {
@@ -116,7 +118,9 @@ function gameView(gi: number): { text: string; kb: InlineKeyboard } {
   g.mainSections.forEach((m, mi) => {
     kb.text(m.name.slice(0, 32), `${PREFIX}m!${gi}!${mi}`).row();
   });
-  kb.text("➕ Добавить подраздел", `${PREFIX}addm!${gi}`).row();
+  if (!hasRootItems) {
+    kb.text("➕ Добавить подраздел", `${PREFIX}addm!${gi}`).row();
+  }
   if (!hasSubs) {
     kb.text("➕ ОПИСАНИЕ", `${PREFIX}addo!${gi}`).row();
   }
@@ -132,18 +136,21 @@ function mainView(gi: number, mi: number): { text: string; kb: InlineKeyboard } 
   if (!g || !m) {
     return { text: "Нет.", kb: new InlineKeyboard().text("⬅️", `${PREFIX}g!${gi}`) };
   }
-  let body = `<b>${esc(m.name)}</b>\n${esc(g.name)}\n\n`;
+  let body = `<b>Название раздела:</b> ${esc(g.name)}\n`;
+  body += `<b>Название подраздела:</b> ${esc(m.name)}\n\n`;
   if (m.description?.trim()) {
-    body += `На плашке: ${esc(m.description.trim())}\n\n`;
+    body += `<b>Текст на плашке:</b> ${esc(m.description.trim())}\n\n`;
   }
-  body += "Позиции (описания):\n";
-  m.items.forEach((it) => {
-    body += `• ${esc(it.description.slice(0, 40))} (${paymentModeShort(it.paymentMode)})\n`;
-  });
-  if (m.items.length === 0) {
-    body += "Пока пусто.\n";
+  if (m.items.length > 0) {
+    body += `<b>Позиции</b>\n`;
+    m.items.forEach((it, idx) => {
+      const snippet = esc(it.description.slice(0, 500));
+      body += `<b>Позиция ${idx + 1}:</b> ${snippet}\n`;
+      body += `<b>Метод оплаты:</b> ${esc(paymentModeAdmin(it.paymentMode))}\n\n`;
+    });
+  } else {
+    body += "Позиций пока нет.\n\n";
   }
-  body += "\n";
   const kb = new InlineKeyboard();
   m.items.forEach((it, ii) => {
     const t = (it.description.slice(0, 16) + (it.description.length > 16 ? "…" : "")) as string;
@@ -285,6 +292,19 @@ export function installOtherServicesAdmin(bot: Bot, adminIds: Set<number>) {
       return;
     }
     const gi = Number(ctx.match![1]!);
+    const g = getOtherServicesV1().games[gi];
+    if (!g) {
+      await ctx.answerCallbackQuery({ text: "Нет в списке.", show_alert: true });
+      return;
+    }
+    if ((g.items ?? []).length > 0) {
+      await ctx.answerCallbackQuery({
+        text:
+          "В разделе уже есть позиции. Удалите их, чтобы добавить подразделы (в одном разделе — либо позиции, либо подразделы).",
+        show_alert: true,
+      });
+      return;
+    }
     if (ctx.from) {
       wizards.set(ctx.from.id, { k: "mainName", g: gi });
     }
@@ -305,7 +325,8 @@ export function installOtherServicesAdmin(bot: Bot, adminIds: Set<number>) {
     }
     if (g.mainSections.length > 0) {
       await ctx.answerCallbackQuery({
-        text: "Откройте подраздел в списке и добавьте описание там.",
+        text:
+          "В разделе уже есть подразделы. Позицию можно добавить только внутри подраздела (откройте его в списке).",
         show_alert: true,
       });
       return;
@@ -386,17 +407,17 @@ export function installOtherServicesAdmin(bot: Bot, adminIds: Set<number>) {
       });
       pendingPayMode.delete(uid);
       await ctx.answerCallbackQuery();
-      await a.reply(
-        "Введите <b>текст автовыдачи</b> — что получит покупатель в личку после успешной оплаты:",
-        { parse_mode: "HTML", reply_markup: kbCancel() },
-      );
+      await a.reply("Введите <b>товар для автовыдачи</b>:", {
+        parse_mode: "HTML",
+        reply_markup: kbCancel(),
+      });
       return;
     }
 
     wizards.set(uid, { k: "itemManualAmount", g: pend.g, m: pend.m, cardDesc: pend.desc });
     pendingPayMode.delete(uid);
     await ctx.answerCallbackQuery();
-    await a.reply("Введите <b>сумму заказа в ₽</b> (например <code>1500</code>):", {
+    await a.reply("Введите <b>сумму</b>:", {
       parse_mode: "HTML",
       reply_markup: kbCancel(),
     });
@@ -613,32 +634,15 @@ export function installOtherServicesAdmin(bot: Bot, adminIds: Set<number>) {
       }
       const u = getOtherServicesV1();
       const game = u.games[gi];
+      clearWiz(ctx.from.id);
       if (game && game.mainSections.length > 0) {
         const mi = game.mainSections.length - 1;
-        if (ctx.from) {
-          wizards.set(ctx.from.id, { k: "mainPlashAfterCreate", g: gi, m: mi });
-        }
-        await ctx.reply(
-          "Подраздел создан. При желании введите <b>текст на плашке</b> под названием (или «-» чтобы пропустить).",
-          { parse_mode: "HTML", reply_markup: kbCancel() },
-        );
+        const { text, kb } = mainView(gi, mi);
+        await ctx.reply(text, { parse_mode: "HTML", reply_markup: kb });
       } else {
-        clearWiz(ctx.from!.id);
         const { text, kb } = gameView(gi);
         await ctx.reply(text, { parse_mode: "HTML", reply_markup: kb });
       }
-      return;
-    }
-    if (st0?.k === "mainPlashAfterCreate") {
-      const { g: gi, m: mi } = st0;
-      const game = getOtherServicesV1().games[gi];
-      const main = game?.mainSections[mi];
-      if (game && main && t !== "-" && t.trim() !== "") {
-        setMainDescription(game.id, main.id, t);
-      }
-      clearWiz(ctx.from.id);
-      const { text, kb } = mainView(gi, mi);
-      await ctx.reply(text, { parse_mode: "HTML", reply_markup: kb });
       return;
     }
     if (st0?.k === "itemDesc") {
@@ -681,7 +685,7 @@ export function installOtherServicesAdmin(bot: Bot, adminIds: Set<number>) {
         cardDesc: st0.cardDesc,
         deliverText: t,
       });
-      await ctx.reply("Введите <b>сумму в ₽</b> для оплаты (например <code>1500</code>):", {
+      await ctx.reply("Введите <b>сумму</b>:", {
         parse_mode: "HTML",
         reply_markup: kbCancel(),
       });

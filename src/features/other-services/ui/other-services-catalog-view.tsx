@@ -48,7 +48,7 @@ function descriptionToRows(description: string): { label: string; value: string 
     }
   }
   if (rows.length > 0 && rows.every((r) => !r.label)) {
-    return [{ label: "Описание", value: rows.map((r) => r.value).join("\n") }];
+    return [{ label: "", value: rows.map((r) => r.value).join("\n") }];
   }
   return rows;
 }
@@ -177,12 +177,12 @@ function ServiceItemCard({
             {rows.map((r, i) => (
               <li key={i} className="min-w-0">
                 {r.label ? (
-                  <div className="flex min-w-0 items-start justify-between gap-3">
+                  <div className="flex min-w-0 w-full flex-col items-stretch gap-1">
                     <AppText
                       tag={TAG.p}
                       variant="primaryMedium"
                       size="small"
-                      className="!shrink-0 !text-left !text-white/55"
+                      className="!w-full !text-left !text-white/55"
                     >
                       {r.label}:
                     </AppText>
@@ -190,7 +190,7 @@ function ServiceItemCard({
                       tag={TAG.p}
                       variant="primaryStrong"
                       size="small"
-                      className="!min-w-0 !text-right !font-bold !text-white !whitespace-pre-wrap"
+                      className="!w-full !text-left !font-bold !text-white !whitespace-pre-wrap !break-words"
                     >
                       {r.value}
                     </AppText>
@@ -200,7 +200,7 @@ function ServiceItemCard({
                     tag={TAG.p}
                     variant="primaryStrong"
                     size="medium"
-                    className="!whitespace-pre-wrap !text-left !font-bold !text-white"
+                    className="!w-full !whitespace-pre-wrap !text-left !font-bold !text-white !break-words"
                   >
                     {r.value}
                   </AppText>
@@ -252,7 +252,7 @@ function ServiceItemCard({
                   type="button"
                   variant="popupSubmit"
                   size="popupSubmit"
-                  className="h-10 w-full justify-center rounded-full border border-white/15 bg-gradient-to-r from-teal-600/95 to-emerald-800/95 shadow-md hover:brightness-110"
+                  className="h-11 min-h-11 w-full justify-center rounded-full border border-white/15 bg-gradient-to-r from-teal-600/95 to-emerald-800/95 px-4 py-2 shadow-md hover:brightness-110"
                   onClick={() => {
                     const mode = item.paymentMode;
                     if (mode !== "auto" && mode !== "manual") {
@@ -265,13 +265,13 @@ function ServiceItemCard({
                     });
                   }}
                 >
-                  <AppText variant="primaryStrong" size="small">
+                  <span className="text-center text-sm font-semibold leading-snug text-white">
                     Оплатить{" "}
                     {new Intl.NumberFormat("ru-RU").format(
-                      Math.round(item.amountRub * 100) / 100,
+                      Math.round(item.amountRub! * 100) / 100,
                     )}{" "}
                     ₽
-                  </AppText>
+                  </span>
                 </Button>
                 <AppText
                   tag={TAG.p}
@@ -280,7 +280,7 @@ function ServiceItemCard({
                   className="!mt-2 !text-center !text-white/65"
                 >
                   {item.paymentMode === "auto"
-                    ? "После оплаты товар придёт вам в этот чат с ботом."
+                    ? "После оплаты товар придёт вам в чат с ботом"
                     : "После оплаты заказ уйдёт администратору; когда выдачу подтвердят — вы получите товар в чат."}
                 </AppText>
               </>
