@@ -228,18 +228,20 @@ function ServiceItemCard({
         ) : null}
 
         {item.paymentMode === "manager" ? (
-          <Button
-            asChild
-            variant="popupSubmit"
-            size="popupSubmit"
-            className="mt-3 h-9 w-full justify-center rounded-full border border-white/15 bg-teal-700/90 shadow-md hover:brightness-110"
-          >
-            <a href={SUPPORT_CHAT_URL} target="_blank" rel="noreferrer">
-              <AppText variant="primaryStrong" size="small">
-                Написать менеджеру
-              </AppText>
-            </a>
-          </Button>
+          <div className="mt-3 border-t border-white/10 pt-3">
+            <Button
+              asChild
+              variant="popupSubmit"
+              size="popupSubmit"
+              className="h-11 min-h-11 w-full justify-center rounded-full border border-white/15 bg-teal-700/90 px-4 py-2 shadow-md hover:brightness-110"
+            >
+              <a href={SUPPORT_CHAT_URL} target="_blank" rel="noreferrer">
+                <span className="text-center text-sm font-semibold leading-snug text-white">
+                  Написать менеджеру
+                </span>
+              </a>
+            </Button>
+          </div>
         ) : null}
 
         {item.paymentMode === "auto" || item.paymentMode === "manual" ? (
@@ -279,9 +281,7 @@ function ServiceItemCard({
                   size="small"
                   className="!mt-2 !text-center !text-white/65"
                 >
-                  {item.paymentMode === "auto"
-                    ? "После оплаты товар придёт вам в чат с ботом"
-                    : "После оплаты заказ уйдёт администратору; когда выдачу подтвердят — вы получите товар в чат."}
+                  После оплаты товар придёт вам в чат с ботом
                 </AppText>
               </>
             ) : (

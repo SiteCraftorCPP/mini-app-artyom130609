@@ -90,7 +90,6 @@ function gameView(gi: number): { text: string; kb: InlineKeyboard } {
   const hasRootItems = giItems.length > 0;
   let text = `<b>Название раздела:</b> ${esc(g.name)}\n\n`;
   if (!hasSubs && hasRootItems) {
-    text += `<b>Позиции</b>\n`;
     giItems.forEach((it, idx) => {
       const snippet = esc(it.description.slice(0, 500));
       text += `<b>Позиция ${idx + 1}:</b> ${snippet}\n`;
@@ -104,8 +103,7 @@ function gameView(gi: number): { text: string; kb: InlineKeyboard } {
     });
     text += "\n";
   } else if (!hasRootItems) {
-    text +=
-      "Добавьте <b>подраздел</b> или <b>позицию</b> (кнопка «ОПИСАНИЕ»). Одновременно в разделе могут быть либо подразделы, либо позиции.\n\n";
+    text += "Добавьте подраздел или позицию:\n\n";
   }
   const kb = new InlineKeyboard();
   if (!hasSubs) {
@@ -142,7 +140,6 @@ function mainView(gi: number, mi: number): { text: string; kb: InlineKeyboard } 
     body += `<b>Текст на плашке:</b> ${esc(m.description.trim())}\n\n`;
   }
   if (m.items.length > 0) {
-    body += `<b>Позиции</b>\n`;
     m.items.forEach((it, idx) => {
       const snippet = esc(it.description.slice(0, 500));
       body += `<b>Позиция ${idx + 1}:</b> ${snippet}\n`;
