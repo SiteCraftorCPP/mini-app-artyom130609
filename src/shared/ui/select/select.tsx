@@ -39,14 +39,22 @@ export const SelectContent = ({
       <SelectPrimitive.Content
         position={position}
         className={cn(
-          "bg-surface-base text-text-inverse relative z-50 min-w-[var(--radix-select-trigger-width)] overflow-hidden rounded-xl border border-app-border-soft p-1 shadow-[var(--shadow-popup-panel)]",
+          "bg-surface-base text-text-inverse relative z-50 flex max-h-[var(--radix-select-content-available-height)] min-w-[var(--radix-select-trigger-width)] flex-col overflow-hidden rounded-xl border border-app-border-soft shadow-[var(--shadow-popup-panel)]",
           className,
         )}
         {...props}
       >
-        <SelectPrimitive.Viewport className="scrollbar-app max-h-[min(320px,52dvh)] min-h-0 touch-pan-y overflow-y-scroll overscroll-contain p-0.5 [-webkit-overflow-scrolling:touch]">
-          {children}
-        </SelectPrimitive.Viewport>
+        {/*
+          Скролл здесь, не на Viewport: Radix выставляет на Viewport overflow, из‑за чего в TG WebView нет полосы.
+        */}
+        <div
+          className={cn(
+            "scrollbar-select-list min-h-0 min-w-0 flex-1 touch-pan-y overflow-y-scroll overscroll-contain px-1 py-1 [-webkit-overflow-scrolling:touch]",
+            "max-h-[min(300px,var(--radix-select-content-available-height,100dvh))]",
+          )}
+        >
+          <SelectPrimitive.Viewport className="p-0">{children}</SelectPrimitive.Viewport>
+        </div>
       </SelectPrimitive.Content>
     </SelectPrimitive.Portal>
   );

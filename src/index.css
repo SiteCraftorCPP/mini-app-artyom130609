@@ -522,3 +522,27 @@ input[type="number"]::-webkit-outer-spin-button {
   border-radius: 999px;
   border: 2px solid rgba(26, 26, 26, 0.95);
 }
+
+/* Список в Radix Select: скролл на обёртке (у Viewport часто overflow:hidden), фон светлый */
+.scrollbar-select-list {
+  box-sizing: border-box;
+  scrollbar-gutter: stable;
+  scrollbar-width: auto;
+  scrollbar-color: rgba(80, 80, 80, 0.85) rgba(230, 230, 230, 0.95);
+}
+
+.scrollbar-select-list::-webkit-scrollbar {
+  width: 12px;
+}
+
+.scrollbar-select-list::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.06);
+  border-radius: 6px;
+}
+
+.scrollbar-select-list::-webkit-scrollbar-thumb {
+  background: rgba(100, 100, 100, 0.55);
+  border-radius: 999px;
+  border: 2px solid rgba(255, 255, 255, 0.9);
+  min-height: 32px;
+}
