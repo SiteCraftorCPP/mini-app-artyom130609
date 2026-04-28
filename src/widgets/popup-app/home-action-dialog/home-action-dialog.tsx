@@ -1,4 +1,4 @@
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 
 import { AppText } from "@/ui/app-text";
 import { TAG } from "@/ui/app-text/model";
@@ -39,6 +39,15 @@ export const HomeActionDialog = ({
   title,
 }: HomeActionDialogProps) => {
   const [open, setOpen] = useState(false);
+  const [servicesDrillGameId, setServicesDrillGameId] = useState<string | null>(
+    null,
+  );
+
+  useEffect(() => {
+    if (!open) {
+      setServicesDrillGameId(null);
+    }
+  }, [open]);
 
   const actionToVirtType: Record<string, VirtPopupType | null> = {
     "buy-virtual-currency": "buy",
@@ -57,10 +66,13 @@ export const HomeActionDialog = ({
   const isSellVirtsAction = actionId === "sell-virtual-currency";
   const isBuyAccountAction = actionId === "buy-account";
   const isFormCenteredFlow = isBuyVirtsAction || isBuyAccountAction;
-  /** Показываем «назад», как только выбран пункт (даже пока грузится virt по id). */
+  const isServicesAction = actionId === "services";
+
+  /** «Назад»: вложенный virt / подразделы «Другие услуги». */
   const shouldShowBackButton =
-    (isBuyVirtsAction || isSellVirtsAction || isBuyAccountAction) &&
-    Boolean(virtPopupFlow.activeVirtId);
+    (Boolean(virtPopupFlow.activeVirtId) &&
+      (isBuyVirtsAction || isSellVirtsAction || isBuyAccountAction)) ||
+    (isServicesAction && servicesDrillGameId !== null);
 
   let content: ReactNode;
   if (isBuyVirtsAction) {
@@ -70,7 +82,14 @@ export const HomeActionDialog = ({
   } else if (isBuyAccountAction) {
     content = <FlowBuyAccount flow={virtPopupFlow} />;
   } else if (virtPopupType) {
-    content = <VirtsPopupContent enabled={open} type={virtPopupType} />;
+    content = (
+      <VirtsPopupContent
+        enabled={open}
+        type={virtPopupType}
+        otherServicesDrilledGameId={servicesDrillGameId}
+        onOtherServicesDrillGame={setServicesDrillGameId}
+      />
+    );
   } else {
     content = <DefaultContent description={description} />;
   }
@@ -87,7 +106,17 @@ export const HomeActionDialog = ({
       slot={
         <PopupAppHeader
           title={title}
-          onBack={shouldShowBackButton ? virtPopupFlow.onBack : undefined}
+          onBack={
+            shouldShowBackButton
+              ? () => {
+                  if (isServicesAction && servicesDrillGameId !== null) {
+                    setServicesDrillGameId(null);
+                    return;
+                  }
+                  virtPopupFlow.onBack();
+                }
+              : undefined
+          }
         />
       }
       content={content}

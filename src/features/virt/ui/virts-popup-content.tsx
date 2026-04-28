@@ -13,11 +13,16 @@ import { VirtCard } from "@/entities/virt";
 type VirtsPopupContentProps = {
   enabled: boolean;
   type: VirtPopupType;
+  /** Экран раздела «Другие услуги»: id выбранной игры или null — список разделов. */
+  otherServicesDrilledGameId?: string | null;
+  onOtherServicesDrillGame?: (gameId: string | null) => void;
 };
 
 export const VirtsPopupContent = ({
   enabled,
   type,
+  otherServicesDrilledGameId = null,
+  onOtherServicesDrillGame = () => {},
 }: VirtsPopupContentProps) => {
   const { data, isLoading } = useVirtsPopupContent({ enabled, type });
   const catalogQuery = useGetOtherServicesCatalog({
@@ -58,7 +63,13 @@ export const VirtsPopupContent = ({
         </div>
       );
     }
-    return <OtherServicesCatalogView catalog={catalogQuery.data} />;
+    return (
+      <OtherServicesCatalogView
+        catalog={catalogQuery.data}
+        drilledGameId={otherServicesDrilledGameId}
+        onDrillGame={onOtherServicesDrillGame}
+      />
+    );
   }
 
   return (

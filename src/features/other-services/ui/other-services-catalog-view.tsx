@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect } from "react";
 
 import { AppText } from "@/ui/app-text";
 import { TAG } from "@/ui/app-text/model";
@@ -24,31 +24,28 @@ const SERVICES_PILL_ICON = HOME_ACTION_ICON.services;
 function SectionPill({
   title,
   subtitle,
-  active,
   onClick,
 }: {
   title: string;
   subtitle?: string;
-  active?: boolean;
   onClick?: () => void;
 }) {
   const hasSubtitle = Boolean(subtitle?.trim());
-  /** Как на главной: одна строка по центру по вертикали; с подзаголовком — чуть выше, без обрезки иконки. */
+  /** Как `home-page.tsx`: общий `px-8` на плашке, текст не прижат к обводке слева. */
   const shellClass = cn(
-    "relative flex w-full justify-start overflow-hidden rounded-full border border-white/30 text-left",
+    "relative flex w-full justify-start overflow-hidden rounded-full border border-white/30 px-8 text-left",
     SERVICES_PILL_GRADIENT,
     hasSubtitle
       ? "h-auto min-h-20 items-start py-3"
       : "h-20 items-center",
-    active && "brightness-110",
   );
 
   const inner = (
     <>
       <div
         className={cn(
-          "relative z-10 min-w-0 max-w-[calc(100%-4.5rem)] pl-8 pr-2",
-          !hasSubtitle && "self-center py-0",
+          "relative z-10 min-w-0 max-w-[calc(100%-4.5rem)]",
+          !hasSubtitle && "self-center",
         )}
       >
         <AppText
@@ -146,75 +143,65 @@ function MainSectionBlock({ main }: { main: OtherServiceMain }) {
       <div className="mb-3 w-full min-w-0">
         <SectionPill title={main.name} subtitle={main.description} />
       </div>
-      {main.items.length === 0 ? (
-        <AppText
-          tag={TAG.p}
-          variant="primaryMedium"
-          size="small"
-          className="!text-left text-white/45"
-        >
-          Пока пусто.
-        </AppText>
-      ) : (
+      {main.items.length > 0 ? (
         <ul className="flex flex-col gap-2">
           {main.items.map((it) => (
             <ServiceItemCard key={it.id} item={it} />
           ))}
         </ul>
-      )}
+      ) : null}
     </li>
   );
 }
 
-type Props = { catalog: OtherServicesCatalogV1 };
+type Props = {
+  catalog: OtherServicesCatalogV1;
+  drilledGameId: string | null;
+  onDrillGame: (gameId: string | null) => void;
+};
 
-export const OtherServicesCatalogView = ({ catalog }: Props) => {
+export const OtherServicesCatalogView = ({
+  catalog,
+  drilledGameId,
+  onDrillGame,
+}: Props) => {
   const games = catalog.games;
-  const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  const current = useMemo(() => {
-    if (games.length === 0) return undefined;
-    const k = selectedId ?? games[0]!.id;
-    return games.find((g) => g.id === k) ?? games[0]!;
-  }, [games, selectedId]);
+  useEffect(() => {
+    if (
+      drilledGameId !== null &&
+      !games.some((g) => g.id === drilledGameId)
+    ) {
+      onDrillGame(null);
+    }
+  }, [games, drilledGameId, onDrillGame]);
 
   if (games.length === 0) {
     return null;
   }
 
-  const activeGame = current ?? games[0]!;
+  if (drilledGameId === null) {
+    return (
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-auto pb-4">
+        <ul className="flex flex-col gap-3 px-4 pt-1">
+          {games.map((g) => (
+            <li key={g.id} className="w-full min-w-0">
+              <SectionPill title={g.name} onClick={() => onDrillGame(g.id)} />
+            </li>
+          ))}
+        </ul>
+      </div>
+    );
+  }
+
+  const activeGame = games.find((g) => g.id === drilledGameId);
+  if (!activeGame) {
+    return null;
+  }
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-auto pb-4">
-      <ul className="flex flex-col gap-3 px-4 pt-1">
-        {games.map((g) => {
-          const isActive = (selectedId ?? games[0]!.id) === g.id;
-          return (
-            <li key={g.id} className="w-full min-w-0">
-              <SectionPill
-                title={g.name}
-                active={isActive}
-                onClick={() => {
-                  setSelectedId(g.id);
-                }}
-              />
-            </li>
-          );
-        })}
-      </ul>
-
-      {activeGame.mainSections.length === 0 ? (
-        <AppText
-          tag={TAG.p}
-          variant="primaryMedium"
-          size="small"
-          className="!px-4 !text-left text-white/50"
-        >
-          В разделе пока нет подразделов — настройка в боте.
-        </AppText>
-      ) : null}
-
-      <ul className="flex flex-col gap-8 px-4">
+      <ul className="flex flex-col gap-8 px-4 pt-1">
         {activeGame.mainSections.map((main) => (
           <MainSectionBlock key={main.id} main={main} />
         ))}
