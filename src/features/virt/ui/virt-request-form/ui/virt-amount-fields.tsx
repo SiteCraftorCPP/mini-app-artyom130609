@@ -70,9 +70,9 @@ export const VirtAmountFields = memo(
           name="amountRub"
           render={() => (
             <FormItem className={VIRT_REQUEST_FORM_CLASSNAMES.formItem}>
-              <div className="mb-0 flex items-center justify-between gap-3">
+              <div className="mb-0 flex items-start justify-between gap-3">
                 <FormLabel className="normal-case">
-                  <div className="mb-1 flex items-center gap-2">
+                  <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0">
                     <AppText
                       tag={TAG.div}
                       variant="heroButtonBlack"
@@ -82,7 +82,7 @@ export const VirtAmountFields = memo(
                     </AppText>
                     <AppText
                       tag={TAG.p}
-                      className="mb-0 text-center text-black/60"
+                      className="mb-0 text-[13px] leading-tight text-red-600"
                       variant="heroButtonBlack"
                       size="small"
                     >
@@ -91,7 +91,7 @@ export const VirtAmountFields = memo(
                   </div>
                 </FormLabel>
                 <AppText
-                  className="mb-1 text-black/60"
+                  className="shrink-0 text-[13px] leading-tight text-red-600"
                   variant="heroButtonBlack"
                   size="small"
                 >
@@ -113,7 +113,7 @@ export const VirtAmountFields = memo(
                     placeholder={VIRT_FORM_TEXT.amountRubPlaceholder}
                     className="pr-8"
                   />
-                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-black/60 font-medium">
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-medium text-red-600">
                     ₽
                   </span>
                 </div>
@@ -132,13 +132,13 @@ export const VirtAmountFields = memo(
           render={() => (
             <FormItem className={VIRT_REQUEST_FORM_CLASSNAMES.formItem}>
               <FormLabel className="normal-case">
-                <div className="mb-1 flex items-center gap-2">
+                <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0">
                   <AppText tag={TAG.div} variant="heroButtonBlack" size="small">
                     {VIRT_FORM_TEXT.amountVirtsLabel}
                   </AppText>
                   <AppText
                     tag={TAG.p}
-                    className="text-center text-black/60"
+                    className="text-[13px] leading-tight text-red-600"
                     variant="heroButtonBlack"
                     size="small"
                   >
@@ -161,7 +161,7 @@ export const VirtAmountFields = memo(
                     placeholder={VIRT_FORM_TEXT.amountVirtsKkPlaceholder}
                     className="pr-10"
                   />
-                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-black/60 font-medium">
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-medium text-red-600">
                     КК
                   </span>
                 </div>

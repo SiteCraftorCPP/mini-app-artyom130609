@@ -600,6 +600,15 @@ bot.callbackQuery("menu:how", async (ctx) => {
   await sendHowToVideo(ctx);
 });
 
+bot.callbackQuery("how:back", async (ctx) => {
+  await ctx.answerCallbackQuery();
+  try {
+    await ctx.deleteMessage();
+  } catch {
+    /* сообщение уже удалено или недоступно */
+  }
+});
+
 bot.callbackQuery("menu:about", async (ctx) => {
   await ctx.answerCallbackQuery();
   await sendAboutShop(ctx);

@@ -42,6 +42,8 @@ export const PAYMENT_TEXT = {
   kztInstructions:
     "Скопируйте подходящие для вас банковские реквизиты и выполните перевод.\nПосле оплаты нажмите кнопку «Я оплатил».",
   kztPaidButton: "Я оплатил",
+  /** Курс 1 ₽ = 6,9 ₸; пример 100 ₽ ≈ 690 ₸ */
+  kztRateLine: "Курс: 1 ₽ = 6,9 ₸ · пример: 100 ₽ ≈ 690 ₸",
 } as const;
 
 export const VIRT_FORM_TEXT = {

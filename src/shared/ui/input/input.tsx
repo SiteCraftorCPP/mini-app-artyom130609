@@ -29,7 +29,7 @@ const inputVariants = {
   },
   form: {
     input:
-      "h-full w-full rounded-full bg-transparent px-4 text-[14px] leading-[100%] font-normal text-black transition-colors placeholder:text-[14px] placeholder:font-normal placeholder:text-white/60 focus-visible:outline-hidden disabled:cursor-not-allowed disabled:opacity-50 ",
+      "h-full w-full rounded-full bg-transparent pl-5 pr-4 pt-[2px] text-[14px] leading-[100%] font-normal text-black transition-colors placeholder:text-[14px] placeholder:font-medium placeholder:text-red-200 focus-visible:outline-hidden disabled:cursor-not-allowed disabled:opacity-50 ",
     outer: "flex h-12 w-full items-center justify-center rounded-full",
     surface:
       "border-app-border-soft bg-app-highlight flex h-12 w-full rounded-full border",

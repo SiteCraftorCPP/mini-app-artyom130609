@@ -2,7 +2,7 @@ import { ArrowLeft, Loader2, X } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useWebApp } from "@vkruglikov/react-telegram-web-app";
 
-import { KZT_REQUISITES } from "@/shared/constants/payment-requisites-kzt";
+import { KZT_REQUISITES, rubToKztAmount } from "@/shared/constants/payment-requisites-kzt";
 import { CURRENCY } from "@/shared/constants/common";
 import { PAYMENT_TEXT, TEXT } from "@/shared/constants/text";
 import { formatNumberWithSpaces } from "@/shared/lib/format-numbers";
@@ -283,6 +283,13 @@ export function PaymentMethodDialog({
     /\s/g,
     "\u00a0",
   );
+  const amountKztLine =
+    Number.isFinite(amountRub) && amountRub > 0
+      ? `${formatNumberWithSpaces(rubToKztAmount(Math.round(amountRub * 100) / 100))} ₸`.replace(
+          /\s/g,
+          "\u00a0",
+        )
+      : "";
 
   return (
     <Dialog open={open} onOpenChange={resetAndClose}>
@@ -328,7 +335,7 @@ export function PaymentMethodDialog({
                 <AppText
                   tag={TAG.p}
                   variant="darkStrong"
-                  className="text-app-text-muted mt-1.5 text-xs font-medium"
+                  className="mt-1.5 text-center text-xs font-medium text-red-600"
                 >
                   {PAYMENT_TEXT.subtitleMethods}
                 </AppText>
@@ -378,9 +385,19 @@ export function PaymentMethodDialog({
               <AppText
                 tag={TAG.p}
                 variant="darkStrong"
-                className="text-app-text-muted text-center text-xs font-medium leading-snug whitespace-pre-line"
+                className="text-center text-xs font-medium leading-snug whitespace-pre-line text-red-600"
               >
                 {PAYMENT_TEXT.kztInstructions}
+              </AppText>
+              <AppText
+                tag={TAG.p}
+                variant="darkStrong"
+                className="text-center text-xs font-semibold leading-snug whitespace-pre-line text-red-600"
+              >
+                {PAYMENT_TEXT.kztRateLine}
+                {amountKztLine
+                  ? `\nК перечислению в тенге (ориентир): ${amountLine} ≈ ${amountKztLine}`
+                  : ""}
               </AppText>
               <div className="flex flex-col gap-3">
                 <Button

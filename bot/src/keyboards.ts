@@ -31,7 +31,10 @@ export function mainMenuInlineKeyboard(miniAppUrl: string) {
 
 /** Под видео «Как оформить заказ». */
 export function howToOrderManagerKeyboard() {
-  return new InlineKeyboard().url(BTN_HOW_TO_ORDER_MANAGER, LINK_ABOUT_MANAGER);
+  return new InlineKeyboard()
+    .url(BTN_HOW_TO_ORDER_MANAGER, LINK_ABOUT_MANAGER)
+    .row()
+    .text(BTN_BACK, "how:back");
 }
 
 /**
