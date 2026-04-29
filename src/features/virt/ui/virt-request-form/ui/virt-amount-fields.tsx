@@ -82,7 +82,7 @@ export const VirtAmountFields = memo(
                     </AppText>
                     <AppText
                       tag={TAG.p}
-                      className="mb-0 text-[13px] leading-tight text-red-600"
+                      className="mb-0 text-[13px] leading-tight text-black"
                       variant="heroButtonBlack"
                       size="small"
                     >
@@ -91,7 +91,7 @@ export const VirtAmountFields = memo(
                   </div>
                 </FormLabel>
                 <AppText
-                  className="shrink-0 text-[13px] leading-tight text-red-600"
+                  className="shrink-0 text-[13px] leading-tight text-black"
                   variant="heroButtonBlack"
                   size="small"
                 >
@@ -138,7 +138,7 @@ export const VirtAmountFields = memo(
                   </AppText>
                   <AppText
                     tag={TAG.p}
-                    className="text-[13px] leading-tight text-red-600"
+                    className="text-[13px] leading-tight text-black"
                     variant="heroButtonBlack"
                     size="small"
                   >
