@@ -335,7 +335,7 @@ export function PaymentMethodDialog({
                 <AppText
                   tag={TAG.p}
                   variant="darkStrong"
-                  className="mt-1.5 text-center text-xs font-medium text-red-600"
+                  className="text-app-text-muted mt-1.5 text-center text-xs font-medium"
                 >
                   {PAYMENT_TEXT.subtitleMethods}
                 </AppText>
@@ -385,14 +385,14 @@ export function PaymentMethodDialog({
               <AppText
                 tag={TAG.p}
                 variant="darkStrong"
-                className="text-center text-xs font-medium leading-snug whitespace-pre-line text-red-600"
+                className="text-app-text-muted text-center text-xs font-medium leading-snug whitespace-pre-line"
               >
                 {PAYMENT_TEXT.kztInstructions}
               </AppText>
               <AppText
                 tag={TAG.p}
                 variant="darkStrong"
-                className="text-center text-xs font-semibold leading-snug whitespace-pre-line text-red-600"
+                className="text-app-text-muted text-center text-xs font-semibold leading-snug whitespace-pre-line"
               >
                 {PAYMENT_TEXT.kztRateLine}
                 {amountKztLine

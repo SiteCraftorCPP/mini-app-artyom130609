@@ -113,7 +113,7 @@ export const VirtAmountFields = memo(
                     placeholder={VIRT_FORM_TEXT.amountRubPlaceholder}
                     className="pr-8"
                   />
-                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-medium text-red-600">
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-medium text-black">
                     ₽
                   </span>
                 </div>
@@ -161,7 +161,7 @@ export const VirtAmountFields = memo(
                     placeholder={VIRT_FORM_TEXT.amountVirtsKkPlaceholder}
                     className="pr-10"
                   />
-                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-medium text-red-600">
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-medium text-black">
                     КК
                   </span>
                 </div>
