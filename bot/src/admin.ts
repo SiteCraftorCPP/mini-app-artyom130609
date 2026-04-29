@@ -10,6 +10,7 @@ import {
 } from "./admin-orders-mock.js";
 import { parseRublesAmountFromUserText } from "./money-input.js";
 import { closeActiveOrder } from "./orders-store.js";
+import { notifyOrderCompletionToOwners } from "./order-completion-notify.js";
 import { addReferralBonus, changeBalanceAdmin, getAllReferralUsers, getReferralUser, getTopReferrals, getTransactions, searchReferralUser } from "./referrals-store.js";
 import {
   BTN_ADMIN_CURRENT_ORDERS,
@@ -2261,6 +2262,11 @@ export function installAdminModule(bot: Bot<Context>, adminIds: Set<number>) {
         }
         pendingAccountData.delete(pendingOrderId);
       }
+    }
+    if (completedOrder) {
+      void notifyOrderCompletionToOwners(bot, completedOrder, value).catch((e) => {
+        console.error("[order-completion-notify]", e);
+      });
     }
     console.info(
       "[admin-profit]",
