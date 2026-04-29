@@ -55,8 +55,20 @@ import {
 import { touchUserUsage } from "./user-usage-store.js";
 import { setReferrer } from "./referrals-store.js";
 import { captionEntitiesAllBoldExcludingCustomEmoji } from "./caption-bold-helpers.js";
+import { createTelegramIPv4HttpsAgent } from "./telegram-https-agent.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+
+const telegramApiTimeoutSeconds = (() => {
+  const raw = process.env.TELEGRAM_API_FETCH_TIMEOUT_SECONDS?.trim();
+  if (raw && /^\d+$/.test(raw)) {
+    const n = Number(raw);
+    if (n >= 30 && n <= 600) {
+      return n;
+    }
+  }
+  return 180;
+})();
 
 /**
  * Подгружаем все существующие .env по очереди (нижележащие переопределяют верхние).
@@ -85,9 +97,16 @@ if (!token) {
   process.exit(1);
 }
 
+const telegramHttpsAgent = createTelegramIPv4HttpsAgent();
+
 const bot = new Bot<Context>(token, {
   client: {
     apiRoot: process.env.TELEGRAM_API_ROOT || "https://api.telegram.org",
+    timeoutSeconds: telegramApiTimeoutSeconds,
+    baseFetchConfig: {
+      agent: telegramHttpsAgent,
+      compress: true,
+    },
   },
 });
 
