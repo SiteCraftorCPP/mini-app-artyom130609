@@ -151,7 +151,7 @@ export const VirtAmountFields = memo(
                   <Input
                     variant="form"
                     type="text"
-                    inputMode="numeric"
+                    inputMode="decimal"
                     enterKeyHint="done"
                     disableAutoScrollOnFocus
                     value={amountVirtValue}

@@ -1,14 +1,17 @@
 import { ArrowLeft, Loader2, X } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
+import { useWebApp } from "@vkruglikov/react-telegram-web-app";
 
 import { KZT_REQUISITES } from "@/shared/constants/payment-requisites-kzt";
 import { CURRENCY } from "@/shared/constants/common";
 import { PAYMENT_TEXT, TEXT } from "@/shared/constants/text";
 import { formatNumberWithSpaces } from "@/shared/lib/format-numbers";
 import {
+  type KztPrepareInput,
   type PaymentMethodCode,
   type PaymentPrepareInput,
   openPaymentUrl,
+  requestKztPrepare,
   requestPaymentPrepare,
 } from "@/shared/lib/prepare-payment";
 import { showErrorMessage, showSuccessMessage } from "@/shared/lib/notify";
@@ -111,6 +114,44 @@ function buildPrepareInput(
   };
 }
 
+function buildKztPrepareInput(
+  initData: string,
+  amountRub: number,
+  ctx: PaymentDialogContext,
+): KztPrepareInput {
+  if (ctx.orderKind === "virt") {
+    return {
+      initData,
+      orderKind: "virt",
+      amountRub,
+      game: ctx.game,
+      server: ctx.server,
+      bankAccount: ctx.bankAccount,
+      virtAmountLabel: ctx.virtAmountLabel,
+      transferMethod: ctx.transferMethod,
+      promoCode: ctx.promoCode,
+    };
+  }
+  if (ctx.orderKind === "account") {
+    return {
+      initData,
+      orderKind: "account",
+      amountRub,
+      game: ctx.game,
+      server: ctx.server,
+      transferMethod: ctx.transferMethod,
+      accountMode: ctx.accountMode,
+      accountOptionLabel: ctx.accountOptionLabel,
+    };
+  }
+  return {
+    initData,
+    orderKind: "other_service",
+    amountRub,
+    otherService: ctx.otherService,
+  };
+}
+
 function formatErr(e: unknown): string {
   if (e instanceof Error && e.message) {
     return e.message;
@@ -125,6 +166,7 @@ export function PaymentMethodDialog({
   amountRub,
   context,
 }: PaymentMethodDialogProps) {
+  const webApp = useWebApp();
   const [step, setStep] = useState<"list" | "kzt">("list");
   const [busy, setBusy] = useState(false);
 
@@ -199,6 +241,39 @@ export function PaymentMethodDialog({
     },
     [amountRub, context, initData, resetAndClose],
   );
+
+  const onKztPaid = useCallback(async () => {
+    if (!initData.trim() || !context) {
+      showErrorMessage("Откройте магазин из Telegram (кнопка в боте), не из обычного браузера.");
+      return;
+    }
+    if (!Number.isFinite(amountRub) || amountRub <= 0) {
+      showErrorMessage("Некорректная сумма. Вернитесь к форме и проверьте рубли.");
+      return;
+    }
+    setBusy(true);
+    try {
+      const body = buildKztPrepareInput(initData, amountRub, context);
+      const res = await requestKztPrepare(body);
+      const url = `https://t.me/${res.botUsername}?start=${encodeURIComponent(res.startParam)}`;
+      const w = webApp as {
+        openTelegramLink?: (u: string) => void;
+        openLink?: (u: string, o?: { try_instant_view?: boolean }) => void;
+      };
+      if (typeof w.openTelegramLink === "function") {
+        w.openTelegramLink(url);
+      } else if (typeof w.openLink === "function") {
+        w.openLink(url, { try_instant_view: false });
+      } else {
+        openPaymentUrl(url);
+      }
+      resetAndClose(false);
+    } catch (e) {
+      showErrorMessage(formatErr(e));
+    } finally {
+      setBusy(false);
+    }
+  }, [amountRub, context, initData, resetAndClose, webApp]);
 
   if (!context) {
     return null;
@@ -299,23 +374,41 @@ export function PaymentMethodDialog({
           )}
 
           {step === "kzt" ? (
-            <div className="mt-2 flex flex-1 flex-col justify-center gap-3 px-1 pb-6">
-              <Button
-                type="button"
-                size="default"
-                className={methodBtnClass}
-                onClick={() => void copy("Halyk", KZT_REQUISITES.halyk)}
+            <div className="mt-2 flex flex-1 flex-col justify-start gap-4 px-1 pb-6">
+              <AppText
+                tag={TAG.p}
+                variant="darkStrong"
+                className="text-app-text-muted text-center text-xs font-medium leading-snug whitespace-pre-line"
               >
-                {PAYMENT_TEXT.copyHalyk}
-              </Button>
-              <Button
-                type="button"
-                size="default"
-                className={methodBtnClass}
-                onClick={() => void copy("Kaspi", KZT_REQUISITES.kaspi)}
-              >
-                {PAYMENT_TEXT.copyKaspi}
-              </Button>
+                {PAYMENT_TEXT.kztInstructions}
+              </AppText>
+              <div className="flex flex-col gap-3">
+                <Button
+                  type="button"
+                  size="default"
+                  className={methodBtnClass}
+                  onClick={() => void copy("Halyk", KZT_REQUISITES.halyk)}
+                >
+                  {PAYMENT_TEXT.copyHalyk}
+                </Button>
+                <Button
+                  type="button"
+                  size="default"
+                  className={methodBtnClass}
+                  onClick={() => void copy("Kaspi", KZT_REQUISITES.kaspi)}
+                >
+                  {PAYMENT_TEXT.copyKaspi}
+                </Button>
+                <Button
+                  type="button"
+                  size="default"
+                  disabled={busy}
+                  className={cn(methodBtnClass, "!font-bold")}
+                  onClick={() => void onKztPaid()}
+                >
+                  {PAYMENT_TEXT.kztPaidButton}
+                </Button>
+              </div>
             </div>
           ) : (
             <div className="flex flex-col gap-3">

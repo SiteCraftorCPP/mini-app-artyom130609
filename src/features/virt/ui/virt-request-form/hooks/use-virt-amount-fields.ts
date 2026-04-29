@@ -53,7 +53,7 @@ export const useVirtAmountFields = ({
   // «вторую» величину, иначе локальный state не совпадёт с формой/итогом.
   useEffect(() => {
     if (lockVirtsForPromo && amountVirtValue.trim() !== "") {
-      const n = Number(amountVirtValue);
+      const n = Number(amountVirtValue.replace(",", "."));
       if (Number.isNaN(n) || n <= 0) {
         return;
       }
@@ -77,7 +77,7 @@ export const useVirtAmountFields = ({
       return;
     }
     if (lastEditedForAmount === "amountVirts" && amountVirtValue.trim() !== "") {
-      const n = Number(amountVirtValue);
+      const n = Number(amountVirtValue.replace(",", "."));
       if (Number.isNaN(n) || n <= 0) {
         return;
       }
@@ -117,9 +117,11 @@ export const useVirtAmountFields = ({
   const handleAmountVirtChange = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
       const inKK = event.target.value;
-
       setAmountVirtValue(inKK);
-      const rawVirts = inKK ? String(Number(inKK) * 1_000_000) : "";
+      const norm = inKK.replace(",", ".").trim();
+      const n = norm === "" ? NaN : Number(norm);
+      const rawVirts =
+        norm !== "" && Number.isFinite(n) && n > 0 ? String(n * 1_000_000) : "";
       onAmountVirtInput(rawVirts);
     },
     [onAmountVirtInput],
@@ -127,7 +129,10 @@ export const useVirtAmountFields = ({
 
   const handleAmountVirtDebounce = useCallback(
     (value: string) => {
-      const rawVirts = value ? String(Number(value) * 1_000_000) : "";
+      const norm = value.replace(",", ".").trim();
+      const n = norm === "" ? NaN : Number(norm);
+      const rawVirts =
+        norm !== "" && Number.isFinite(n) && n > 0 ? String(n * 1_000_000) : "";
       const nextAmountRub = rawVirts
         ? calculateAmountRub(rawVirts, getVirtExchangeRate(exchangeRate))
         : "";

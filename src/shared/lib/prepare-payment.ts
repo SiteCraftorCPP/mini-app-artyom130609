@@ -37,6 +37,17 @@ export type PaymentPrepareInput = {
   };
 };
 
+/** Запрос на оплату в тенге (без FreeKassa; чек в боте). */
+export type KztPrepareInput = Omit<PaymentPrepareInput, "method">;
+
+export type KztPrepareResult = {
+  ok: true;
+  startParam: string;
+  botUsername: string;
+  orderNumber: string;
+  orderId: string;
+};
+
 export type PaymentPrepareResult = {
   payUrl: string;
   merchantOrderId: string;
@@ -152,6 +163,45 @@ export async function requestPaymentPrepare(
     merchantOrderId: j.merchantOrderId,
     orderId: j.orderId,
     orderNumber: j.orderNumber,
+  };
+}
+
+export async function requestKztPrepare(body: KztPrepareInput): Promise<KztPrepareResult> {
+  const base = resolveBaseUrl();
+  if (!base) {
+    throw new Error("Нет адреса API. Проверьте VITE_VIRT_ORDER_NOTIFY_URL при сборке.");
+  }
+  let r: Response;
+  try {
+    r = await fetch(`${base}/notify/payment/kzt-prepare`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    console.error(LOG, "kzt network", msg);
+    throw new Error("Не удалось связаться с сервером. Повторите из Telegram.");
+  }
+  const text = await r.text().catch(() => "");
+  if (!r.ok) {
+    throw new Error(mapPrepareError(r.status, text));
+  }
+  let j: { ok?: boolean; startParam?: string; botUsername?: string; orderNumber?: string; orderId?: string };
+  try {
+    j = JSON.parse(text) as typeof j;
+  } catch {
+    throw new Error("Сервер вернул неверный ответ.");
+  }
+  if (!j?.startParam || !j.botUsername || !j.orderNumber || !j.orderId) {
+    throw new Error("Неполный ответ сервера. Повторите попытку.");
+  }
+  return {
+    ok: true,
+    startParam: j.startParam,
+    botUsername: j.botUsername.replace(/^@/, ""),
+    orderNumber: j.orderNumber,
+    orderId: j.orderId,
   };
 }
 

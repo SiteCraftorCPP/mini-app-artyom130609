@@ -11,6 +11,9 @@ dist-ssr
 # Данные каталога «Другие услуги» на сервере — не перетирать деплоем из репозитория
 bot/data/other-services.v1.json
 
+# Сессии подтверждения чека KZT (сервер)
+bot/data/kzt-receipt-sessions.v1.json
+
 # Env (секреты)
 .env
 .env.development

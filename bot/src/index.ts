@@ -39,6 +39,7 @@ import {
   sendVirtOrderSuccess,
   startOrderNotifyHttpServer,
 } from "./order-notify.js";
+import { handleKztReceiptDeepLink, installKztReceiptFlow } from "./kzt-receipt-flow.js";
 import {
   ABOUT_SHOP_HTML,
   ABOUT_SHOP_LINES,
@@ -431,6 +432,8 @@ async function setWebAppMenuButtonForPrivateChat(
   }
 }
 
+installKztReceiptFlow(bot, BOT_ADMIN_IDS, miniAppUrl);
+
 bot.command("start", async (ctx) => {
   if (ctx.chat?.type === "private" && ctx.chat.id != null) {
     await setWebAppMenuButtonForPrivateChat(ctx, ctx.chat.id);
@@ -441,6 +444,11 @@ bot.command("start", async (ctx) => {
   const payload = getStartPayload(ctx);
   if (payload === "sell") {
     await sendSellVirtGuidance(ctx);
+    return;
+  }
+
+  if (payload.startsWith("kzt_")) {
+    await handleKztReceiptDeepLink(ctx, payload);
     return;
   }
 

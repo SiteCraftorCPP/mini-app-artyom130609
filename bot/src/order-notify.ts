@@ -1,6 +1,6 @@
 import { createServer } from "node:http";
 import { getReferralUser } from "./referrals-store.js";
-import { randomInt } from "node:crypto";
+import { randomInt, randomBytes } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, resolve, basename } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -69,6 +69,7 @@ import {
   putPendingPayment,
   type PendingPaymentOrder,
 } from "./payment-pending-store.js";
+import { putKztSession } from "./kzt-receipt-store.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -1094,6 +1095,264 @@ function fkMethodId(m: PaymentPrepareJson["method"]): number {
   return resolveFreeKassaMethodId(m);
 }
 
+/** Тело prepare / kzt-prepare без поля method (KZT не использует FreeKassa). */
+export type PaymentPrepareBodyBase = Omit<PaymentPrepareJson, "method">;
+
+type BuildPendingFail = { ok: false; status: number; error: string };
+type BuildPendingOk = {
+  ok: true;
+  payload: PendingPaymentOrder;
+  amountNum: number;
+};
+type BuildPendingResult = BuildPendingOk | BuildPendingFail;
+
+/**
+ * Общая сборка pending-заказа для оплаты (FK или KZT с чеком).
+ * Не создаёт merchant id и не вызывает FreeKassa.
+ */
+export function buildPendingPayloadForPaymentBody(
+  body: PaymentPrepareBodyBase,
+  botToken: string,
+): BuildPendingResult {
+  if (typeof body.initData !== "string" || !body.initData.length) {
+    return { ok: false, status: 400, error: "initData" };
+  }
+  if (
+    body.orderKind !== "virt" &&
+    body.orderKind !== "account" &&
+    body.orderKind !== "other_service"
+  ) {
+    return { ok: false, status: 400, error: "orderKind" };
+  }
+  const amountNum = Number(body.amountRub);
+  if (!Number.isFinite(amountNum) || amountNum <= 0) {
+    return { ok: false, status: 400, error: "amount" };
+  }
+  const webUser = parseValidatedWebAppUser(body.initData, botToken);
+  if (!webUser) {
+    return { ok: false, status: 401, error: "bad initData" };
+  }
+  const telegramUserId = webUser.id;
+  const pendingTgUsername = webUser.username ?? undefined;
+  const pendingTgFirst = webUser.firstName ?? undefined;
+  const orderId = `o-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  const suffix = Date.now().toString(36).toUpperCase().slice(-6);
+  const orderNumber = `#${suffix}`;
+  const oa = formatAmountForFk(amountNum);
+
+  if (body.orderKind === "other_service") {
+    const osIn = body.otherService;
+    if (
+      !osIn ||
+      typeof osIn.itemId !== "string" ||
+      typeof osIn.gameId !== "string" ||
+      (osIn.mode !== "auto" && osIn.mode !== "manual")
+    ) {
+      return { ok: false, status: 400, error: "otherService" };
+    }
+    const mainIdNorm =
+      osIn.mainId === undefined ||
+      osIn.mainId === null ||
+      String(osIn.mainId).trim() === ""
+        ? null
+        : String(osIn.mainId).trim();
+    const found = findOtherServiceItem(osIn.gameId, mainIdNorm, osIn.itemId);
+    if (!found) {
+      return { ok: false, status: 404, error: "catalog item" };
+    }
+    const { item, game, main } = found;
+    if (osIn.mode === "auto") {
+      if (item.paymentMode !== "auto") {
+        return { ok: false, status: 400, error: "mode item" };
+      }
+      if (!item.deliverText?.trim()) {
+        return { ok: false, status: 400, error: "deliver" };
+      }
+    } else if (item.paymentMode !== "manual") {
+      return { ok: false, status: 400, error: "mode item" };
+    }
+    const expectedRub = item.amountRub;
+    if (
+      expectedRub == null ||
+      !Number.isFinite(expectedRub) ||
+      Math.abs(expectedRub - amountNum) > 0.009
+    ) {
+      return { ok: false, status: 400, error: "amount mismatch" };
+    }
+    const transferOs =
+      osIn.mode === "auto"
+        ? "Другие услуги · автовыдача"
+        : "Другие услуги · ручная выдача";
+    const payload: PendingPaymentOrder = {
+      amountExpected: oa,
+      sent: false,
+      telegramUserId,
+      telegramUsername: pendingTgUsername,
+      telegramFirstName: pendingTgFirst,
+      orderId,
+      orderNumber,
+      orderKind: "other_service",
+      game: game.name,
+      server: main?.name ?? "—",
+      bankAccount: "",
+      amountRub: amountNum,
+      virtAmountLabel: item.description.slice(0, 400),
+      transferMethod: transferOs,
+      otherService: {
+        mode: osIn.mode,
+        deliverText: item.deliverText,
+        itemId: item.id,
+        gameId: game.id,
+        mainId: main?.id ?? null,
+        gameName: game.name,
+        mainName: main?.name ?? null,
+        cardSummary: item.description.slice(0, 300),
+      },
+    };
+    return { ok: true, payload, amountNum };
+  }
+
+  const kind = parseOrderKind(body.orderKind) ?? "virt";
+  const transfer =
+    body.transferMethod?.trim() ||
+    (kind === "account" && body.accountOptionLabel
+      ? `Аккаунт: ${body.accountMode ?? ""} ${body.accountOptionLabel}`.trim()
+      : "Оплата FreeKassa");
+  const payload: PendingPaymentOrder = {
+    amountExpected: oa,
+    sent: false,
+    telegramUserId,
+    telegramUsername: pendingTgUsername,
+    telegramFirstName: pendingTgFirst,
+    orderId,
+    orderNumber,
+    orderKind: kind,
+    game: body.game,
+    server: body.server,
+    bankAccount: body.bankAccount,
+    amountRub: amountNum,
+    virtAmountLabel: body.virtAmountLabel,
+    transferMethod: transfer,
+    promoCode: body.promoCode?.trim() || undefined,
+  };
+  return { ok: true, payload, amountNum };
+}
+
+/** После подтверждения оплаты (FK webhook или ручное «чек ОК» для KZT). */
+export async function deliverPaidPendingOrder(
+  bot: Bot,
+  miniAppUrl: string,
+  pending: PendingPaymentOrder,
+): Promise<void> {
+  if (pending.promoCode) {
+    consumePromoCode(pending.promoCode);
+  }
+  if (pending.orderKind === "other_service" && pending.otherService) {
+    const os = pending.otherService;
+    try {
+      if (os.mode === "auto") {
+        const txt = os.deliverText?.trim() || "Спасибо за оплату!";
+        await sendOrderCompletedToBuyer(bot, {
+          telegramUserId: pending.telegramUserId,
+          orderNumber: pending.orderNumber,
+          otherServiceBody: txt,
+        });
+        try {
+          await notifyAdminsNewOrder(bot, {
+            telegramUserId: pending.telegramUserId,
+            orderId: pending.orderId,
+            orderNumber: pending.orderNumber,
+            orderKind: "other_service",
+            game: pending.game,
+            server: pending.server,
+            amountRub: pending.amountRub,
+            virtAmountLabel: pending.virtAmountLabel,
+            transferMethod: pending.transferMethod ?? "Другие услуги · автовыдача",
+            promoCode: pending.promoCode,
+          });
+        } catch (e) {
+          console.error("[order] notifyAdmins other_service auto", e);
+        }
+      } else {
+        let telegramUsername = pending.telegramUsername?.trim() || "";
+        if (!telegramUsername) {
+          try {
+            const chat = await bot.api.getChat(pending.telegramUserId);
+            if (chat.type === "private" && "username" in chat && chat.username) {
+              telegramUsername = chat.username;
+            }
+          } catch {
+            /* ok */
+          }
+        }
+        if (!telegramUsername && pending.telegramFirstName?.trim()) {
+          telegramUsername = pending.telegramFirstName.trim();
+        }
+        if (!telegramUsername) {
+          telegramUsername = "";
+        }
+        addOrUpdateActiveOrder({
+          id: pending.orderId.trim(),
+          publicOrderId: formatOrderNumberForCaption(pending.orderNumber),
+          categoryLabel: "Другие услуги",
+          telegramUsername,
+          telegramUserId: String(pending.telegramUserId),
+          game: os.gameName,
+          server: os.mainName ?? "—",
+          virtAmountLabel: os.cardSummary,
+          transferMethod: pending.transferMethod ?? "FreeKassa",
+          bankAccount: "",
+          amountRub: pending.amountRub ?? 0,
+          openedAtLine: formatOpenedAtLine(),
+        });
+        try {
+          await notifyAdminsNewOrder(bot, {
+            telegramUserId: pending.telegramUserId,
+            orderId: pending.orderId.trim(),
+            orderNumber: pending.orderNumber,
+            orderKind: "other_service",
+            game: pending.game ?? os.gameName,
+            server: pending.server ?? os.mainName ?? "—",
+            amountRub: pending.amountRub,
+            virtAmountLabel: os.cardSummary.slice(0, 400),
+            transferMethod: pending.transferMethod ?? "Другие услуги · ручная выдача",
+            promoCode: pending.promoCode,
+          });
+        } catch (e) {
+          console.error("[order] notifyAdmins other_service manual", e);
+        }
+        await sendOtherServiceManualOrderPlaced(bot, miniAppUrl, {
+          telegramUserId: pending.telegramUserId,
+          orderId: pending.orderId.trim(),
+          orderNumber: pending.orderNumber,
+        });
+      }
+    } catch (e) {
+      console.error("[order] deliverPaid other_service", e);
+    }
+    return;
+  }
+  const ok = parseOrderKind(pending.orderKind);
+  if (ok !== "virt" && ok !== "account") {
+    return;
+  }
+  await sendVirtOrderSuccess(bot, miniAppUrl, {
+    telegramUserId: pending.telegramUserId,
+    orderId: pending.orderId,
+    orderNumber: pending.orderNumber,
+    orderKind: ok,
+    game: pending.game,
+    server: pending.server,
+    bankAccount: pending.bankAccount,
+    amountRub: pending.amountRub,
+    virtAmountLabel: pending.virtAmountLabel,
+    transferMethod: pending.transferMethod,
+    promoCode: pending.promoCode,
+    ...(pending.telegramUsername ? { telegramUsername: pending.telegramUsername } : {}),
+    ...(pending.telegramFirstName ? { telegramFirstName: pending.telegramFirstName } : {}),
+  });
+}
+
 /** GET query + x-www-form-urlencoded body */
 async function collectFreeKassaFormFields(
   req: import("node:http").IncomingMessage,
@@ -1192,55 +1451,29 @@ export function startOrderNotifyHttpServer(
       }
       try {
         const body = await readJsonBody<PaymentPrepareJson>(req);
-        if (typeof body.initData !== "string" || !body.initData.length) {
-          res.writeHead(400, { "Content-Type": "application/json", ...corsNotifyHeaders });
-          res.end(JSON.stringify({ error: "initData" }));
-          return;
-        }
-        if (
-          body.orderKind !== "virt" &&
-          body.orderKind !== "account" &&
-          body.orderKind !== "other_service"
-        ) {
-          res.writeHead(400, { "Content-Type": "application/json", ...corsNotifyHeaders });
-          res.end(JSON.stringify({ error: "orderKind" }));
-          return;
-        }
         if (body.method !== "sbp" && body.method !== "mir" && body.method !== "card_rub") {
           res.writeHead(400, { "Content-Type": "application/json", ...corsNotifyHeaders });
           res.end(JSON.stringify({ error: "method" }));
           return;
         }
-        const amountNum = Number(body.amountRub);
-        if (!Number.isFinite(amountNum) || amountNum <= 0) {
-          res.writeHead(400, { "Content-Type": "application/json", ...corsNotifyHeaders });
-          res.end(JSON.stringify({ error: "amount" }));
+        const built = buildPendingPayloadForPaymentBody(body, botToken);
+        if (!built.ok) {
+          res.writeHead(built.status, { "Content-Type": "application/json", ...corsNotifyHeaders });
+          res.end(JSON.stringify({ error: built.error }));
           return;
         }
-        const webUser = parseValidatedWebAppUser(body.initData, botToken);
-        if (!webUser) {
-          res.writeHead(401, { "Content-Type": "application/json", ...corsNotifyHeaders });
-          res.end(JSON.stringify({ error: "bad initData" }));
-          return;
-        }
-        const telegramUserId = webUser.id;
-        const pendingTgUsername = webUser.username ?? undefined;
-        const pendingTgFirst = webUser.firstName ?? undefined;
-        const orderId = `o-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-        const suffix = Date.now().toString(36).toUpperCase().slice(-6);
-        const orderNumber = `#${suffix}`;
+        const { payload, amountNum } = built;
+        const oa = payload.amountExpected;
+        const telegramUserId = payload.telegramUserId;
         const merchantOrderId = buildMerchantOrderId();
-        const oa = formatAmountForFk(amountNum);
         const sign = signPaymentForm(merchantId, oa, secret1, "RUB", merchantOrderId);
         const i = fkMethodId(body.method);
         const apiKey = process.env.FREEKASSA_API_KEY?.trim();
         const secret2 = process.env.FREEKASSA_SECRET2?.trim() || process.env.FREEKASSA_SECRET?.trim();
         const clientIp = getClientIp(req).trim() || "0.0.0.0";
-        /** Домен example.com зарезервирован (RFC), подходит как технический email для FK. */
         const payerEmail = `tg${telegramUserId}@example.com`;
         const orderTelOptional = process.env.FREEKASSA_ORDER_TEL?.trim();
 
-        /** Карта RUB / СБП в кабинете FK — только API; GET pay.fk.money с i= даёт страницу «только по API». */
         const needsFkApi = body.method === "card_rub" || body.method === "sbp";
 
         let payUrl: string;
@@ -1328,125 +1561,65 @@ export function startOrderNotifyHttpServer(
             i,
           });
         }
-        let payload: PendingPaymentOrder;
-        if (body.orderKind === "other_service") {
-          const osIn = body.otherService;
-          if (
-            !osIn ||
-            typeof osIn.itemId !== "string" ||
-            typeof osIn.gameId !== "string" ||
-            (osIn.mode !== "auto" && osIn.mode !== "manual")
-          ) {
-            res.writeHead(400, { "Content-Type": "application/json", ...corsNotifyHeaders });
-            res.end(JSON.stringify({ error: "otherService" }));
-            return;
-          }
-          const mainIdNorm =
-            osIn.mainId === undefined ||
-            osIn.mainId === null ||
-            String(osIn.mainId).trim() === ""
-              ? null
-              : String(osIn.mainId).trim();
-          const found = findOtherServiceItem(osIn.gameId, mainIdNorm, osIn.itemId);
-          if (!found) {
-            res.writeHead(404, { "Content-Type": "application/json", ...corsNotifyHeaders });
-            res.end(JSON.stringify({ error: "catalog item" }));
-            return;
-          }
-          const { item, game, main } = found;
-          if (osIn.mode === "auto") {
-            if (item.paymentMode !== "auto") {
-              res.writeHead(400, { "Content-Type": "application/json", ...corsNotifyHeaders });
-              res.end(JSON.stringify({ error: "mode item" }));
-              return;
-            }
-            if (!item.deliverText?.trim()) {
-              res.writeHead(400, { "Content-Type": "application/json", ...corsNotifyHeaders });
-              res.end(JSON.stringify({ error: "deliver" }));
-              return;
-            }
-          } else if (item.paymentMode !== "manual") {
-            res.writeHead(400, { "Content-Type": "application/json", ...corsNotifyHeaders });
-            res.end(JSON.stringify({ error: "mode item" }));
-            return;
-          }
-          const expectedRub = item.amountRub;
-          if (
-            expectedRub == null ||
-            !Number.isFinite(expectedRub) ||
-            Math.abs(expectedRub - amountNum) > 0.009
-          ) {
-            res.writeHead(400, { "Content-Type": "application/json", ...corsNotifyHeaders });
-            res.end(JSON.stringify({ error: "amount mismatch" }));
-            return;
-          }
-          const transferOs =
-            osIn.mode === "auto"
-              ? "Другие услуги · автовыдача"
-              : "Другие услуги · ручная выдача";
-          payload = {
-            amountExpected: oa,
-            sent: false,
-            telegramUserId,
-            telegramUsername: pendingTgUsername,
-            telegramFirstName: pendingTgFirst,
-            orderId,
-            orderNumber,
-            orderKind: "other_service",
-            game: game.name,
-            server: main?.name ?? "—",
-            bankAccount: "",
-            amountRub: amountNum,
-            virtAmountLabel: item.description.slice(0, 400),
-            transferMethod: transferOs,
-            otherService: {
-              mode: osIn.mode,
-              deliverText: item.deliverText,
-              itemId: item.id,
-              gameId: game.id,
-              mainId: main?.id ?? null,
-              gameName: game.name,
-              mainName: main?.name ?? null,
-              cardSummary: item.description.slice(0, 300),
-            },
-          };
-        } else {
-          const kind = parseOrderKind(body.orderKind) ?? "virt";
-          const transfer =
-            body.transferMethod?.trim() ||
-            (kind === "account" && body.accountOptionLabel
-              ? `Аккаунт: ${body.accountMode ?? ""} ${body.accountOptionLabel}`.trim()
-              : "Оплата FreeKassa");
-          payload = {
-            amountExpected: oa,
-            sent: false,
-            telegramUserId,
-            telegramUsername: pendingTgUsername,
-            telegramFirstName: pendingTgFirst,
-            orderId,
-            orderNumber,
-            orderKind: kind,
-            game: body.game,
-            server: body.server,
-            bankAccount: body.bankAccount,
-            amountRub: amountNum,
-            virtAmountLabel: body.virtAmountLabel,
-            transferMethod: transfer,
-            promoCode: body.promoCode?.trim() || undefined,
-          };
-        }
         putPendingPayment(merchantOrderId, payload);
         res.writeHead(200, { "Content-Type": "application/json", ...corsNotifyHeaders });
         res.end(
           JSON.stringify({
             payUrl,
             merchantOrderId,
-            orderId,
-            orderNumber,
+            orderId: payload.orderId,
+            orderNumber: payload.orderNumber,
           }),
         );
       } catch (e) {
         console.error("[payment] /notify/payment/prepare", e);
+        res.writeHead(500, { "Content-Type": "application/json", ...corsNotifyHeaders });
+        res.end(JSON.stringify({ error: "server" }));
+      }
+      return;
+    }
+
+    if (req.method === "POST" && url === "/notify/payment/kzt-prepare") {
+      if (!botToken) {
+        res.writeHead(503, corsNotifyHeaders).end(JSON.stringify({ error: "no bot token" }));
+        return;
+      }
+      try {
+        const body = await readJsonBody<PaymentPrepareBodyBase>(req);
+        const built = buildPendingPayloadForPaymentBody(body, botToken);
+        if (!built.ok) {
+          res.writeHead(built.status, { "Content-Type": "application/json", ...corsNotifyHeaders });
+          res.end(JSON.stringify({ error: built.error }));
+          return;
+        }
+        let { payload } = built;
+        if (payload.orderKind === "virt" || payload.orderKind === "account") {
+          payload = {
+            ...payload,
+            transferMethod: "Перевод в тенге (KZT) по реквизитам",
+          };
+        }
+        const token = randomBytes(9).toString("hex");
+        putKztSession(token, {
+          token,
+          telegramUserId: payload.telegramUserId,
+          state: "await_photo",
+          pending: payload,
+          createdAt: Date.now(),
+        });
+        const botUsername = resolveReferralBotHandle();
+        res.writeHead(200, { "Content-Type": "application/json", ...corsNotifyHeaders });
+        res.end(
+          JSON.stringify({
+            ok: true,
+            startParam: `kzt_${token}`,
+            botUsername,
+            orderNumber: payload.orderNumber,
+            orderId: payload.orderId,
+          }),
+        );
+      } catch (e) {
+        console.error("[payment] /notify/payment/kzt-prepare", e);
         res.writeHead(500, { "Content-Type": "application/json", ...corsNotifyHeaders });
         res.end(JSON.stringify({ error: "server" }));
       }
@@ -1514,123 +1687,7 @@ export function startOrderNotifyHttpServer(
         if (intid) {
           markIntidProcessed(intid);
         }
-        if (pending.promoCode) {
-          consumePromoCode(pending.promoCode);
-        }
-        if (pending.orderKind === "other_service" && pending.otherService) {
-          const os = pending.otherService;
-          try {
-            if (os.mode === "auto") {
-              const txt = os.deliverText?.trim() || "Спасибо за оплату!";
-              await sendOrderCompletedToBuyer(bot, {
-                telegramUserId: pending.telegramUserId,
-                orderNumber: pending.orderNumber,
-                otherServiceBody: txt,
-              });
-              try {
-                await notifyAdminsNewOrder(bot, {
-                  telegramUserId: pending.telegramUserId,
-                  orderId: pending.orderId,
-                  orderNumber: pending.orderNumber,
-                  orderKind: "other_service",
-                  game: pending.game,
-                  server: pending.server,
-                  amountRub: pending.amountRub,
-                  virtAmountLabel: pending.virtAmountLabel,
-                  transferMethod:
-                    pending.transferMethod ?? "Другие услуги · автовыдача",
-                  promoCode: pending.promoCode,
-                });
-              } catch (e) {
-                console.error("[freekassa] notifyAdmins other_service auto", e);
-              }
-            } else {
-              let telegramUsername = pending.telegramUsername?.trim() || "";
-              if (!telegramUsername) {
-                try {
-                  const chat = await bot.api.getChat(pending.telegramUserId);
-                  if (chat.type === "private" && "username" in chat && chat.username) {
-                    telegramUsername = chat.username;
-                  }
-                } catch {
-                  /* ok */
-                }
-              }
-              if (!telegramUsername && pending.telegramFirstName?.trim()) {
-                telegramUsername = pending.telegramFirstName.trim();
-              }
-              if (!telegramUsername) {
-                telegramUsername = "";
-              }
-              addOrUpdateActiveOrder({
-                id: pending.orderId.trim(),
-                publicOrderId: formatOrderNumberForCaption(pending.orderNumber),
-                categoryLabel: "Другие услуги",
-                telegramUsername,
-                telegramUserId: String(pending.telegramUserId),
-                game: os.gameName,
-                server: os.mainName ?? "—",
-                virtAmountLabel: os.cardSummary,
-                transferMethod: pending.transferMethod ?? "FreeKassa",
-                bankAccount: "",
-                amountRub: pending.amountRub ?? 0,
-                openedAtLine: formatOpenedAtLine(),
-              });
-              try {
-                await notifyAdminsNewOrder(bot, {
-                  telegramUserId: pending.telegramUserId,
-                  orderId: pending.orderId.trim(),
-                  orderNumber: pending.orderNumber,
-                  orderKind: "other_service",
-                  game: pending.game ?? os.gameName,
-                  server: pending.server ?? os.mainName ?? "—",
-                  amountRub: pending.amountRub,
-                  virtAmountLabel: os.cardSummary.slice(0, 400),
-                  transferMethod:
-                    pending.transferMethod ?? "Другие услуги · ручная выдача",
-                  promoCode: pending.promoCode,
-                });
-              } catch (e) {
-                console.error("[freekassa] notifyAdmins other_service manual", e);
-              }
-              await sendOtherServiceManualOrderPlaced(bot, miniAppUrl, {
-                telegramUserId: pending.telegramUserId,
-                orderId: pending.orderId.trim(),
-                orderNumber: pending.orderNumber,
-              });
-            }
-          } catch (e) {
-            console.error("[freekassa] other_service", e);
-          }
-          markPendingSent(mOrder);
-          res.writeHead(200, { "Content-Type": "text/plain" }).end("YES");
-          return;
-        }
-        const ok = parseOrderKind(pending.orderKind);
-        if (ok !== "virt" && ok !== "account") {
-          markPendingSent(mOrder);
-          res.writeHead(200, { "Content-Type": "text/plain" }).end("YES");
-          return;
-        }
-        await sendVirtOrderSuccess(bot, miniAppUrl, {
-          telegramUserId: pending.telegramUserId,
-          orderId: pending.orderId,
-          orderNumber: pending.orderNumber,
-          orderKind: ok,
-          game: pending.game,
-          server: pending.server,
-          bankAccount: pending.bankAccount,
-          amountRub: pending.amountRub,
-          virtAmountLabel: pending.virtAmountLabel,
-          transferMethod: pending.transferMethod,
-          promoCode: pending.promoCode,
-          ...(pending.telegramUsername
-            ? { telegramUsername: pending.telegramUsername }
-            : {}),
-          ...(pending.telegramFirstName
-            ? { telegramFirstName: pending.telegramFirstName }
-            : {}),
-        });
+        await deliverPaidPendingOrder(bot, miniAppUrl, pending);
         markPendingSent(mOrder);
         res.writeHead(200, { "Content-Type": "text/plain" }).end("YES");
       } catch (e) {
@@ -1646,6 +1703,7 @@ export function startOrderNotifyHttpServer(
         url === "/notify/sell-virt-webapp" ||
         url === "/notify/virt-order-success" ||
         url === "/notify/payment/prepare" ||
+        url === "/notify/payment/kzt-prepare" ||
         url === "/notify/freekassa" ||
         url === "/notify/referral" ||
         url === "/api/promo-codes")
