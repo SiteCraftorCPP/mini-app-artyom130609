@@ -1,4 +1,5 @@
 import { accessSync, constants, existsSync, readFileSync } from "node:fs";
+import { setDefaultResultOrder } from "node:dns";
 import { dirname, resolve, basename } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -703,10 +704,29 @@ bot.catch((err) => {
 startOrderNotifyHttpServer(bot, miniAppUrl);
 
 try {
-  await bot.api.deleteWebhook({ drop_pending_updates: false });
-  console.log("Telegram: вебхук снят (long polling)");
+  setDefaultResultOrder("ipv4first");
+  console.log("DNS: включён ipv4first для Telegram API");
 } catch (e) {
-  console.warn("Telegram: не удалось снять вебхук — проверьте сеть к api.telegram.org", e);
+  console.warn("DNS: не удалось включить ipv4first", e);
+}
+
+const deleteWebhookResult = await Promise.race([
+  bot.api
+    .deleteWebhook({ drop_pending_updates: false })
+    .then(() => "ok" as const)
+    .catch((e) => {
+      console.warn("Telegram: не удалось снять вебхук — проверьте сеть к api.telegram.org", e);
+      return "failed" as const;
+    }),
+  new Promise<"timeout">((resolveTimeout) => {
+    setTimeout(() => resolveTimeout("timeout"), 4000);
+  }),
+]);
+
+if (deleteWebhookResult === "ok") {
+  console.log("Telegram: вебхук снят (long polling)");
+} else if (deleteWebhookResult === "timeout") {
+  console.warn("Telegram: deleteWebhook timeout >4s, продолжаем запуск long polling");
 }
 
 await bot.start({
