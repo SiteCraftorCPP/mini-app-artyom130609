@@ -115,7 +115,7 @@ export async function handleKztReceiptDeepLink(ctx: Context, payload: string): P
       "",
       `Заказ: ${session.pending.orderNumber}`,
       "",
-      "После отправки фото дождитесь проверки — уведомление о заказе придёт только после подтверждения чека.",
+      "После отправки фото дождитесь проверки.",
     ].join("\n"),
   );
 }
