@@ -62,7 +62,7 @@ async function handleKztPhoto(
 
   const cap = adminCaptionPlain(session);
   const kb = new InlineKeyboard()
-    .text("✅ Одобрить", `kztok:${token}`)
+    .text("✅ Подтвердить", `kztok:${token}`)
     .text("❌ Отклонить", `kztno:${token}`);
 
   for (const aid of adminIds) {
@@ -163,13 +163,15 @@ export function installKztReceiptFlow(bot: Bot, adminIds: Set<number>, miniAppUr
     }
     await ctx.answerCallbackQuery();
     try {
-      await deliverPaidPendingOrder(bot, miniAppUrl, session.pending);
+      await deliverPaidPendingOrder(bot, miniAppUrl, session.pending, {
+        skipAdminBroadcast: true,
+      });
       deleteKztSession(token);
       userAwaitingPhoto.delete(session.telegramUserId);
       const prev = ctx.callbackQuery.message;
       if (prev && "caption" in prev && prev.caption) {
         await ctx.editMessageCaption({
-          caption: `${prev.caption}\n\n✅ Одобрено администратором`,
+          caption: `${prev.caption}\n\n✅ Подтверждено администратором`,
           reply_markup: { inline_keyboard: [] },
         });
       }

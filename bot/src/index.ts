@@ -702,6 +702,13 @@ bot.catch((err) => {
 
 startOrderNotifyHttpServer(bot, miniAppUrl);
 
+try {
+  await bot.api.deleteWebhook({ drop_pending_updates: false });
+  console.log("Telegram: вебхук снят (long polling)");
+} catch (e) {
+  console.warn("Telegram: не удалось снять вебхук — проверьте сеть к api.telegram.org", e);
+}
+
 await bot.start({
   onStart: async (botInfo) => {
     console.log(`Бот @${botInfo.username} запущен (long polling)`);

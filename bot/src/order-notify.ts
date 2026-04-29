@@ -641,6 +641,7 @@ export async function sendVirtOrderSuccess(
   bot: Bot,
   miniAppUrl: string,
   payload: VirtOrderSuccessPayload,
+  options?: { skipAdminBroadcast?: boolean },
 ): Promise<void> {
   console.info("[virt-order] sendVirtOrderSuccess", {
     telegramUserId: payload.telegramUserId,
@@ -648,10 +649,12 @@ export async function sendVirtOrderSuccess(
     orderId: payload.orderId,
     orderKind: payload.orderKind ?? "virt",
   });
-  try {
-    await notifyAdminsNewOrder(bot, payload);
-  } catch (e) {
-    console.error("[virt-order] notifyAdminsNewOrder:", e);
+  if (!options?.skipAdminBroadcast) {
+    try {
+      await notifyAdminsNewOrder(bot, payload);
+    } catch (e) {
+      console.error("[virt-order] notifyAdminsNewOrder:", e);
+    }
   }
   const { reply_markup } = resolveVirtOrderCaptionAndKeyboard(payload, miniAppUrl);
   const orderKind: OrderKindForSuccessParts = payload.orderKind === "account" ? "account" : "virt";
@@ -1243,7 +1246,9 @@ export async function deliverPaidPendingOrder(
   bot: Bot,
   miniAppUrl: string,
   pending: PendingPaymentOrder,
+  options?: { skipAdminBroadcast?: boolean },
 ): Promise<void> {
+  const skipAdmin = options?.skipAdminBroadcast === true;
   if (pending.promoCode) {
     consumePromoCode(pending.promoCode);
   }
@@ -1257,21 +1262,23 @@ export async function deliverPaidPendingOrder(
           orderNumber: pending.orderNumber,
           otherServiceBody: txt,
         });
-        try {
-          await notifyAdminsNewOrder(bot, {
-            telegramUserId: pending.telegramUserId,
-            orderId: pending.orderId,
-            orderNumber: pending.orderNumber,
-            orderKind: "other_service",
-            game: pending.game,
-            server: pending.server,
-            amountRub: pending.amountRub,
-            virtAmountLabel: pending.virtAmountLabel,
-            transferMethod: pending.transferMethod ?? "Другие услуги · автовыдача",
-            promoCode: pending.promoCode,
-          });
-        } catch (e) {
-          console.error("[order] notifyAdmins other_service auto", e);
+        if (!skipAdmin) {
+          try {
+            await notifyAdminsNewOrder(bot, {
+              telegramUserId: pending.telegramUserId,
+              orderId: pending.orderId,
+              orderNumber: pending.orderNumber,
+              orderKind: "other_service",
+              game: pending.game,
+              server: pending.server,
+              amountRub: pending.amountRub,
+              virtAmountLabel: pending.virtAmountLabel,
+              transferMethod: pending.transferMethod ?? "Другие услуги · автовыдача",
+              promoCode: pending.promoCode,
+            });
+          } catch (e) {
+            console.error("[order] notifyAdmins other_service auto", e);
+          }
         }
       } else {
         let telegramUsername = pending.telegramUsername?.trim() || "";
@@ -1305,21 +1312,23 @@ export async function deliverPaidPendingOrder(
           amountRub: pending.amountRub ?? 0,
           openedAtLine: formatOpenedAtLine(),
         });
-        try {
-          await notifyAdminsNewOrder(bot, {
-            telegramUserId: pending.telegramUserId,
-            orderId: pending.orderId.trim(),
-            orderNumber: pending.orderNumber,
-            orderKind: "other_service",
-            game: pending.game ?? os.gameName,
-            server: pending.server ?? os.mainName ?? "—",
-            amountRub: pending.amountRub,
-            virtAmountLabel: os.cardSummary.slice(0, 400),
-            transferMethod: pending.transferMethod ?? "Другие услуги · ручная выдача",
-            promoCode: pending.promoCode,
-          });
-        } catch (e) {
-          console.error("[order] notifyAdmins other_service manual", e);
+        if (!skipAdmin) {
+          try {
+            await notifyAdminsNewOrder(bot, {
+              telegramUserId: pending.telegramUserId,
+              orderId: pending.orderId.trim(),
+              orderNumber: pending.orderNumber,
+              orderKind: "other_service",
+              game: pending.game ?? os.gameName,
+              server: pending.server ?? os.mainName ?? "—",
+              amountRub: pending.amountRub,
+              virtAmountLabel: os.cardSummary.slice(0, 400),
+              transferMethod: pending.transferMethod ?? "Другие услуги · ручная выдача",
+              promoCode: pending.promoCode,
+            });
+          } catch (e) {
+            console.error("[order] notifyAdmins other_service manual", e);
+          }
         }
         await sendOtherServiceManualOrderPlaced(bot, miniAppUrl, {
           telegramUserId: pending.telegramUserId,
@@ -1336,21 +1345,26 @@ export async function deliverPaidPendingOrder(
   if (ok !== "virt" && ok !== "account") {
     return;
   }
-  await sendVirtOrderSuccess(bot, miniAppUrl, {
-    telegramUserId: pending.telegramUserId,
-    orderId: pending.orderId,
-    orderNumber: pending.orderNumber,
-    orderKind: ok,
-    game: pending.game,
-    server: pending.server,
-    bankAccount: pending.bankAccount,
-    amountRub: pending.amountRub,
-    virtAmountLabel: pending.virtAmountLabel,
-    transferMethod: pending.transferMethod,
-    promoCode: pending.promoCode,
-    ...(pending.telegramUsername ? { telegramUsername: pending.telegramUsername } : {}),
-    ...(pending.telegramFirstName ? { telegramFirstName: pending.telegramFirstName } : {}),
-  });
+  await sendVirtOrderSuccess(
+    bot,
+    miniAppUrl,
+    {
+      telegramUserId: pending.telegramUserId,
+      orderId: pending.orderId,
+      orderNumber: pending.orderNumber,
+      orderKind: ok,
+      game: pending.game,
+      server: pending.server,
+      bankAccount: pending.bankAccount,
+      amountRub: pending.amountRub,
+      virtAmountLabel: pending.virtAmountLabel,
+      transferMethod: pending.transferMethod,
+      promoCode: pending.promoCode,
+      ...(pending.telegramUsername ? { telegramUsername: pending.telegramUsername } : {}),
+      ...(pending.telegramFirstName ? { telegramFirstName: pending.telegramFirstName } : {}),
+    },
+    skipAdmin ? { skipAdminBroadcast: true } : undefined,
+  );
 }
 
 /** GET query + x-www-form-urlencoded body */
@@ -1593,10 +1607,17 @@ export function startOrderNotifyHttpServer(
           return;
         }
         let { payload } = built;
+        const kztTransferSuffix = "Перевод в тенге (KZT) по реквизитам";
         if (payload.orderKind === "virt" || payload.orderKind === "account") {
           payload = {
             ...payload,
-            transferMethod: "Перевод в тенге (KZT) по реквизитам",
+            transferMethod: kztTransferSuffix,
+          };
+        } else if (payload.orderKind === "other_service") {
+          const base = payload.transferMethod?.trim() || "Другие услуги";
+          payload = {
+            ...payload,
+            transferMethod: `${base} · ${kztTransferSuffix}`,
           };
         }
         const token = randomBytes(9).toString("hex");

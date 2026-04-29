@@ -385,13 +385,6 @@ export function PaymentMethodDialog({
               <AppText
                 tag={TAG.p}
                 variant="darkStrong"
-                className="text-app-text-muted text-center text-xs font-medium leading-snug whitespace-pre-line"
-              >
-                {PAYMENT_TEXT.kztInstructions}
-              </AppText>
-              <AppText
-                tag={TAG.p}
-                variant="darkStrong"
                 className="text-app-text-muted text-center text-xs font-semibold leading-snug whitespace-pre-line"
               >
                 {PAYMENT_TEXT.kztRateLine}
@@ -416,16 +409,23 @@ export function PaymentMethodDialog({
                 >
                   {PAYMENT_TEXT.copyKaspi}
                 </Button>
-                <Button
-                  type="button"
-                  size="default"
-                  disabled={busy}
-                  className={cn(methodBtnClass, "!font-bold")}
-                  onClick={() => void onKztPaid()}
-                >
-                  {PAYMENT_TEXT.kztPaidButton}
-                </Button>
               </div>
+              <AppText
+                tag={TAG.p}
+                variant="darkStrong"
+                className="text-app-text-muted px-0.5 text-center text-xs font-medium leading-snug whitespace-pre-line"
+              >
+                {PAYMENT_TEXT.kztInstructions}
+              </AppText>
+              <Button
+                type="button"
+                size="default"
+                disabled={busy}
+                className={cn(methodBtnClass, "!font-bold")}
+                onClick={() => void onKztPaid()}
+              >
+                {PAYMENT_TEXT.kztPaidButton}
+              </Button>
             </div>
           ) : (
             <div className="flex flex-col gap-3">
@@ -441,17 +441,15 @@ export function PaymentMethodDialog({
                   {m.label}
                 </Button>
               ))}
-              {context.orderKind !== "other_service" ? (
-                <Button
-                  type="button"
-                  size="default"
-                  disabled={busy}
-                  className={cn(methodBtnClass, "mt-0.5")}
-                  onClick={() => setStep("kzt")}
-                >
-                  {PAYMENT_TEXT.methodKzt}
-                </Button>
-              ) : null}
+              <Button
+                type="button"
+                size="default"
+                disabled={busy}
+                className={cn(methodBtnClass, "mt-0.5")}
+                onClick={() => setStep("kzt")}
+              >
+                {PAYMENT_TEXT.methodKzt}
+              </Button>
             </div>
           )}
         </div>
