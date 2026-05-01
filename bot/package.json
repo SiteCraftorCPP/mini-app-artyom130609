@@ -8,6 +8,7 @@
     "start": "node dist/index.js",
     "build": "tsc -p tsconfig.json",
     "diag:order-photo": "node scripts/diag-order-photo.mjs",
+    "diag:photos": "node scripts/diag-all-photos.mjs",
     "prepare": "npm run build"
   },
   "dependencies": {

@@ -839,6 +839,75 @@ const COMPLETED_ORDER_REVIEW_PHOTO_NAMES = [
   "photo_3.webp",
 ] as const;
 
+export type CompletedOrderPhotoDiag = {
+  runtimeDirname: string;
+  botRoot: string;
+  repoRoot: string;
+  cwd: string;
+  installRoots: string[];
+  env_ORDER_COMPLETED_REVIEW_PHOTO_URL: string | undefined;
+  env_ORDER_COMPLETED_REVIEW_IMAGE_PATH: string | undefined;
+  env_ORDER_COMPLETED_REVIEW_PHOTO_PATH: string | undefined;
+  candidates: string[];
+  firstExistingPath: string | null;
+  urlFallback: string | null;
+};
+
+/** Те же кандидаты, что `resolveCompletedOrderReviewPhoto`, для проверки на сервере. */
+export function diagnoseCompletedOrderReviewPhoto(): CompletedOrderPhotoDiag {
+  const runtimeDirname = __dirname;
+  const botRoot = resolve(__dirname, "..");
+  const repoRoot = resolve(__dirname, "../..");
+  const installRoots = orderPhotoInstallRoots();
+  const fileCandidates: string[] = [];
+  const push = (p: string | null | undefined) => {
+    if (p && !fileCandidates.includes(p)) {
+      fileCandidates.push(p);
+    }
+  };
+
+  const orderUrl = process.env.ORDER_COMPLETED_REVIEW_PHOTO_URL?.trim();
+  const urlFallback =
+    orderUrl && /^https?:\/\//i.test(orderUrl) ? orderUrl : null;
+
+  const fromEnv = (
+    process.env.ORDER_COMPLETED_REVIEW_IMAGE_PATH ||
+    process.env.ORDER_COMPLETED_REVIEW_PHOTO_PATH
+  )?.trim();
+  if (fromEnv) {
+    const p = fromEnv.startsWith("/") ? fromEnv : resolve(botRoot, fromEnv);
+    push(p);
+    push(resolve(repoRoot, "images", basename(p)));
+  }
+  for (const root of installRoots) {
+    for (const name of COMPLETED_ORDER_REVIEW_PHOTO_NAMES) {
+      push(resolve(root, "images", name));
+    }
+  }
+  for (const name of COMPLETED_ORDER_REVIEW_PHOTO_NAMES) {
+    push(resolve(repoRoot, "images", name));
+  }
+
+  const firstExistingPath =
+    fileCandidates.find((p) => existsSync(p)) ?? null;
+
+  return {
+    runtimeDirname,
+    botRoot,
+    repoRoot,
+    cwd: process.cwd(),
+    installRoots,
+    env_ORDER_COMPLETED_REVIEW_PHOTO_URL: process.env.ORDER_COMPLETED_REVIEW_PHOTO_URL,
+    env_ORDER_COMPLETED_REVIEW_IMAGE_PATH:
+      process.env.ORDER_COMPLETED_REVIEW_IMAGE_PATH,
+    env_ORDER_COMPLETED_REVIEW_PHOTO_PATH:
+      process.env.ORDER_COMPLETED_REVIEW_PHOTO_PATH,
+    candidates: fileCandidates,
+    firstExistingPath,
+    urlFallback,
+  };
+}
+
 /**
  * Уведомление покупателю после завершения заказа в админке (положите `bot/images/photo_3.*`).
  * Переопределение: `ORDER_COMPLETED_REVIEW_PHOTO_URL` (https) или `ORDER_COMPLETED_REVIEW_IMAGE_PATH` (от корня бота).

@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 /**
- * Запуск из папки bot/:
- *   node scripts/diag-order-photo.mjs
- * Подхватывает bot/.env (как процесс бота).
+ * Устаревший короткий вывод только по ORDER_SUCCESS.
+ * Полный отчёт (оформлен / выполнен / welcome / о магазине):
+ *   npm run diag:photos
+ *   node scripts/diag-all-photos.mjs
  */
 import { config } from "dotenv";
 import { existsSync } from "node:fs";
