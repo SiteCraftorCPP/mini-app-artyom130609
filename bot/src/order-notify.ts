@@ -528,6 +528,65 @@ async function retrySendPhoto(fn: () => Promise<void>, maxRetries = 10) {
   }
 }
 
+async function notifyBuyerPhotoOrPlainText(
+  bot: Bot,
+  logPrefix: string,
+  chatId: number,
+  text: string,
+  reply_markup: InlineKeyboard | undefined,
+  photo: OrderSuccessPhoto | null,
+  caption_entities?: import("@grammyjs/types").MessageEntity[],
+): Promise<void> {
+  const withEntities = caption_entities && caption_entities.length > 0;
+  const sendPlain = async (reason: string) => {
+    console.warn(`[${logPrefix}] отправка текста без фото (${reason})`);
+    if (withEntities) {
+      await bot.api.sendMessage(chatId, text, {
+        entities: caption_entities,
+        ...(reply_markup ? { reply_markup } : {}),
+        link_preview_options: { is_disabled: true },
+      });
+    } else {
+      await bot.api.sendMessage(chatId, text, {
+        parse_mode: "HTML",
+        ...(reply_markup ? { reply_markup } : {}),
+        link_preview_options: { is_disabled: true },
+      });
+    }
+  };
+
+  if (!photo) {
+    await sendPlain("нет изображения");
+    return;
+  }
+
+  const sendPhotoOpts = {
+    caption: text,
+    ...(reply_markup ? { reply_markup } : {}),
+    ...(withEntities
+      ? { caption_entities: caption_entities! }
+      : { parse_mode: "HTML" as const }),
+  };
+
+  try {
+    await retrySendPhoto(async () => {
+      if (photo.type === "url") {
+        await bot.api.sendPhoto(chatId, photo.url, sendPhotoOpts);
+      } else {
+        const buffer = readFileSync(photo.path);
+        await bot.api.sendPhoto(
+          chatId,
+          new InputFile(buffer, `${Date.now()}_${basename(photo.path)}`),
+          sendPhotoOpts,
+        );
+      }
+    });
+  } catch (e) {
+    console.error(`[${logPrefix}] sendPhoto не удался после повторов`, e);
+    await sendPlain("sendPhoto failed");
+  }
+}
+
 /** DTO для мини-аппа «Аккаунт» — совпадает с `AccountOrderMock` во фронте. */
 function adminRowToMiniappOrderJson(row: AdminOrderRow): Record<string, unknown> {
   const pid = (row.publicOrderId || row.id || "").trim();
@@ -592,6 +651,9 @@ export async function notifyAdminsNewOrder(
 ): Promise<void> {
   const admins = resolveAdminTelegramIdsFromEnv();
   if (admins.length === 0) {
+    console.warn(
+      "[admin-notify] TELEGRAM_ADMIN_ID / TELEGRAM_ADMIN_IDS не заданы — админы не получат уведомление о новом заказе.",
+    );
     return;
   }
   const seq = bumpAdminOrderSequence();
@@ -707,36 +769,19 @@ export async function sendVirtOrderSuccess(
 
   const photo = resolveOrderSuccessPhoto();
 
-  if (!photo) {
-    console.warn(
-      "ORDER_SUCCESS: нет фото на диске и нет рабочего URL — сообщение не отправлено по вашему требованию.",
+  try {
+    await notifyBuyerPhotoOrPlainText(
+      bot,
+      "virt-order",
+      payload.telegramUserId,
+      caption,
+      reply_markup,
+      photo,
+      caption_entities,
     );
-    return;
+  } catch (e) {
+    console.error("[virt-order] не удалось доставить уведомление покупателю:", e);
   }
-
-  const sendPhotoOptions = {
-    caption,
-    reply_markup,
-    ...(caption_entities && caption_entities.length > 0 ? { caption_entities } : { parse_mode: "HTML" as const }),
-  };
-
-  await retrySendPhoto(async () => {
-      if (photo.type === "url") {
-        console.info("[virt-order] sendPhoto по URL", photo.url.slice(0, 72));
-        await bot.api.sendPhoto(payload.telegramUserId, photo.url, sendPhotoOptions);
-      } else {
-        console.info("[virt-order] sendPhoto заказа с диска", photo.path);
-        const buffer = readFileSync(photo.path);
-        await bot.api.sendPhoto(
-          payload.telegramUserId,
-          new InputFile(buffer, `${Date.now()}_${basename(photo.path)}`),
-          sendPhotoOptions,
-        );
-      }
-    }).catch((e) => {
-      console.error("[virt-order] Фото так и не отправилось", e);
-      throw e;
-    });
 
   try {
     const row = await buildActiveOrderRow(bot, payload);
@@ -776,36 +821,15 @@ export async function sendOtherServiceManualOrderPlaced(
   const reply_markup = buildOrderDetailsKeyboard(miniAppUrl, payload.orderId);
   const photo = resolveOrderSuccessPhoto();
 
-  if (!photo) {
-    console.warn(
-      "[other-service] нет ORDER_SUCCESS фото — «оформлен» не отправлен покупателю.",
-    );
-    return;
-  }
-
-  const sendPhotoOptions = {
+  await notifyBuyerPhotoOrPlainText(
+    bot,
+    "other-service",
+    payload.telegramUserId,
     caption,
     reply_markup,
-    ...(caption_entities && caption_entities.length > 0
-      ? { caption_entities }
-      : { parse_mode: "HTML" as const }),
-  };
-
-  await retrySendPhoto(async () => {
-    if (photo.type === "url") {
-      await bot.api.sendPhoto(payload.telegramUserId, photo.url, sendPhotoOptions);
-    } else {
-      const buffer = readFileSync(photo.path);
-      await bot.api.sendPhoto(
-        payload.telegramUserId,
-        new InputFile(buffer, `${Date.now()}_${basename(photo.path)}`),
-        sendPhotoOptions,
-      );
-    }
-  }).catch((e) => {
-    console.error("[other-service] sendPhoto «оформлен»", e);
-    throw e;
-  });
+    photo,
+    caption_entities,
+  );
 }
 
 const COMPLETED_ORDER_REVIEW_PHOTO_NAMES = [
@@ -863,7 +887,7 @@ function resolveCompletedOrderReviewPhoto(): OrderSuccessPhoto | null {
     }
   }
   console.warn(
-    "[order-complete] нет images/photo_3.* — уведомление о выполнении уйдёт без фото. Задайте ORDER_COMPLETED_REVIEW_PHOTO_URL.",
+    "[order-complete] нет images/photo_3.* — покупателю уйдёт только текст. Задайте ORDER_COMPLETED_REVIEW_PHOTO_URL или положите photo_3.* в images/.",
   );
   return null;
 }
@@ -936,35 +960,22 @@ export async function sendOrderCompletedToBuyer(
   const reply_markup = new InlineKeyboard().url(BTN_WRITE_REVIEW, REVIEW_POST_URL);
 
   const photo = resolveCompletedOrderReviewPhoto();
-  if (!photo) {
-    console.warn("ORDER_COMPLETE: нет фото на диске — сообщение не отправлено.");
-    return;
-  }
-
   const withOrderDoneCapEntities = caption_entities && caption_entities.length > 0;
-  const sendPhotoOptions = {
-    caption,
-    reply_markup,
-    ...(withOrderDoneCapEntities
-      ? { caption_entities }
-      : { parse_mode: "HTML" as const }),
-  };
 
-  await retrySendPhoto(async () => {
-    if (photo.type === "url") {
-      await bot.api.sendPhoto(payload.telegramUserId, photo.url, sendPhotoOptions);
-    } else {
-      const buffer = readFileSync(photo.path);
-      await bot.api.sendPhoto(
-        payload.telegramUserId,
-        new InputFile(buffer, `${Date.now()}_${basename(photo.path)}`),
-        sendPhotoOptions,
-      );
-    }
-  }).catch((e) => {
-    console.error("[order-complete] Фото так и не отправилось", e);
+  try {
+    await notifyBuyerPhotoOrPlainText(
+      bot,
+      "order-complete",
+      payload.telegramUserId,
+      caption,
+      reply_markup,
+      photo,
+      withOrderDoneCapEntities ? caption_entities : undefined,
+    );
+  } catch (e) {
+    console.error("[order-complete] не удалось уведомить покупателя:", e);
     throw e;
-  });
+  }
 }
 
 type NotifyBody = {
