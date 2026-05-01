@@ -365,7 +365,12 @@ async function buildActiveOrderRow(
   return {
     id,
     publicOrderId,
-    categoryLabel: kind === "account" ? "Аккаунт" : "Вирты",
+    categoryLabel:
+      kind === "account"
+        ? "Аккаунт"
+        : kind === "other_service"
+          ? "Другие услуги"
+          : "Вирты",
     telegramUsername,
     telegramUserId: String(payload.telegramUserId),
     game: payload.game ?? "—",
@@ -453,11 +458,16 @@ function getOrderManagerSuccessTextParts(
 /**
  * Кнопка только типа web_app — иначе Telegram показывает обычную ссылку, а не открытие мини-аппа.
  * URL должен совпадать с доменом Mini App в @BotFather.
+ * Раздел «Актуальные заказы»; при orderId — сразу карточка заказа.
  */
-/** Только раздел «История заказов» без orderId — карточка по id часто пуста до синхронизации. */
-function buildOrderDetailsKeyboard(miniAppUrl: string) {
+function buildOrderDetailsKeyboard(miniAppUrl: string, orderId?: string) {
   const base = miniAppUrl.replace(/\/$/, "");
-  const url = `${base}/profile?open=orderHistory`;
+  const q = new URLSearchParams({ open: "currentOrders" });
+  const id = orderId?.trim();
+  if (id) {
+    q.set("orderId", id);
+  }
+  const url = `${base}/profile?${q.toString()}`;
   return new InlineKeyboard().webApp("Узнать детали", url).success();
 }
 
@@ -477,7 +487,7 @@ function resolveVirtOrderCaptionAndKeyboard(
   if (kind === "virt") {
     return {
       caption: buildVirtOrderCaption(payload.orderNumber),
-      reply_markup: buildOrderDetailsKeyboard(miniAppUrl),
+      reply_markup: buildOrderDetailsKeyboard(miniAppUrl, payload.orderId),
     };
   }
 
@@ -492,7 +502,7 @@ function resolveVirtOrderCaptionAndKeyboard(
 
   return {
     caption: buildAccountAppOrderCaption(payload.orderNumber),
-    reply_markup: buildOrderDetailsKeyboard(miniAppUrl),
+    reply_markup: buildOrderDetailsKeyboard(miniAppUrl, payload.orderId),
   };
 }
 
@@ -763,7 +773,7 @@ export async function sendOtherServiceManualOrderPlaced(
     caption = buildAccountAppOrderCaptionHtml(payload.orderNumber);
   }
 
-  const reply_markup = buildOrderDetailsKeyboard(miniAppUrl);
+  const reply_markup = buildOrderDetailsKeyboard(miniAppUrl, payload.orderId);
   const photo = resolveOrderSuccessPhoto();
 
   if (!photo) {
