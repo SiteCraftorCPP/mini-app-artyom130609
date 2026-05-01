@@ -2,6 +2,12 @@ import { ArrowLeft, Loader2, X } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useWebApp } from "@vkruglikov/react-telegram-web-app";
 
+import {
+  PAYMENT_MIN_KZT,
+  minRubForPaymentMethod,
+  minimalRubForKztPay,
+  rubMeetsKztMinimum,
+} from "@/shared/constants/payment-method-limits";
 import { KZT_REQUISITES, rubToKztAmount } from "@/shared/constants/payment-requisites-kzt";
 import { CURRENCY } from "@/shared/constants/common";
 import { PAYMENT_TEXT, TEXT } from "@/shared/constants/text";
@@ -15,7 +21,6 @@ import {
   requestPaymentPrepare,
 } from "@/shared/lib/prepare-payment";
 import { showErrorMessage, showSuccessMessage } from "@/shared/lib/notify";
-import { savePostPaymentNotice } from "@/features/payment/post-payment-notice-storage";
 import { Button } from "@/shared/ui/button";
 import {
   Dialog,
@@ -168,11 +173,13 @@ export function PaymentMethodDialog({
 }: PaymentMethodDialogProps) {
   const webApp = useWebApp();
   const [step, setStep] = useState<"list" | "kzt">("list");
+  const [kztPhase, setKztPhase] = useState<"details" | "goBot">("details");
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     if (open) {
       setStep("list");
+      setKztPhase("details");
       setBusy(false);
     }
   }, [open]);
@@ -181,6 +188,7 @@ export function PaymentMethodDialog({
     (v: boolean) => {
       if (!v) {
         setStep("list");
+        setKztPhase("details");
         setBusy(false);
       }
       onOpenChange(v);
@@ -207,6 +215,15 @@ export function PaymentMethodDialog({
         showErrorMessage("Некорректная сумма. Вернитесь к форме и проверьте рубли.");
         return;
       }
+      const minRub = minRubForPaymentMethod(method);
+      if (amountRub + 1e-9 < minRub) {
+        showErrorMessage(
+          method === "sbp"
+            ? PAYMENT_TEXT.paymentMinSbp(minRub)
+            : PAYMENT_TEXT.paymentMinCard(minRub),
+        );
+        return;
+      }
       setBusy(true);
       try {
         const body = buildPrepareInput(
@@ -216,15 +233,6 @@ export function PaymentMethodDialog({
           context,
         );
         const res = await requestPaymentPrepare(body);
-        savePostPaymentNotice({
-          orderNumber: res.orderNumber,
-          orderId: res.orderId,
-          orderKind: context.orderKind,
-          otherMode:
-            context.orderKind === "other_service"
-              ? context.otherService.mode
-              : undefined,
-        });
         const opened = openPaymentUrl(res.payUrl);
         if (opened) {
           resetAndClose(false);
@@ -242,7 +250,24 @@ export function PaymentMethodDialog({
     [amountRub, context, initData, resetAndClose],
   );
 
-  const onKztPaid = useCallback(async () => {
+  const onKztMarkPaidClick = useCallback(() => {
+    if (!initData.trim() || !context) {
+      showErrorMessage("Откройте магазин из Telegram (кнопка в боте), не из обычного браузера.");
+      return;
+    }
+    if (!Number.isFinite(amountRub) || amountRub <= 0) {
+      showErrorMessage("Некорректная сумма. Вернитесь к форме и проверьте рубли.");
+      return;
+    }
+    if (!rubMeetsKztMinimum(amountRub)) {
+      const approxRub = formatNumberWithSpaces(minimalRubForKztPay()).replace(/\s/g, "\u00a0");
+      showErrorMessage(PAYMENT_TEXT.paymentMinKzt(PAYMENT_MIN_KZT, approxRub));
+      return;
+    }
+    setKztPhase("goBot");
+  }, [amountRub, context, initData]);
+
+  const onKztGoToBot = useCallback(async () => {
     if (!initData.trim() || !context) {
       showErrorMessage("Откройте магазин из Telegram (кнопка в боте), не из обычного браузера.");
       return;
@@ -274,6 +299,20 @@ export function PaymentMethodDialog({
       setBusy(false);
     }
   }, [amountRub, context, initData, resetAndClose, webApp]);
+
+  const openKztDetailsStep = useCallback(() => {
+    if (!Number.isFinite(amountRub) || amountRub <= 0) {
+      showErrorMessage("Некорректная сумма. Вернитесь к форме и проверьте рубли.");
+      return;
+    }
+    if (!rubMeetsKztMinimum(amountRub)) {
+      const approxRub = formatNumberWithSpaces(minimalRubForKztPay()).replace(/\s/g, "\u00a0");
+      showErrorMessage(PAYMENT_TEXT.paymentMinKzt(PAYMENT_MIN_KZT, approxRub));
+      return;
+    }
+    setKztPhase("details");
+    setStep("kzt");
+  }, [amountRub]);
 
   if (!context) {
     return null;
@@ -314,7 +353,16 @@ export function PaymentMethodDialog({
                 <button
                   type="button"
                   className="text-app-text-muted flex size-8 items-center justify-center rounded-[4px] border-0 bg-white/5 transition hover:bg-white/10 hover:brightness-110"
-                  onClick={() => setStep("list")}
+                  onClick={() => {
+                    if (step === "kzt" && kztPhase === "goBot") {
+                      setKztPhase("details");
+                      return;
+                    }
+                    if (step === "kzt") {
+                      setStep("list");
+                      setKztPhase("details");
+                    }
+                  }}
                   aria-label={PAYMENT_TEXT.backToMethods}
                 >
                   <ArrowLeft className="h-4 w-4" />
@@ -380,17 +428,47 @@ export function PaymentMethodDialog({
             </div>
           )}
 
-          {step === "kzt" ? (
+          {step === "kzt" && kztPhase === "goBot" ? (
+            <div className="mt-2 flex flex-1 flex-col justify-start gap-5 px-1 pb-6">
+              <AppText
+                tag={TAG.p}
+                variant="darkStrong"
+                className="text-center text-sm font-semibold leading-snug text-white"
+              >
+                {PAYMENT_TEXT.kztGoToBotBody}
+              </AppText>
+              <Button
+                type="button"
+                size="default"
+                disabled={busy}
+                className={cn(methodBtnClass, "!font-bold")}
+                onClick={() => void onKztGoToBot()}
+              >
+                {PAYMENT_TEXT.kztGoToBotButton}
+              </Button>
+            </div>
+          ) : step === "kzt" ? (
             <div className="mt-2 flex flex-1 flex-col justify-start gap-4 px-1 pb-6">
+              {amountKztLine ? (
+                <div className="border-app-border-soft tw-bg-gradient-badge-background/90 flex w-full flex-col items-center justify-center gap-0.5 rounded-2xl border py-3 text-white">
+                  <AppText
+                    tag={TAG.span}
+                    variant="primaryStrong"
+                    className="text-xs font-semibold uppercase tracking-wide opacity-90"
+                  >
+                    {PAYMENT_TEXT.kztAmountDueLine}
+                  </AppText>
+                  <AppText tag={TAG.span} variant="primaryStrong" className="text-base font-bold tabular-nums">
+                    {amountKztLine}
+                  </AppText>
+                </div>
+              ) : null}
               <AppText
                 tag={TAG.p}
                 variant="darkStrong"
                 className="text-app-text-muted text-center text-xs font-semibold leading-snug whitespace-pre-line"
               >
                 {PAYMENT_TEXT.kztRateLine}
-                {amountKztLine
-                  ? `\nК перечислению в тенге (ориентир): ${amountLine} ≈ ${amountKztLine}`
-                  : ""}
               </AppText>
               <div className="flex flex-col gap-3">
                 <Button
@@ -422,7 +500,7 @@ export function PaymentMethodDialog({
                 size="default"
                 disabled={busy}
                 className={cn(methodBtnClass, "!font-bold")}
-                onClick={() => void onKztPaid()}
+                onClick={onKztMarkPaidClick}
               >
                 {PAYMENT_TEXT.kztPaidButton}
               </Button>
@@ -446,7 +524,7 @@ export function PaymentMethodDialog({
                 size="default"
                 disabled={busy}
                 className={cn(methodBtnClass, "mt-0.5")}
-                onClick={() => setStep("kzt")}
+                onClick={openKztDetailsStep}
               >
                 {PAYMENT_TEXT.methodKzt}
               </Button>

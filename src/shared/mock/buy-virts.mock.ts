@@ -21,11 +21,11 @@ export const BUY_VIRTS_MOCK: Virt[] = [
     serverLabel: "Сервер",
     serverOptions: [...BLACK_RUSSIA_SERVER_OPTIONS],
     accountNumber: "",
-    amountRub: 99,
+    amountRub: 10,
     amountVirts: 0,
     exchangeRate: 99,
     promoCode: "",
-    minAmountRub: 99,
+    minAmountRub: 10,
   },
   {
     id: "matryoshka-rp",

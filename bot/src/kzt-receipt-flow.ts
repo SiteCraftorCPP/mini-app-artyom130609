@@ -14,6 +14,13 @@ const userAwaitingPhoto = new Map<number, string>();
 
 const MGR_URL = process.env.MANAGER_TELEGRAM_URL?.trim() || "https://t.me/artshopvirts_man";
 
+/** Как на фронте: `payment-requisites-kzt.ts` */
+const KZT_PER_ONE_RUB = 6.9;
+
+function rubToKztAmount(rub: number): number {
+  return Math.round(rub * KZT_PER_ONE_RUB);
+}
+
 function buyerLinePlain(p: KztSession["pending"]): string {
   const u = p.telegramUsername?.trim();
   if (u) {
@@ -29,6 +36,10 @@ function buyerLinePlain(p: KztSession["pending"]): string {
 function adminCaptionPlain(s: KztSession): string {
   const p = s.pending;
   const amt = p.amountRub != null ? `${p.amountRub.toFixed(2)} RUB` : "—";
+  const kztLine =
+    p.amountRub != null && Number.isFinite(p.amountRub)
+      ? `Ориентир в тенге (1 ₽ = 6,9 ₸): ${rubToKztAmount(p.amountRub)} ₸`
+      : null;
   return [
     "❗ Подтверждение оплаты ❗",
     "",
@@ -36,6 +47,7 @@ function adminCaptionPlain(s: KztSession): string {
     `Создан: ${new Date(s.createdAt).toLocaleString("ru-RU")}`,
     `Пользователь: ${buyerLinePlain(p)}`,
     `Сумма: ${amt}`,
+    ...(kztLine ? [kztLine] : []),
     "Тип подтверждения: photo",
   ].join("\n");
 }
@@ -109,11 +121,19 @@ export async function handleKztReceiptDeepLink(ctx: Context, payload: string): P
     return;
   }
   userAwaitingPhoto.set(ctx.from.id, token);
+  const kztHint =
+    session.pending.amountRub != null && Number.isFinite(session.pending.amountRub)
+      ? [
+          "",
+          `Сумма к оплате (ориентир по курсу 1 ₽ = 6,9 ₸): ${rubToKztAmount(session.pending.amountRub)} ₸`,
+        ].join("\n")
+      : "";
   await ctx.reply(
     [
       "📎 Отправьте сюда фото чека перевода в тенге (одним сообщением, чтобы текст на чеке был читаемым).",
       "",
       `Заказ: ${session.pending.orderNumber}`,
+      kztHint,
       "",
       "После отправки фото дождитесь проверки.",
     ].join("\n"),

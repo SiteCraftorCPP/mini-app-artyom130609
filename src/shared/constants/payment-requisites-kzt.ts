@@ -1,6 +1,6 @@
 /** Тенге (KZT) — ручной перевод; в личный кабинет FreeKassa не ведёт. */
-/** Ориентир для покупателя: сколько тенге на 1 рубль (100 ₽ × курс). */
-export const KZT_PER_ONE_RUB = 6.99 as const;
+/** Ориентир: 1 ₽ = 6,9 ₸ (округление при переводе суммы заказа). */
+export const KZT_PER_ONE_RUB = 6.9 as const;
 
 export function rubToKztAmount(rub: number): number {
   return Math.round(rub * KZT_PER_ONE_RUB);
