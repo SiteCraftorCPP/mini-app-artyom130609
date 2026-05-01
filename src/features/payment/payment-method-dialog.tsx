@@ -463,13 +463,6 @@ export function PaymentMethodDialog({
                   </AppText>
                 </div>
               ) : null}
-              <AppText
-                tag={TAG.p}
-                variant="darkStrong"
-                className="text-app-text-muted text-center text-xs font-semibold leading-snug whitespace-pre-line"
-              >
-                {PAYMENT_TEXT.kztRateLine}
-              </AppText>
               <div className="flex flex-col gap-3">
                 <Button
                   type="button"

@@ -38,7 +38,7 @@ function adminCaptionPlain(s: KztSession): string {
   const amt = p.amountRub != null ? `${p.amountRub.toFixed(2)} RUB` : "—";
   const kztLine =
     p.amountRub != null && Number.isFinite(p.amountRub)
-      ? `Ориентир в тенге (1 ₽ = 6,9 ₸): ${rubToKztAmount(p.amountRub)} ₸`
+      ? `К оплате в тенге: ${rubToKztAmount(p.amountRub)} ₸`
       : null;
   return [
     "❗ Подтверждение оплаты ❗",
@@ -123,10 +123,7 @@ export async function handleKztReceiptDeepLink(ctx: Context, payload: string): P
   userAwaitingPhoto.set(ctx.from.id, token);
   const kztHint =
     session.pending.amountRub != null && Number.isFinite(session.pending.amountRub)
-      ? [
-          "",
-          `Сумма к оплате (ориентир по курсу 1 ₽ = 6,9 ₸): ${rubToKztAmount(session.pending.amountRub)} ₸`,
-        ].join("\n")
+      ? ["", `Сумма к оплате: ${rubToKztAmount(session.pending.amountRub)} ₸`].join("\n")
       : "";
   await ctx.reply(
     [

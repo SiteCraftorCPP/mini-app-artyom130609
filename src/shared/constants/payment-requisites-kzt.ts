@@ -1,5 +1,5 @@
 /** Тенге (KZT) — ручной перевод; в личный кабинет FreeKassa не ведёт. */
-/** Ориентир: 1 ₽ = 6,9 ₸ (округление при переводе суммы заказа). */
+/** Пересчёт суммы заказа в ₸: 1 ₽ = 6,9 ₸, округление до целого. */
 export const KZT_PER_ONE_RUB = 6.9 as const;
 
 export function rubToKztAmount(rub: number): number {
