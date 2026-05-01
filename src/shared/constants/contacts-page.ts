@@ -1,4 +1,4 @@
-export const CONTACTS_PAGE_TITLE = "Контакты";
+export const CONTACTS_PAGE_TITLE = "📩 КОНТАКТЫ";
 
 export const CONTACTS_PAGE_BODY = `Общая информация
 
