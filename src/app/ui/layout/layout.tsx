@@ -10,7 +10,9 @@ import { ROUTERS } from "@/shared/constants/routers";
 export const Layout = () => {
   const { pathname } = useLocation();
   const hideHeader =
-    pathname === ROUTERS.USER_AGREEMENT || pathname === ROUTERS.PRIVACY_POLICY;
+    pathname === ROUTERS.USER_AGREEMENT ||
+    pathname === ROUTERS.PRIVACY_POLICY ||
+    pathname === ROUTERS.CONTACTS;
 
   return (
     <BgLayout>

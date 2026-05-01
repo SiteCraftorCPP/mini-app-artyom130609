@@ -27,6 +27,11 @@ const PrivacyPolicyPage = lazy(() =>
     default: module.PrivacyPolicyPage,
   })),
 );
+const ContactsPage = lazy(() =>
+  import("@/pages/contacts").then((module) => ({
+    default: module.ContactsPage,
+  })),
+);
 
 const withSuspense = (component: React.ReactNode) => {
   return (
@@ -51,6 +56,10 @@ const routes = [
       {
         path: ROUTERS.USER_AGREEMENT,
         element: withSuspense(<UserAgreementPage />),
+      },
+      {
+        path: ROUTERS.CONTACTS,
+        element: withSuspense(<ContactsPage />),
       },
     ],
   },

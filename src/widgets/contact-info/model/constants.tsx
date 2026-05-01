@@ -15,7 +15,7 @@ export const CONTACT_LEGAL_LINKS = [
     label: ACCOUNT_PAGE_TEXT.contact.terms,
   },
   {
-    href: EXTERNAL_LINKS.contacts,
+    href: ROUTERS.CONTACTS,
     label: ACCOUNT_PAGE_TEXT.contact.contacts,
   },
 ] as const;
