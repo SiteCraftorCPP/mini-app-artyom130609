@@ -16,6 +16,8 @@ export type KztSession = {
   pending: PendingPaymentOrder;
   createdAt: number;
   receiptFileId?: string;
+  /** Как прислал покупатель — для sendPhoto vs sendDocument админам */
+  receiptKind?: "photo" | "document";
 };
 
 type FileShape = { v: 1; sessions: Record<string, KztSession> };

@@ -33,6 +33,10 @@ function buyerLinePlain(p: KztSession["pending"]): string {
   return `ID: ${p.telegramUserId}`;
 }
 
+function receiptKindLabel(s: KztSession): string {
+  return s.receiptKind === "document" ? "документ (PDF/файл)" : "фото";
+}
+
 function adminCaptionPlain(s: KztSession): string {
   const p = s.pending;
   const amt = p.amountRub != null ? `${p.amountRub.toFixed(2)} RUB` : "—";
@@ -48,30 +52,35 @@ function adminCaptionPlain(s: KztSession): string {
     `Пользователь: ${buyerLinePlain(p)}`,
     `Сумма: ${amt}`,
     ...(kztLine ? [kztLine] : []),
-    "Тип подтверждения: photo",
+    `Тип вложения: ${receiptKindLabel(s)}`,
   ].join("\n");
 }
 
-async function handleKztPhoto(
-  ctx: Context,
+function isAcceptedReceiptDocument(
+  doc: NonNullable<NonNullable<Context["message"]>["document"]>,
+): boolean {
+  const mime = doc.mime_type?.toLowerCase() ?? "";
+  if (mime === "application/pdf" || mime.startsWith("image/")) {
+    return true;
+  }
+  const name = doc.file_name?.toLowerCase() ?? "";
+  return /\.(pdf|jpe?g|png|webp)$/i.test(name);
+}
+
+async function deliverReceiptToAdmins(
   bot: Bot,
   adminIds: Set<number>,
+  session: KztSession,
   token: string,
-): Promise<boolean> {
-  const session = getKztSession(token);
-  if (!session || session.state !== "await_photo" || ctx.from?.id !== session.telegramUserId) {
-    userAwaitingPhoto.delete(ctx.from?.id ?? 0);
-    return false;
+  fileId: string,
+  kind: "photo" | "document",
+): Promise<void> {
+  if (adminIds.size === 0) {
+    console.error(
+      "[kzt] админам не отправлен чек: TELEGRAM_ADMIN_ID / TELEGRAM_ADMIN_IDS пусты — задайте id в bot/.env",
+    );
+    return;
   }
-  const photos = ctx.message?.photo;
-  if (!photos?.length) {
-    return false;
-  }
-  const best = photos[photos.length - 1];
-  const fileId = best.file_id;
-  updateKztSession(token, { state: "await_admin", receiptFileId: fileId });
-  userAwaitingPhoto.delete(session.telegramUserId);
-
   const cap = adminCaptionPlain(session);
   const kb = new InlineKeyboard()
     .text("✅ Подтвердить", `kztok:${token}`)
@@ -79,14 +88,48 @@ async function handleKztPhoto(
 
   for (const aid of adminIds) {
     try {
-      await bot.api.sendPhoto(aid, fileId, {
-        caption: cap,
-        reply_markup: kb,
-      });
+      if (kind === "photo") {
+        await bot.api.sendPhoto(aid, fileId, {
+          caption: cap,
+          reply_markup: kb,
+        });
+      } else {
+        await bot.api.sendDocument(aid, fileId, {
+          caption: cap,
+          reply_markup: kb,
+        });
+      }
     } catch (e) {
-      console.error("[kzt] sendPhoto admin", aid, e);
+      console.error("[kzt] отправка чека админу", aid, kind, e);
     }
   }
+}
+
+async function submitKztReceipt(
+  ctx: Context,
+  bot: Bot,
+  adminIds: Set<number>,
+  token: string,
+  fileId: string,
+  kind: "photo" | "document",
+): Promise<boolean> {
+  const session = getKztSession(token);
+  if (!session || session.state !== "await_photo" || ctx.from?.id !== session.telegramUserId) {
+    userAwaitingPhoto.delete(ctx.from?.id ?? 0);
+    return false;
+  }
+  updateKztSession(token, {
+    state: "await_admin",
+    receiptFileId: fileId,
+    receiptKind: kind,
+  });
+  userAwaitingPhoto.delete(session.telegramUserId);
+
+  const sessionAfter = getKztSession(token);
+  if (!sessionAfter) {
+    return false;
+  }
+  await deliverReceiptToAdmins(bot, adminIds, sessionAfter, token, fileId, kind);
 
   await ctx.reply(
     [
@@ -96,6 +139,37 @@ async function handleKztPhoto(
     ].join("\n"),
   );
   return true;
+}
+
+async function handleKztPhoto(
+  ctx: Context,
+  bot: Bot,
+  adminIds: Set<number>,
+  token: string,
+): Promise<boolean> {
+  const photos = ctx.message?.photo;
+  if (!photos?.length) {
+    return false;
+  }
+  const best = photos[photos.length - 1];
+  return submitKztReceipt(ctx, bot, adminIds, token, best.file_id, "photo");
+}
+
+async function handleKztDocument(
+  ctx: Context,
+  bot: Bot,
+  adminIds: Set<number>,
+  token: string,
+): Promise<boolean> {
+  const doc = ctx.message?.document;
+  if (!doc) {
+    return false;
+  }
+  if (!isAcceptedReceiptDocument(doc)) {
+    await ctx.reply("Пришлите фото чека или PDF. Другие типы файлов не принимаются.");
+    return true;
+  }
+  return submitKztReceipt(ctx, bot, adminIds, token, doc.file_id, "document");
 }
 
 export async function handleKztReceiptDeepLink(ctx: Context, payload: string): Promise<void> {
@@ -127,12 +201,12 @@ export async function handleKztReceiptDeepLink(ctx: Context, payload: string): P
       : "";
   await ctx.reply(
     [
-      "📎 Отправьте сюда фото чека перевода в тенге (одним сообщением, чтобы текст на чеке был читаемым).",
+      "📎 Отправьте сюда фото чека или PDF-файл с банка (одним сообщением, текст должен быть читаемым).",
       "",
       `Заказ: ${session.pending.orderNumber}`,
       kztHint,
       "",
-      "После отправки фото дождитесь проверки.",
+      "После отправки дождитесь проверки.",
     ].join("\n"),
   );
 }
@@ -155,12 +229,24 @@ export function installKztReceiptFlow(bot: Bot, adminIds: Set<number>, miniAppUr
       }
       return next();
     }
+    if (ctx.message?.document) {
+      const token = userAwaitingPhoto.get(ctx.from.id);
+      if (token) {
+        const done = await handleKztDocument(ctx, bot, adminIds, token);
+        if (done) {
+          return;
+        }
+      }
+      return next();
+    }
     if (ctx.message?.text && userAwaitingPhoto.has(ctx.from.id)) {
       const t = ctx.message.text.trim();
       if (t.startsWith("/")) {
         return next();
       }
-      await ctx.reply("Нужно отправить фото чека (снимок или скрин), не текстовое сообщение.");
+      await ctx.reply(
+        "Нужно отправить фото чека, скрин или PDF-файл — не текстовое сообщение.",
+      );
       return;
     }
     return next();
