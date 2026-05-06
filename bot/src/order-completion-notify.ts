@@ -77,13 +77,29 @@ export async function notifyOrderCompletionToOwners(
     formatBuyerLine(order),
   ];
   const text = lines.join("\n");
+  const ok: number[] = [];
+  const failed: number[] = [];
   for (const chatId of recipients) {
     try {
       await bot.api.sendMessage(chatId, text, {
         link_preview_options: { is_disabled: true },
       });
+      ok.push(chatId);
     } catch (e) {
+      failed.push(chatId);
       console.warn("[order-completion-notify] не удалось отправить", chatId, order.id, e);
     }
+  }
+  const ref = formatOrderRef(order);
+  if (ok.length > 0) {
+    console.info(
+      "[order-completion-notify] отправлено",
+      ref,
+      `orderId=${order.id ?? "—"}`,
+      `chat_ids_ok=[${ok.join(",")}]`,
+      failed.length ? `chat_ids_fail=[${failed.join(",")}]` : "",
+    );
+  } else if (recipients.length > 0) {
+    console.warn("[order-completion-notify] ни одному получателю не отправлено", ref, order.id);
   }
 }
