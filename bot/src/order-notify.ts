@@ -1197,14 +1197,26 @@ function streamPayUahPerOneRubFromEnv(): number | null {
   return n;
 }
 
+/** BOM/пробелы/кавычки в .env (частая причина «invalid_system_currency» при видимом USD). */
+function streamPayNormalizeToken(raw: string): string {
+  let s = raw.replace(/^\ufeff/, "").trim();
+  if (
+    (s.startsWith('"') && s.endsWith('"') && s.length >= 2) ||
+    (s.startsWith("'") && s.endsWith("'") && s.length >= 2)
+  ) {
+    s = s.slice(1, -1).trim();
+  }
+  return s;
+}
+
 function streamPayPickStr(
   envName: string,
   extraKey: string,
   extra: Record<string, unknown> | null,
 ): string {
-  const e = process.env[envName]?.trim();
-  if (e) {
-    return e;
+  const eRaw = process.env[envName];
+  if (eRaw !== undefined && String(eRaw).trim() !== "") {
+    return streamPayNormalizeToken(String(eRaw));
   }
   if (!extra) {
     return "";
@@ -1213,13 +1225,13 @@ function streamPayPickStr(
   if (v == null) {
     return "";
   }
-  return String(v).trim();
+  return streamPayNormalizeToken(String(v));
 }
 
 function streamPayPickPaymentType(extra: Record<string, unknown> | null): number | null {
-  const e = process.env.STREAMPAY_PAYMENT_TYPE?.trim();
-  if (e !== undefined && e !== "") {
-    const n = Number(e);
+  const eRaw = process.env.STREAMPAY_PAYMENT_TYPE;
+  if (eRaw !== undefined && String(eRaw).trim() !== "") {
+    const n = Number(streamPayNormalizeToken(String(eRaw)));
     return Number.isFinite(n) ? n : null;
   }
   if (!extra || extra.payment_type === undefined || extra.payment_type === null) {
@@ -1734,6 +1746,14 @@ export function startOrderNotifyHttpServer(
             },
             extraMerge,
           );
+          console.info("[streampay] payment/create resolved fields", {
+            systemCurrency,
+            paymentType,
+            currencyForApi: paymentType === 1 ? currencyOpt : null,
+            storeId,
+            amount: streamPayAmount,
+            extraSupplementaryOnlyKeys: extraMerge ? Object.keys(extraMerge) : [],
+          });
           let payUrl: string;
           try {
             payUrl = (

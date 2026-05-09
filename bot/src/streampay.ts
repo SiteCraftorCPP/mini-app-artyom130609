@@ -125,6 +125,33 @@ export type StreamPayCreatePaymentFields = {
   lang?: string;
 };
 
+/** Поля из заказа и .env — не переопределяются STREAMPAY_EXTRA_CREATE_FIELDS (иначе старый JSON в EXTRA затирал валюту → 406). */
+const STREAMPAY_CREATE_BODY_CORE_KEYS = new Set([
+  "store_id",
+  "customer",
+  "external_id",
+  "description",
+  "system_currency",
+  "payment_type",
+  "currency",
+  "amount",
+  "merchant_fee",
+  "success_url",
+  "fail_url",
+  "cancel_url",
+  "lang",
+]);
+
+function streamPayExtraValueOk(v: unknown): boolean {
+  if (v === undefined || v === null) {
+    return false;
+  }
+  if (typeof v === "string" && !v.replace(/^\ufeff/, "").trim()) {
+    return false;
+  }
+  return true;
+}
+
 /**
  * Тело POST /api/payment/create — порядок ключей как в примере PaymentCreateJs в ЛК (интеграция магазина).
  * `extraFromEnv` — опционально: JSON-объект из STREAMPAY_EXTRA_CREATE_FIELDS (поля кабинета, не совпадающие с генерацией).
@@ -163,7 +190,10 @@ export function streamPayBuildCreatePaymentJson(
   }
   if (extraFromEnv && typeof extraFromEnv === "object" && !Array.isArray(extraFromEnv)) {
     for (const [k, v] of Object.entries(extraFromEnv)) {
-      if (v !== undefined) {
+      if (STREAMPAY_CREATE_BODY_CORE_KEYS.has(k)) {
+        continue;
+      }
+      if (streamPayExtraValueOk(v)) {
         o[k] = v;
       }
     }
