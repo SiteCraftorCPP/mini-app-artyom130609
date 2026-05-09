@@ -1544,7 +1544,9 @@ export function startOrderNotifyHttpServer(
   }
 
   const server = createServer(async (req, res) => {
-    const url = req.url?.split("?")[0] ?? "";
+    const rawPath = req.url?.split("?")[0] ?? "";
+    const url =
+      rawPath.length > 1 && rawPath.endsWith("/") ? rawPath.slice(0, -1) : rawPath;
 
     if (req.method === "GET" && url === "/api/promo-codes") {
       try {
