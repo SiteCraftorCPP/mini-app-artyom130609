@@ -74,7 +74,9 @@ import {
   streamPayBuildCreatePaymentJson,
   streamPayExtractCallbackFields,
   streamPayIsPaidStatus,
+  streamPayParseExtraCreateFieldsJson,
   streamPayPostCreate,
+  streamPaySanitizeExtraForMerge,
   streamPaySortedQueryString,
   streamPayVerifySignedPayload,
 } from "./streampay.js";
@@ -1195,6 +1197,39 @@ function streamPayUahPerOneRubFromEnv(): number | null {
   return n;
 }
 
+function streamPayPickStr(
+  envName: string,
+  extraKey: string,
+  extra: Record<string, unknown> | null,
+): string {
+  const e = process.env[envName]?.trim();
+  if (e) {
+    return e;
+  }
+  if (!extra) {
+    return "";
+  }
+  const v = extra[extraKey];
+  if (v == null) {
+    return "";
+  }
+  return String(v).trim();
+}
+
+function streamPayPickPaymentType(extra: Record<string, unknown> | null): number | null {
+  const e = process.env.STREAMPAY_PAYMENT_TYPE?.trim();
+  if (e !== undefined && e !== "") {
+    const n = Number(e);
+    return Number.isFinite(n) ? n : null;
+  }
+  if (!extra || extra.payment_type === undefined || extra.payment_type === null) {
+    return null;
+  }
+  const x = extra.payment_type;
+  const n = typeof x === "number" ? x : Number(String(x).trim());
+  return Number.isFinite(n) ? n : null;
+}
+
 type PaymentPrepareJson = {
   initData: string;
   orderKind: "virt" | "account" | "other_service";
@@ -1606,13 +1641,65 @@ export function startOrderNotifyHttpServer(
             res.end(JSON.stringify({ error: "streampay private key" }));
             return;
           }
+          let extraRaw: Record<string, unknown> | null = null;
+          try {
+            extraRaw = streamPayParseExtraCreateFieldsJson(process.env.STREAMPAY_EXTRA_CREATE_FIELDS);
+          } catch (e) {
+            const msg = e instanceof Error ? e.message : String(e);
+            console.warn("[streampay] STREAMPAY_EXTRA_CREATE_FIELDS", msg);
+            res.writeHead(503, { "Content-Type": "application/json", ...corsNotifyHeaders });
+            res.end(JSON.stringify({ error: "streampay extra fields", detail: msg }));
+            return;
+          }
+          const systemCurrency = streamPayPickStr(
+            "STREAMPAY_SYSTEM_CURRENCY",
+            "system_currency",
+            extraRaw,
+          );
+          const paymentTypeVal = streamPayPickPaymentType(extraRaw);
+          const currencyOpt = streamPayPickStr("STREAMPAY_CURRENCY", "currency", extraRaw);
+          if (!systemCurrency) {
+            console.warn(
+              "[streampay] нет system_currency — задайте STREAMPAY_SYSTEM_CURRENCY или JSON в STREAMPAY_EXTRA_CREATE_FIELDS (как в ЛК → Payment Create)",
+            );
+            res.writeHead(503, { "Content-Type": "application/json", ...corsNotifyHeaders });
+            res.end(
+              JSON.stringify({
+                error: "streampay system_currency",
+                detail:
+                  "Скопируйте поле system_currency из примера JSON в ЛК (Integration → Payment Create) в STREAMPAY_SYSTEM_CURRENCY или в объект STREAMPAY_EXTRA_CREATE_FIELDS.",
+              }),
+            );
+            return;
+          }
+          if (paymentTypeVal == null || !Number.isFinite(paymentTypeVal)) {
+            console.warn(
+              "[streampay] нет payment_type — STREAMPAY_PAYMENT_TYPE или поле в STREAMPAY_EXTRA_CREATE_FIELDS",
+            );
+            res.writeHead(503, { "Content-Type": "application/json", ...corsNotifyHeaders });
+            res.end(
+              JSON.stringify({
+                error: "streampay payment_type",
+                detail:
+                  "Скопируйте payment_type из примера Payment Create в ЛК в STREAMPAY_PAYMENT_TYPE (число) или в STREAMPAY_EXTRA_CREATE_FIELDS.",
+              }),
+            );
+            return;
+          }
+          const paymentType = paymentTypeVal;
+          if (paymentType === 1 && !currencyOpt) {
+            console.warn("[streampay] payment_type=1 нужен currency (STREAMPAY_CURRENCY или EXTRA.currency)");
+            res.writeHead(503, { "Content-Type": "application/json", ...corsNotifyHeaders });
+            res.end(
+              JSON.stringify({
+                error: "streampay currency",
+                detail:
+                  "При payment_type=1 задайте STREAMPAY_CURRENCY или поле currency в STREAMPAY_EXTRA_CREATE_FIELDS — как в примере ЛК.",
+              }),
+            );
+            return;
+          }
           const storeId = Number(storeRaw);
-          /* Часто в ЛК «валюта магазина» = USD, списание с клиента в ₴ — payment_type 1 + currency.
-           * Если снова invalid_system_currency — скопируй system_currency/payment_type из JSON-примера в кабинете в .env. */
-          const systemCurrency =
-            process.env.STREAMPAY_SYSTEM_CURRENCY?.trim() || "USD";
-          const paymentTypeParsed = Number(process.env.STREAMPAY_PAYMENT_TYPE || "1");
-          const paymentType = Number.isFinite(paymentTypeParsed) ? paymentTypeParsed : 1;
           const merchantOrderId = buildMerchantOrderId();
           const uahPerRub = streamPayUahPerOneRubFromEnv();
           const streamPayAmount =
@@ -1629,24 +1716,32 @@ export function startOrderNotifyHttpServer(
           ) as string[];
           const description =
             descParts.join(" ").trim().slice(0, 480) || payloadSp.orderNumber;
-          const currencyOpt = process.env.STREAMPAY_CURRENCY?.trim() || "UAH";
-          const bodyJson = streamPayBuildCreatePaymentJson({
-            storeId,
-            customer: String(telegramUserId),
-            externalId: merchantOrderId,
-            description,
-            systemCurrency,
-            paymentType,
-            ...(paymentType === 1 ? { currency: currencyOpt } : {}),
-            amount: streamPayAmount,
-            successUrl: process.env.STREAMPAY_SUCCESS_URL?.trim() || undefined,
-            failUrl: process.env.STREAMPAY_FAIL_URL?.trim() || undefined,
-            cancelUrl: process.env.STREAMPAY_CANCEL_URL?.trim() || undefined,
-            lang: process.env.STREAMPAY_LANG?.trim() || undefined,
-          });
+          const extraMerge = streamPaySanitizeExtraForMerge(extraRaw);
+          const bodyJson = streamPayBuildCreatePaymentJson(
+            {
+              storeId,
+              customer: String(telegramUserId),
+              externalId: merchantOrderId,
+              description,
+              systemCurrency,
+              paymentType,
+              ...(paymentType === 1 && currencyOpt ? { currency: currencyOpt } : {}),
+              amount: streamPayAmount,
+              successUrl: process.env.STREAMPAY_SUCCESS_URL?.trim() || undefined,
+              failUrl: process.env.STREAMPAY_FAIL_URL?.trim() || undefined,
+              cancelUrl: process.env.STREAMPAY_CANCEL_URL?.trim() || undefined,
+              lang: process.env.STREAMPAY_LANG?.trim() || undefined,
+            },
+            extraMerge,
+          );
           let payUrl: string;
           try {
-            payUrl = (await streamPayPostCreate(apiBase, bodyJson, seed)).payUrl;
+            payUrl = (
+              await streamPayPostCreate(apiBase, bodyJson, seed, {
+                storeId,
+                orderHint: payloadSp.orderNumber,
+              })
+            ).payUrl;
           } catch (e) {
             const msg = e instanceof Error ? e.message : String(e);
             console.error("[streampay] create", msg);

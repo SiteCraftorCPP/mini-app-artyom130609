@@ -125,8 +125,15 @@ export type StreamPayCreatePaymentFields = {
   lang?: string;
 };
 
-/** Жёсткий порядок полей как в примере PaymentCreateJs. */
-export function streamPayBuildCreatePaymentJson(i: StreamPayCreatePaymentFields): string {
+/**
+ * Тело POST /api/payment/create — порядок ключей как в примере PaymentCreateJs в ЛК (интеграция магазина).
+ * `extraFromEnv` — опционально: JSON-объект из STREAMPAY_EXTRA_CREATE_FIELDS (поля кабинета, не совпадающие с генерацией).
+ * Позже идущие ключи в extra переопределяют сгенерированные (как в примере «скопируй JSON»).
+ */
+export function streamPayBuildCreatePaymentJson(
+  i: StreamPayCreatePaymentFields,
+  extraFromEnv?: Record<string, unknown> | null,
+): string {
   const o: Record<string, unknown> = {
     store_id: i.storeId,
     customer: i.customer,
@@ -154,7 +161,42 @@ export function streamPayBuildCreatePaymentJson(i: StreamPayCreatePaymentFields)
   if (i.lang) {
     o.lang = i.lang;
   }
+  if (extraFromEnv && typeof extraFromEnv === "object" && !Array.isArray(extraFromEnv)) {
+    for (const [k, v] of Object.entries(extraFromEnv)) {
+      if (v !== undefined) {
+        o[k] = v;
+      }
+    }
+  }
   return JSON.stringify(o);
+}
+
+/** Парсинг STREAMPAY_EXTRA_CREATE_FIELDS — одна строка JSON-объекта из ЛК (без подстановок). */
+export function streamPayParseExtraCreateFieldsJson(raw: string | undefined): Record<string, unknown> | null {
+  const s = raw?.trim();
+  if (!s) {
+    return null;
+  }
+  const j = JSON.parse(s) as unknown;
+  if (j == null || typeof j !== "object" || Array.isArray(j)) {
+    throw new Error("STREAMPAY_EXTRA_CREATE_FIELDS: ожидается JSON-объект {...}");
+  }
+  return j as Record<string, unknown>;
+}
+
+/** Убираем из extra поля, которые обязаны совпадать с заказом (подмена = поломка callback). */
+export function streamPaySanitizeExtraForMerge(extra: Record<string, unknown> | null): Record<string, unknown> | null {
+  if (!extra) {
+    return null;
+  }
+  const skip = new Set(["store_id", "customer", "external_id", "amount"]);
+  const o: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(extra)) {
+    if (!skip.has(k)) {
+      o[k] = v;
+    }
+  }
+  return Object.keys(o).length > 0 ? o : null;
 }
 
 export type StreamPayCreateResult = { payUrl: string };
@@ -163,18 +205,49 @@ export async function streamPayPostCreate(
   apiBaseUrl: string,
   bodyJson: string,
   privateSeedHex64: string,
+  logMeta?: { storeId?: number; orderHint?: string },
 ): Promise<StreamPayCreateResult> {
   const base = apiBaseUrl.replace(/\/$/, "");
+  const url = `${base}/api/payment/create`;
   const signature = streamPaySignUtf8Payload(bodyJson, privateSeedHex64);
-  const r = await fetch(`${base}/api/payment/create`, {
+  const verbose = process.env.STREAMPAY_LOG === "1" || process.env.STREAMPAY_LOG === "true";
+  if (verbose) {
+    console.info("[streampay] payment/create request", {
+      url,
+      storeId: logMeta?.storeId,
+      orderHint: logMeta?.orderHint,
+      body: bodyJson,
+      bodyLength: Buffer.byteLength(bodyJson, "utf8"),
+      signatureHexLength: signature.length,
+    });
+  }
+  const r = await fetch(url, {
     method: "POST",
     headers: {
       Signature: signature,
       "Content-Type": "application/json",
+      Accept: "application/json",
     },
     body: bodyJson,
   });
   const text = await r.text();
+  if (!r.ok) {
+    console.error("[streampay] payment/create FAILED", {
+      url,
+      status: r.status,
+      statusText: r.statusText,
+      contentType: r.headers.get("content-type") ?? "",
+      responseBody: text.length > 8000 ? `${text.slice(0, 8000)}…` : text,
+      requestBody: bodyJson,
+    });
+  } else if (verbose) {
+    console.info("[streampay] payment/create ok", {
+      url,
+      status: r.status,
+      responsePreview: text.slice(0, 600),
+      requestBody: bodyJson,
+    });
+  }
   let parsed: unknown;
   try {
     parsed = JSON.parse(text) as {

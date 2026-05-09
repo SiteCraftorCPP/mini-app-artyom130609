@@ -71,6 +71,18 @@ function mapPrepareError(status: number, body: string): string {
   if (code === "streampay private key") {
     return "Платёж StreamPay: задайте STREAMPAY_PRIVATE_KEY_HEX в .env бота (ключ из кабинета).";
   }
+  if (code === "streampay system_currency") {
+    return detail ?? "StreamPay: в .env бота задайте STREAMPAY_SYSTEM_CURRENCY из примера Payment Create в ЛК.";
+  }
+  if (code === "streampay payment_type") {
+    return detail ?? "StreamPay: задайте STREAMPAY_PAYMENT_TYPE (число из примера ЛК).";
+  }
+  if (code === "streampay currency") {
+    return detail ?? "StreamPay: при payment_type=1 нужен STREAMPAY_CURRENCY из ЛК.";
+  }
+  if (code === "streampay extra fields") {
+    return detail ?? "StreamPay: неверный JSON в STREAMPAY_EXTRA_CREATE_FIELDS.";
+  }
   if (code === "streampay api") {
     if (detail) {
       return `StreamPay: ${detail}`;
