@@ -1663,13 +1663,22 @@ export function startOrderNotifyHttpServer(
             res.end(JSON.stringify({ error: "streampay extra fields", detail: msg }));
             return;
           }
-          const systemCurrency = streamPayPickStr(
+          let systemCurrency = streamPayPickStr(
             "STREAMPAY_SYSTEM_CURRENCY",
             "system_currency",
             extraRaw,
           );
           const paymentTypeVal = streamPayPickPaymentType(extraRaw);
-          const currencyOpt = streamPayPickStr("STREAMPAY_CURRENCY", "currency", extraRaw);
+          let currencyOpt = streamPayPickStr("STREAMPAY_CURRENCY", "currency", extraRaw);
+          if (
+            process.env.STREAMPAY_FORCE_ISO4217_LOWER === "1" ||
+            process.env.STREAMPAY_FORCE_ISO4217_LOWER === "true"
+          ) {
+            systemCurrency = systemCurrency.toLowerCase();
+            if (currencyOpt) {
+              currencyOpt = currencyOpt.toLowerCase();
+            }
+          }
           if (!systemCurrency) {
             console.warn(
               "[streampay] нет system_currency — задайте STREAMPAY_SYSTEM_CURRENCY или JSON в STREAMPAY_EXTRA_CREATE_FIELDS (как в ЛК → Payment Create)",
@@ -1746,14 +1755,20 @@ export function startOrderNotifyHttpServer(
             },
             extraMerge,
           );
-          console.info("[streampay] payment/create resolved fields", {
-            systemCurrency,
-            paymentType,
-            currencyForApi: paymentType === 1 ? currencyOpt : null,
-            storeId,
-            amount: streamPayAmount,
-            extraSupplementaryOnlyKeys: extraMerge ? Object.keys(extraMerge) : [],
-          });
+          console.error(
+            "[streampay] payment/create resolved fields",
+            JSON.stringify({
+              systemCurrency,
+              paymentType,
+              currencyForApi: paymentType === 1 ? currencyOpt : null,
+              storeId,
+              amount: streamPayAmount,
+              apiBase:
+                process.env.STREAMPAY_API_BASE_URL?.trim() || "https://streampay.org",
+              extraSupplementaryOnlyKeys: extraMerge ? Object.keys(extraMerge) : [],
+            }),
+          );
+          console.error("[streampay] payment/create bodyJson", bodyJson);
           let payUrl: string;
           try {
             payUrl = (

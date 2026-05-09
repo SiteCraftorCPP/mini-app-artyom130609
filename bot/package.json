@@ -9,6 +9,7 @@
     "build": "tsc -p tsconfig.json",
     "diag:order-photo": "node scripts/diag-order-photo.mjs",
     "diag:photos": "node scripts/diag-all-photos.mjs",
+    "diag:streampay-env": "node scripts/streampay-env-check.mjs",
     "prepare": "npm run build"
   },
   "dependencies": {

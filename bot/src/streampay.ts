@@ -153,26 +153,35 @@ function streamPayExtraValueOk(v: unknown): boolean {
 }
 
 /**
- * Тело POST /api/payment/create — порядок ключей как в примере PaymentCreateJs в ЛК (интеграция магазина).
- * `extraFromEnv` — опционально: JSON-объект из STREAMPAY_EXTRA_CREATE_FIELDS (поля кабинета, не совпадающие с генерацией).
- * Позже идущие ключи в extra переопределяют сгенерированные (как в примере «скопируй JSON»).
+ * Тело POST /api/payment/create — порядок ключей как в примере PaymentCreateJs в ЛК.
+ * `extraFromEnv` — только дополнительные поля из STREAMPAY_EXTRA_CREATE_FIELDS; валюту/тип/сумму там не дублируй (см. STREAMPAY_CREATE_BODY_CORE_KEYS).
  */
 export function streamPayBuildCreatePaymentJson(
   i: StreamPayCreatePaymentFields,
   extraFromEnv?: Record<string, unknown> | null,
 ): string {
+  const paymentTypeOut =
+    process.env.STREAMPAY_PAYMENT_TYPE_AS_JSON_STRING === "1" ||
+    process.env.STREAMPAY_PAYMENT_TYPE_AS_JSON_STRING === "true"
+      ? String(i.paymentType)
+      : i.paymentType;
+  const amountOut =
+    process.env.STREAMPAY_AMOUNT_AS_JSON_STRING === "1" ||
+    process.env.STREAMPAY_AMOUNT_AS_JSON_STRING === "true"
+      ? i.amount.toFixed(2)
+      : i.amount;
   const o: Record<string, unknown> = {
     store_id: i.storeId,
     customer: i.customer,
     external_id: i.externalId,
     description: i.description,
     system_currency: i.systemCurrency,
-    payment_type: i.paymentType,
+    payment_type: paymentTypeOut,
   };
   if (i.paymentType === 1 && i.currency) {
     o.currency = i.currency;
   }
-  o.amount = i.amount;
+  o.amount = amountOut;
   if (i.merchantFee != null && Number.isFinite(i.merchantFee)) {
     o.merchant_fee = i.merchantFee;
   }
