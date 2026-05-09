@@ -71,6 +71,7 @@ const RUB_METHODS: { id: PaymentMethodCode; label: string }[] = [
   { id: "sbp", label: PAYMENT_TEXT.methodSbp },
   { id: "mir", label: PAYMENT_TEXT.methodMir },
   { id: "card_rub", label: PAYMENT_TEXT.methodCard },
+  { id: "streampay", label: PAYMENT_TEXT.methodStreamPay },
 ];
 
 /** Крупные кнопки под палец, читаемый текст */
@@ -220,7 +221,9 @@ export function PaymentMethodDialog({
         showErrorMessage(
           method === "sbp"
             ? PAYMENT_TEXT.paymentMinSbp(minRub)
-            : PAYMENT_TEXT.paymentMinCard(minRub),
+            : method === "streampay"
+              ? PAYMENT_TEXT.paymentMinStreamPay(minRub)
+              : PAYMENT_TEXT.paymentMinCard(minRub),
         );
         return;
       }

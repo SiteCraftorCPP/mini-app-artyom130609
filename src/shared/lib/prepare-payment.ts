@@ -13,7 +13,7 @@ function resolveBaseUrl(): string {
   return "";
 }
 
-export type PaymentMethodCode = "sbp" | "mir" | "card_rub";
+export type PaymentMethodCode = "sbp" | "mir" | "card_rub" | "streampay";
 
 export type PaymentPrepareInput = {
   initData: string;
@@ -64,6 +64,18 @@ function mapPrepareError(status: number, body: string): string {
     detail = typeof j?.detail === "string" ? j.detail.trim() : undefined;
   } catch {
     /* не JSON — nginx/html */
+  }
+  if (code === "streampay store") {
+    return "Платёж StreamPay: на сервере не задан STREAMPAY_STORE_ID.";
+  }
+  if (code === "streampay private key") {
+    return "Платёж StreamPay: задайте STREAMPAY_PRIVATE_KEY_HEX в .env бота (ключ из кабинета).";
+  }
+  if (code === "streampay api") {
+    if (detail) {
+      return `StreamPay: ${detail}`;
+    }
+    return "StreamPay отклонил создание счёта. Проверьте ключи и настройки магазина.";
   }
   if (code === "freekassa not configured") {
     return "На сервере не задан FREEKASSA_SECRET1 в .env у бота — попросите администратора.";

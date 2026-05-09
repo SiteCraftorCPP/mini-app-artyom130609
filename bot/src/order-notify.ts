@@ -70,6 +70,14 @@ import {
   type PendingPaymentOrder,
 } from "./payment-pending-store.js";
 import { putKztSession } from "./kzt-receipt-store.js";
+import {
+  streamPayBuildCreatePaymentJson,
+  streamPayExtractCallbackFields,
+  streamPayIsPaidStatus,
+  streamPayPostCreate,
+  streamPaySortedQueryString,
+  streamPayVerifySignedPayload,
+} from "./streampay.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -1140,6 +1148,19 @@ function readJsonBody<T>(req: import("node:http").IncomingMessage): Promise<T> {
   });
 }
 
+function readRequestBodyBuffer(req: import("node:http").IncomingMessage): Promise<Buffer> {
+  return new Promise((resolvePromise, reject) => {
+    const chunks: Buffer[] = [];
+    req.on("data", (c) => {
+      chunks.push(Buffer.isBuffer(c) ? c : Buffer.from(c));
+    });
+    req.on("end", () => {
+      resolvePromise(Buffer.concat(chunks));
+    });
+    req.on("error", reject);
+  });
+}
+
 function getClientIp(req: import("node:http").IncomingMessage): string {
   const ff = req.headers["x-forwarded-for"];
   if (typeof ff === "string" && ff.length > 0) {
@@ -1164,7 +1185,7 @@ function amountsMatchFreekassa(expected: string, got: string): boolean {
 type PaymentPrepareJson = {
   initData: string;
   orderKind: "virt" | "account" | "other_service";
-  method: "sbp" | "mir" | "card_rub";
+  method: "sbp" | "mir" | "card_rub" | "streampay";
   amountRub: number;
   game?: string;
   server?: string;
@@ -1184,7 +1205,7 @@ type PaymentPrepareJson = {
   };
 };
 
-function fkMethodId(m: PaymentPrepareJson["method"]): number {
+function fkMethodId(m: "sbp" | "mir" | "card_rub"): number {
   return resolveFreeKassaMethodId(m);
 }
 
@@ -1542,24 +1563,8 @@ export function startOrderNotifyHttpServer(
         res.writeHead(503, corsNotifyHeaders).end(JSON.stringify({ error: "no bot token" }));
         return;
       }
-      const merchantId = process.env.FREEKASSA_MERCHANT_ID?.trim() || "68224";
-      const secret1 = process.env.FREEKASSA_SECRET1?.trim() || process.env.FREEKASSA_SECRET?.trim();
-      if (!secret1) {
-        console.warn("[payment] FREEKASSA_SECRET1 не задан");
-        res.writeHead(503, {
-          "Content-Type": "application/json",
-          ...corsNotifyHeaders,
-        });
-        res.end(JSON.stringify({ error: "freekassa not configured" }));
-        return;
-      }
       try {
         const body = await readJsonBody<PaymentPrepareJson>(req);
-        if (body.method !== "sbp" && body.method !== "mir" && body.method !== "card_rub") {
-          res.writeHead(400, { "Content-Type": "application/json", ...corsNotifyHeaders });
-          res.end(JSON.stringify({ error: "method" }));
-          return;
-        }
         const built = buildPendingPayloadForPaymentBody(body, botToken);
         if (!built.ok) {
           res.writeHead(built.status, { "Content-Type": "application/json", ...corsNotifyHeaders });
@@ -1567,8 +1572,97 @@ export function startOrderNotifyHttpServer(
           return;
         }
         const { payload, amountNum } = built;
-        const oa = payload.amountExpected;
         const telegramUserId = payload.telegramUserId;
+
+        if (body.method === "streampay") {
+          const apiBase =
+            process.env.STREAMPAY_API_BASE_URL?.trim() || "https://streampay.org";
+          const storeRaw = process.env.STREAMPAY_STORE_ID?.trim();
+          const seed = process.env.STREAMPAY_PRIVATE_KEY_HEX?.trim();
+          if (!storeRaw || !/^\d+$/.test(storeRaw)) {
+            console.warn("[streampay] STREAMPAY_STORE_ID не задан или не число");
+            res.writeHead(503, { "Content-Type": "application/json", ...corsNotifyHeaders });
+            res.end(JSON.stringify({ error: "streampay store" }));
+            return;
+          }
+          if (!seed) {
+            console.warn("[streampay] STREAMPAY_PRIVATE_KEY_HEX не задан");
+            res.writeHead(503, { "Content-Type": "application/json", ...corsNotifyHeaders });
+            res.end(JSON.stringify({ error: "streampay private key" }));
+            return;
+          }
+          const storeId = Number(storeRaw);
+          const systemCurrency =
+            process.env.STREAMPAY_SYSTEM_CURRENCY?.trim() || "RUB";
+          const paymentTypeParsed = Number(process.env.STREAMPAY_PAYMENT_TYPE || "2");
+          const paymentType = Number.isFinite(paymentTypeParsed) ? paymentTypeParsed : 2;
+          const merchantOrderId = buildMerchantOrderId();
+          const payloadSp: PendingPaymentOrder = {
+            ...payload,
+            transferMethod: "Оплата · StreamPay",
+          };
+          const descParts = [payloadSp.orderNumber, payloadSp.game, payloadSp.server].filter(
+            Boolean,
+          ) as string[];
+          const description =
+            descParts.join(" ").trim().slice(0, 480) || payloadSp.orderNumber;
+          const currencyOpt = process.env.STREAMPAY_CURRENCY?.trim() || "RUB";
+          const bodyJson = streamPayBuildCreatePaymentJson({
+            storeId,
+            customer: String(telegramUserId),
+            externalId: merchantOrderId,
+            description,
+            systemCurrency,
+            paymentType,
+            ...(paymentType === 1 ? { currency: currencyOpt } : {}),
+            amount: amountNum,
+            successUrl: process.env.STREAMPAY_SUCCESS_URL?.trim() || undefined,
+            failUrl: process.env.STREAMPAY_FAIL_URL?.trim() || undefined,
+            cancelUrl: process.env.STREAMPAY_CANCEL_URL?.trim() || undefined,
+            lang: process.env.STREAMPAY_LANG?.trim() || undefined,
+          });
+          let payUrl: string;
+          try {
+            payUrl = (await streamPayPostCreate(apiBase, bodyJson, seed)).payUrl;
+          } catch (e) {
+            const msg = e instanceof Error ? e.message : String(e);
+            console.error("[streampay] create", msg);
+            res.writeHead(502, { "Content-Type": "application/json", ...corsNotifyHeaders });
+            res.end(JSON.stringify({ error: "streampay api", detail: msg.slice(0, 800) }));
+            return;
+          }
+          putPendingPayment(merchantOrderId, payloadSp);
+          res.writeHead(200, { "Content-Type": "application/json", ...corsNotifyHeaders });
+          res.end(
+            JSON.stringify({
+              payUrl,
+              merchantOrderId,
+              orderId: payloadSp.orderId,
+              orderNumber: payloadSp.orderNumber,
+            }),
+          );
+          return;
+        }
+
+        if (body.method !== "sbp" && body.method !== "mir" && body.method !== "card_rub") {
+          res.writeHead(400, { "Content-Type": "application/json", ...corsNotifyHeaders });
+          res.end(JSON.stringify({ error: "method" }));
+          return;
+        }
+
+        const merchantId = process.env.FREEKASSA_MERCHANT_ID?.trim() || "68224";
+        const secret1 = process.env.FREEKASSA_SECRET1?.trim() || process.env.FREEKASSA_SECRET?.trim();
+        if (!secret1) {
+          console.warn("[payment] FREEKASSA_SECRET1 не задан");
+          res.writeHead(503, {
+            "Content-Type": "application/json",
+            ...corsNotifyHeaders,
+          });
+          res.end(JSON.stringify({ error: "freekassa not configured" }));
+          return;
+        }
+
+        const oa = payload.amountExpected;
         const merchantOrderId = buildMerchantOrderId();
         const sign = signPaymentForm(merchantId, oa, secret1, "RUB", merchantOrderId);
         const i = fkMethodId(body.method);
@@ -1737,6 +1831,135 @@ export function startOrderNotifyHttpServer(
       return;
     }
 
+    if ((req.method === "GET" || req.method === "POST") && url === "/notify/streampay") {
+      const pubHex = process.env.STREAMPAY_PUBLIC_KEY_HEX?.trim();
+      if (!pubHex) {
+        res.writeHead(503, corsNotifyHeaders).end("no streampay public key");
+        return;
+      }
+      const sigRaw = req.headers["signature"];
+      const signatureHex =
+        typeof sigRaw === "string" ? sigRaw : Array.isArray(sigRaw) ? (sigRaw[0] ?? "") : "";
+      if (!signatureHex) {
+        res.writeHead(400, corsNotifyHeaders).end("no signature");
+        return;
+      }
+      try {
+        if (req.method === "GET") {
+          const fullUrl = req.url ?? "/";
+          const u = new URL(fullUrl, "http://streampay.callback");
+          const rec: Record<string, string> = {};
+          u.searchParams.forEach((v, k) => {
+            if (!(k in rec)) {
+              rec[k] = v;
+            }
+          });
+          const sorted = streamPaySortedQueryString(rec);
+          const paramsBuf = Buffer.from(sorted, "utf8");
+          if (!streamPayVerifySignedPayload(paramsBuf, signatureHex, pubHex)) {
+            console.warn("[streampay] неверная подпись (GET)");
+            res.writeHead(403, corsNotifyHeaders).end("sign");
+            return;
+          }
+          const fields = streamPayExtractCallbackFields(rec as unknown as Record<string, unknown>);
+          if (!fields) {
+            res.writeHead(200, corsNotifyHeaders).end();
+            return;
+          }
+          if (!streamPayIsPaidStatus(fields.status)) {
+            res.writeHead(200, corsNotifyHeaders).end();
+            return;
+          }
+          if (isIntidProcessed(fields.invoice)) {
+            res.writeHead(200, corsNotifyHeaders).end();
+            return;
+          }
+          const pending = getPendingPayment(fields.externalId);
+          if (!pending) {
+            console.warn("[streampay] нет pending", fields.externalId);
+            res.writeHead(200, corsNotifyHeaders).end();
+            return;
+          }
+          if (pending.sent) {
+            markIntidProcessed(fields.invoice);
+            res.writeHead(200, corsNotifyHeaders).end();
+            return;
+          }
+          if (!amountsMatchFreekassa(pending.amountExpected, fields.amount)) {
+            console.warn(
+              "[streampay] сумма не совпала",
+              fields.externalId,
+              pending.amountExpected,
+              fields.amount,
+            );
+            res.writeHead(200, corsNotifyHeaders).end();
+            return;
+          }
+          markIntidProcessed(fields.invoice);
+          await deliverPaidPendingOrder(bot, miniAppUrl, pending);
+          markPendingSent(fields.externalId);
+          res.writeHead(200, corsNotifyHeaders).end();
+          return;
+        }
+
+        const rawBuf = await readRequestBodyBuffer(req);
+        if (!streamPayVerifySignedPayload(rawBuf, signatureHex, pubHex)) {
+          console.warn("[streampay] неверная подпись (POST)");
+          res.writeHead(403, corsNotifyHeaders).end("sign");
+          return;
+        }
+        let j: Record<string, unknown>;
+        try {
+          j = JSON.parse(rawBuf.toString("utf8")) as Record<string, unknown>;
+        } catch {
+          res.writeHead(400, corsNotifyHeaders).end("bad json");
+          return;
+        }
+        const fields = streamPayExtractCallbackFields(j);
+        if (!fields) {
+          res.writeHead(200, corsNotifyHeaders).end();
+          return;
+        }
+        if (!streamPayIsPaidStatus(fields.status)) {
+          res.writeHead(200, corsNotifyHeaders).end();
+          return;
+        }
+        if (isIntidProcessed(fields.invoice)) {
+          res.writeHead(200, corsNotifyHeaders).end();
+          return;
+        }
+        const pending = getPendingPayment(fields.externalId);
+        if (!pending) {
+          console.warn("[streampay] нет pending", fields.externalId);
+          res.writeHead(200, corsNotifyHeaders).end();
+          return;
+        }
+        if (pending.sent) {
+          markIntidProcessed(fields.invoice);
+          res.writeHead(200, corsNotifyHeaders).end();
+          return;
+        }
+        if (!amountsMatchFreekassa(pending.amountExpected, fields.amount)) {
+          console.warn(
+            "[streampay] сумма не совпала",
+            fields.externalId,
+            pending.amountExpected,
+            fields.amount,
+          );
+          res.writeHead(200, corsNotifyHeaders).end();
+          return;
+        }
+        markIntidProcessed(fields.invoice);
+        await deliverPaidPendingOrder(bot, miniAppUrl, pending);
+        markPendingSent(fields.externalId);
+        res.writeHead(200, corsNotifyHeaders).end();
+      } catch (e) {
+        console.error("[streampay] handler", e);
+        res.writeHead(500, corsNotifyHeaders).end("error");
+      }
+      return;
+    }
+
     if ((req.method === "GET" || req.method === "POST") && url === "/notify/freekassa") {
       const secret2 = process.env.FREEKASSA_SECRET2?.trim() || process.env.FREEKASSA_SECRET?.trim();
       if (!secret2) {
@@ -1816,6 +2039,7 @@ export function startOrderNotifyHttpServer(
         url === "/notify/payment/prepare" ||
         url === "/notify/payment/kzt-prepare" ||
         url === "/notify/freekassa" ||
+        url === "/notify/streampay" ||
         url === "/notify/referral" ||
         url === "/api/promo-codes")
     ) {
@@ -2066,6 +2290,9 @@ export function startOrderNotifyHttpServer(
       );
       console.log(
         `FreeKassa: prepare POST http://${bind}:${port}/notify/payment/prepare (при FREEKASSA_API_KEY — @boarteam/freekassa-sdk createOrder); callback GET|POST /notify/freekassa (URL оповещения в ЛК)`,
+      );
+      console.log(
+        `StreamPay: prepare через POST /notify/payment/prepare с method streampay; callback GET|POST /notify/streampay (URL в ЛК StreamPay — как в интеграции магазина)`,
       );
     }
     if (secret) {

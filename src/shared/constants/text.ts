@@ -38,6 +38,7 @@ export const PAYMENT_TEXT = {
   methodSbp: "СБП (RUB)",
   methodMir: "КАРТА РФ (МИР, СБЕРКИДС)",
   methodCard: "КАРТА РФ #2 (VISA, MASTERCARD)",
+  methodStreamPay: "StreamPay",
   methodKzt: "Тенге (KZT) — реквизиты",
   kztInstructions:
     "Скопируйте подходящие для вас банковские реквизиты и выполните перевод.\nПосле оплаты нажмите кнопку «Я оплатил».",
@@ -50,6 +51,8 @@ export const PAYMENT_TEXT = {
     `Оплата СБП: минимум ${min} ₽. Увеличьте сумму заказа или выберите другой способ.`,
   paymentMinCard: (min: number) =>
     `Оплата картой РФ: минимум ${min} ₽. Увеличьте сумму заказа или выберите другой способ.`,
+  paymentMinStreamPay: (min: number) =>
+    `StreamPay: минимум ${min} ₽. Увеличьте сумму заказа или выберите другой способ.`,
   paymentMinKzt: (minKzt: number, approxRub: string) =>
     `Оплата в тенге: минимум ${minKzt} ₸ (около ${approxRub} ₽ с учётом курса). Увеличьте сумму заказа.`,
 } as const;

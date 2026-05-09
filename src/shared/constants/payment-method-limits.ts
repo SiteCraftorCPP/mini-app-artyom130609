@@ -6,6 +6,7 @@ import { KZT_PER_ONE_RUB, rubToKztAmount } from "./payment-requisites-kzt";
 export const PAYMENT_MIN_RUB_SBP = 10;
 export const PAYMENT_MIN_RUB_MIR = 50;
 export const PAYMENT_MIN_RUB_CARD = 50;
+export const PAYMENT_MIN_RUB_STREAMPAY = 10;
 export const PAYMENT_MIN_KZT = 100;
 
 export function minRubForPaymentMethod(method: PaymentMethodCode): number {
@@ -14,6 +15,9 @@ export function minRubForPaymentMethod(method: PaymentMethodCode): number {
   }
   if (method === "mir") {
     return PAYMENT_MIN_RUB_MIR;
+  }
+  if (method === "streampay") {
+    return PAYMENT_MIN_RUB_STREAMPAY;
   }
   return PAYMENT_MIN_RUB_CARD;
 }
