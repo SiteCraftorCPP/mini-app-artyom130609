@@ -171,14 +171,22 @@ function streamPayCurrencyForJson(code: string): string | number {
   if (!useNum) {
     return raw;
   }
+  let n: number | null = null;
   if (/^\d+$/.test(raw)) {
-    return Number(raw);
+    n = Number(raw);
+  } else {
+    const mapped = ISO4217_ALPHA_TO_NUM[raw.toUpperCase()];
+    if (mapped != null) {
+      n = mapped;
+    }
   }
-  const n = ISO4217_ALPHA_TO_NUM[raw.toUpperCase()];
-  if (n != null) {
-    return n;
+  if (n == null) {
+    return raw;
   }
-  return raw;
+  const asStr =
+    process.env.STREAMPAY_ISO4217_NUMERIC_AS_JSON_STRING === "1" ||
+    process.env.STREAMPAY_ISO4217_NUMERIC_AS_JSON_STRING === "true";
+  return asStr ? String(n) : n;
 }
 
 /**
