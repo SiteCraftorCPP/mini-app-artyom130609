@@ -1607,10 +1607,12 @@ export function startOrderNotifyHttpServer(
             return;
           }
           const storeId = Number(storeRaw);
+          /* Часто в ЛК «валюта магазина» = USD, списание с клиента в ₴ — payment_type 1 + currency.
+           * Если снова invalid_system_currency — скопируй system_currency/payment_type из JSON-примера в кабинете в .env. */
           const systemCurrency =
-            process.env.STREAMPAY_SYSTEM_CURRENCY?.trim() || "UAH";
-          const paymentTypeParsed = Number(process.env.STREAMPAY_PAYMENT_TYPE || "2");
-          const paymentType = Number.isFinite(paymentTypeParsed) ? paymentTypeParsed : 2;
+            process.env.STREAMPAY_SYSTEM_CURRENCY?.trim() || "USD";
+          const paymentTypeParsed = Number(process.env.STREAMPAY_PAYMENT_TYPE || "1");
+          const paymentType = Number.isFinite(paymentTypeParsed) ? paymentTypeParsed : 1;
           const merchantOrderId = buildMerchantOrderId();
           const uahPerRub = streamPayUahPerOneRubFromEnv();
           const streamPayAmount =
