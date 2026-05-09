@@ -1182,6 +1182,19 @@ function amountsMatchFreekassa(expected: string, got: string): boolean {
   return Math.abs(a - b) < 0.01;
 }
 
+/** Сколько UAH за 1 RUB заказа (мини-апп шлёт amountRub). Пусто — в StreamPay уходит та же числовая сумма, что и ₽ в заказе. */
+function streamPayUahPerOneRubFromEnv(): number | null {
+  const raw = process.env.STREAMPAY_UAH_PER_RUB?.trim();
+  if (!raw) {
+    return null;
+  }
+  const n = Number(raw.replace(",", "."));
+  if (!Number.isFinite(n) || n <= 0) {
+    return null;
+  }
+  return n;
+}
+
 type PaymentPrepareJson = {
   initData: string;
   orderKind: "virt" | "account" | "other_service";
@@ -1595,20 +1608,26 @@ export function startOrderNotifyHttpServer(
           }
           const storeId = Number(storeRaw);
           const systemCurrency =
-            process.env.STREAMPAY_SYSTEM_CURRENCY?.trim() || "RUB";
+            process.env.STREAMPAY_SYSTEM_CURRENCY?.trim() || "UAH";
           const paymentTypeParsed = Number(process.env.STREAMPAY_PAYMENT_TYPE || "2");
           const paymentType = Number.isFinite(paymentTypeParsed) ? paymentTypeParsed : 2;
           const merchantOrderId = buildMerchantOrderId();
+          const uahPerRub = streamPayUahPerOneRubFromEnv();
+          const streamPayAmount =
+            uahPerRub != null
+              ? Math.round(amountNum * uahPerRub * 100) / 100
+              : amountNum;
           const payloadSp: PendingPaymentOrder = {
             ...payload,
             transferMethod: "Оплата · StreamPay",
+            amountExpected: formatAmountForFk(streamPayAmount),
           };
           const descParts = [payloadSp.orderNumber, payloadSp.game, payloadSp.server].filter(
             Boolean,
           ) as string[];
           const description =
             descParts.join(" ").trim().slice(0, 480) || payloadSp.orderNumber;
-          const currencyOpt = process.env.STREAMPAY_CURRENCY?.trim() || "RUB";
+          const currencyOpt = process.env.STREAMPAY_CURRENCY?.trim() || "UAH";
           const bodyJson = streamPayBuildCreatePaymentJson({
             storeId,
             customer: String(telegramUserId),
@@ -1617,7 +1636,7 @@ export function startOrderNotifyHttpServer(
             systemCurrency,
             paymentType,
             ...(paymentType === 1 ? { currency: currencyOpt } : {}),
-            amount: amountNum,
+            amount: streamPayAmount,
             successUrl: process.env.STREAMPAY_SUCCESS_URL?.trim() || undefined,
             failUrl: process.env.STREAMPAY_FAIL_URL?.trim() || undefined,
             cancelUrl: process.env.STREAMPAY_CANCEL_URL?.trim() || undefined,
