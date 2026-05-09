@@ -152,6 +152,35 @@ function streamPayExtraValueOk(v: unknown): boolean {
   return true;
 }
 
+/** ISO 4217 numeric — если в ЛК в примере числа вместо "USD"/"UAH", задай STREAMPAY_JSON_CURRENCY_AS_ISO4217_NUMBER=1 */
+const ISO4217_ALPHA_TO_NUM: Record<string, number> = {
+  UAH: 980,
+  USD: 840,
+  EUR: 978,
+  RUB: 643,
+  PLN: 985,
+  GBP: 826,
+  KZT: 398,
+};
+
+function streamPayCurrencyForJson(code: string): string | number {
+  const raw = code.replace(/^\ufeff/, "").trim();
+  const useNum =
+    process.env.STREAMPAY_JSON_CURRENCY_AS_ISO4217_NUMBER === "1" ||
+    process.env.STREAMPAY_JSON_CURRENCY_AS_ISO4217_NUMBER === "true";
+  if (!useNum) {
+    return raw;
+  }
+  if (/^\d+$/.test(raw)) {
+    return Number(raw);
+  }
+  const n = ISO4217_ALPHA_TO_NUM[raw.toUpperCase()];
+  if (n != null) {
+    return n;
+  }
+  return raw;
+}
+
 /**
  * Тело POST /api/payment/create — порядок ключей как в примере PaymentCreateJs в ЛК.
  * `extraFromEnv` — только дополнительные поля из STREAMPAY_EXTRA_CREATE_FIELDS; валюту/тип/сумму там не дублируй (см. STREAMPAY_CREATE_BODY_CORE_KEYS).
@@ -175,11 +204,11 @@ export function streamPayBuildCreatePaymentJson(
     customer: i.customer,
     external_id: i.externalId,
     description: i.description,
-    system_currency: i.systemCurrency,
+    system_currency: streamPayCurrencyForJson(i.systemCurrency),
     payment_type: paymentTypeOut,
   };
   if (i.paymentType === 1 && i.currency) {
-    o.currency = i.currency;
+    o.currency = streamPayCurrencyForJson(i.currency);
   }
   o.amount = amountOut;
   if (i.merchantFee != null && Number.isFinite(i.merchantFee)) {
