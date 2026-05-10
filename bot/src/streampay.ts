@@ -165,6 +165,8 @@ const ISO4217_ALPHA_TO_NUM: Record<string, number> = {
   PLN: 985,
   GBP: 826,
   KZT: 398,
+  BYN: 933,
+  AZN: 944,
 };
 
 function streamPayCurrencyForJson(code: string): string | number {

@@ -16,6 +16,7 @@ import {
   type KztPrepareInput,
   type PaymentMethodCode,
   type PaymentPrepareInput,
+  type StreampayFiatPreset,
   openPaymentUrl,
   requestKztPrepare,
   requestPaymentPrepare,
@@ -67,15 +68,20 @@ type PaymentMethodDialogProps = {
   context: PaymentDialogContext | null;
 };
 
-/** Все варианты с `streampay` ведут на один и тот же prepare/streampay (одна ссылка оплаты); различаются только подпись кнопки. */
-const RUB_METHODS: { rowKey: string; method: PaymentMethodCode; label: string }[] = [
+/** StreamPay: у каждой кнопки свой `streampayPreset` — на бэке фиксируется currency (без выбора на платёжке). */
+const RUB_METHODS: {
+  rowKey: string;
+  method: PaymentMethodCode;
+  label: string;
+  streampayPreset?: StreampayFiatPreset;
+}[] = [
   { rowKey: "sbp", method: "sbp", label: PAYMENT_TEXT.methodSbp },
   { rowKey: "mir", method: "mir", label: PAYMENT_TEXT.methodMir },
   { rowKey: "card_rub", method: "card_rub", label: PAYMENT_TEXT.methodCard },
-  { rowKey: "streampay-tenge", method: "streampay", label: "ТЕНГЕ" },
-  { rowKey: "streampay-uah", method: "streampay", label: "ГРИВНЫ" },
-  { rowKey: "streampay-byn", method: "streampay", label: "БЕЛОРУССКИЙ РУБЛЬ" },
-  { rowKey: "streampay-aze", method: "streampay", label: "АЗЕЙБАРДЖАН" },
+  { rowKey: "streampay-tenge", method: "streampay", label: "ТЕНГЕ", streampayPreset: "tenge" },
+  { rowKey: "streampay-uah", method: "streampay", label: "ГРИВНЫ", streampayPreset: "uah" },
+  { rowKey: "streampay-byn", method: "streampay", label: "БЕЛОРУССКИЙ РУБЛЬ", streampayPreset: "byn" },
+  { rowKey: "streampay-aze", method: "streampay", label: "АЗЕЙБАРДЖАН", streampayPreset: "azn" },
 ];
 
 /** Крупные кнопки под палец, читаемый текст */
@@ -87,7 +93,10 @@ function buildPrepareInput(
   initData: string,
   amountRub: number,
   ctx: PaymentDialogContext,
+  streampayPreset?: StreampayFiatPreset,
 ): PaymentPrepareInput {
+  const sp =
+    method === "streampay" && streampayPreset ? { streampayPreset } : {};
   if (ctx.orderKind === "virt") {
     return {
       initData,
@@ -100,6 +109,7 @@ function buildPrepareInput(
       virtAmountLabel: ctx.virtAmountLabel,
       transferMethod: ctx.transferMethod,
       promoCode: ctx.promoCode,
+      ...sp,
     };
   }
   if (ctx.orderKind === "account") {
@@ -113,6 +123,7 @@ function buildPrepareInput(
       transferMethod: ctx.transferMethod,
       accountMode: ctx.accountMode,
       accountOptionLabel: ctx.accountOptionLabel,
+      ...sp,
     };
   }
   return {
@@ -121,6 +132,7 @@ function buildPrepareInput(
     method,
     amountRub,
     otherService: ctx.otherService,
+    ...sp,
   };
 }
 
@@ -211,7 +223,7 @@ export function PaymentMethodDialog({
   }, []);
 
   const onSelectRub = useCallback(
-    async (method: PaymentMethodCode) => {
+    async (method: PaymentMethodCode, streampayPreset?: StreampayFiatPreset) => {
       if (!initData.trim() || !context) {
         showErrorMessage("Откройте магазин из Telegram (кнопка в боте), не из обычного браузера.");
         return;
@@ -238,6 +250,7 @@ export function PaymentMethodDialog({
           initData,
           amountRub,
           context,
+          streampayPreset,
         );
         const res = await requestPaymentPrepare(body);
         const opened = openPaymentUrl(res.payUrl);
@@ -514,7 +527,7 @@ export function PaymentMethodDialog({
                   size="default"
                   disabled={busy}
                   className={methodBtnClass}
-                  onClick={() => void onSelectRub(m.method)}
+                  onClick={() => void onSelectRub(m.method, m.streampayPreset)}
                 >
                   {m.label}
                 </Button>

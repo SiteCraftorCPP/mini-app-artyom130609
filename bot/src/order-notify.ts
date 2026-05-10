@@ -1204,6 +1204,35 @@ function streamPayInvoiceUnitsPerRubFromEnv(): number | null {
   return n;
 }
 
+/** Кнопки мини-аппа → ISO для payment_type 1 + currency. */
+const STREAMPAY_UI_PRESET_TO_FIAT: Record<string, string> = {
+  tenge: "KZT",
+  uah: "UAH",
+  byn: "BYN",
+  azn: "AZN",
+};
+
+function streamPayFiatUnitsPerRubFromEnv(fiatIso: string): number | null {
+  const upper = fiatIso.toUpperCase();
+  const byFiat: Record<string, string> = {
+    KZT: "STREAMPAY_FIAT_KZT_PER_RUB",
+    UAH: "STREAMPAY_FIAT_UAH_PER_RUB",
+    BYN: "STREAMPAY_FIAT_BYN_PER_RUB",
+    AZN: "STREAMPAY_FIAT_AZN_PER_RUB",
+  };
+  const envName = byFiat[upper];
+  if (envName) {
+    const raw = process.env[envName]?.trim();
+    if (raw) {
+      const n = Number(raw.replace(",", "."));
+      if (Number.isFinite(n) && n > 0) {
+        return n;
+      }
+    }
+  }
+  return streamPayInvoiceUnitsPerRubFromEnv();
+}
+
 /** BOM/пробелы/кавычки в .env (частая причина «invalid_system_currency» при видимом USD). */
 function streamPayNormalizeToken(raw: string): string {
   let s = raw.replace(/^\ufeff/, "").trim();
@@ -1254,6 +1283,8 @@ type PaymentPrepareJson = {
   orderKind: "virt" | "account" | "other_service";
   method: "sbp" | "mir" | "card_rub" | "streampay";
   amountRub: number;
+  /** Фиксированная фиатная ветка StreamPay (см. кнопки в мини-аппе). */
+  streampayPreset?: "tenge" | "uah" | "byn" | "azn";
   game?: string;
   server?: string;
   bankAccount?: string;
@@ -1644,6 +1675,19 @@ export function startOrderNotifyHttpServer(
         const telegramUserId = payload.telegramUserId;
 
         if (body.method === "streampay") {
+          const presetRaw = body.streampayPreset;
+          const allowedPreset = new Set(["tenge", "uah", "byn", "azn"]);
+          if (presetRaw != null && typeof presetRaw !== "string") {
+            res.writeHead(400, { "Content-Type": "application/json", ...corsNotifyHeaders });
+            res.end(JSON.stringify({ error: "streampay preset" }));
+            return;
+          }
+          if (presetRaw != null && !allowedPreset.has(presetRaw)) {
+            res.writeHead(400, { "Content-Type": "application/json", ...corsNotifyHeaders });
+            res.end(JSON.stringify({ error: "streampay preset" }));
+            return;
+          }
+          const fiatFromUi = presetRaw ? STREAMPAY_UI_PRESET_TO_FIAT[presetRaw] : null;
           const apiBase =
             process.env.STREAMPAY_API_BASE_URL?.trim() || STREAMPAY_DEFAULT_API_BASE;
           const storeRaw = process.env.STREAMPAY_STORE_ID?.trim();
@@ -1675,8 +1719,25 @@ export function startOrderNotifyHttpServer(
             "system_currency",
             extraRaw,
           );
-          const paymentTypeVal = streamPayPickPaymentType(extraRaw);
+          let paymentTypeVal = streamPayPickPaymentType(extraRaw);
           let currencyOpt = streamPayPickStr("STREAMPAY_CURRENCY", "currency", extraRaw);
+
+          if (fiatFromUi) {
+            const keepSys =
+              process.env.STREAMPAY_PRESET_KEEP_SYSTEM_CURRENCY === "1" ||
+              process.env.STREAMPAY_PRESET_KEEP_SYSTEM_CURRENCY === "true";
+            if (!keepSys) {
+              systemCurrency = fiatFromUi;
+            }
+            const ftRaw = process.env.STREAMPAY_FIAT_PAYMENT_TYPE?.trim();
+            if (ftRaw && /^\d+$/.test(ftRaw)) {
+              paymentTypeVal = Number(ftRaw);
+            } else {
+              paymentTypeVal = 1;
+            }
+            currencyOpt = fiatFromUi;
+          }
+
           if (
             process.env.STREAMPAY_FORCE_ISO4217_LOWER === "1" ||
             process.env.STREAMPAY_FORCE_ISO4217_LOWER === "true"
@@ -1729,14 +1790,18 @@ export function startOrderNotifyHttpServer(
           }
           const storeId = Number(storeRaw);
           const merchantOrderId = buildMerchantOrderId();
-          const unitsPerRub = streamPayInvoiceUnitsPerRubFromEnv();
+          const unitsPerRub = fiatFromUi
+            ? streamPayFiatUnitsPerRubFromEnv(fiatFromUi)
+            : streamPayInvoiceUnitsPerRubFromEnv();
           const streamPayAmount =
             unitsPerRub != null
               ? Math.round(amountNum * unitsPerRub * 100) / 100
               : amountNum;
           const payloadSp: PendingPaymentOrder = {
             ...payload,
-            transferMethod: "Оплата · StreamPay",
+            transferMethod: fiatFromUi
+              ? `Оплата · StreamPay (${fiatFromUi})`
+              : "Оплата · StreamPay",
             amountExpected: formatAmountForFk(streamPayAmount),
           };
           const descParts = [payloadSp.orderNumber, payloadSp.game, payloadSp.server].filter(
@@ -1765,6 +1830,8 @@ export function startOrderNotifyHttpServer(
           console.error(
             "[streampay] payment/create resolved fields",
             JSON.stringify({
+              streampayPreset: presetRaw ?? null,
+              fiatIso: fiatFromUi,
               systemCurrency,
               paymentType,
               currencyForApi: paymentType === 1 ? currencyOpt : null,

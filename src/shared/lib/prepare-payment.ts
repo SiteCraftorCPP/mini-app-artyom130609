@@ -15,11 +15,16 @@ function resolveBaseUrl(): string {
 
 export type PaymentMethodCode = "sbp" | "mir" | "card_rub" | "streampay";
 
+/** Соответствует кнопкам ТЕНГЕ / ГРИВНЫ / BYN / AZN — бот шлёт в StreamPay как выбранную фиатную валюту (payment_type 1 + currency). */
+export type StreampayFiatPreset = "tenge" | "uah" | "byn" | "azn";
+
 export type PaymentPrepareInput = {
   initData: string;
   orderKind: VirtOrderNotifyKind;
   method: PaymentMethodCode;
   amountRub: number;
+  /** Только при method === "streampay": зафиксировать валюту счёта без выбора на стороне StreamPay. */
+  streampayPreset?: StreampayFiatPreset;
   game?: string;
   server?: string;
   bankAccount?: string;
@@ -64,6 +69,9 @@ function mapPrepareError(status: number, body: string): string {
     detail = typeof j?.detail === "string" ? j.detail.trim() : undefined;
   } catch {
     /* не JSON — nginx/html */
+  }
+  if (code === "streampay preset") {
+    return "Оплата: обновите мини-апп или выберите способ снова.";
   }
   if (code === "streampay store") {
     return "Платёж StreamPay: на сервере не задан STREAMPAY_STORE_ID.";
