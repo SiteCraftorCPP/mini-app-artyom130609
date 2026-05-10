@@ -1216,6 +1216,54 @@ const STREAMPAY_UI_PRESET_LABEL: Record<string, string> = {
   azn: "AZN",
 };
 
+/**
+ * API StreamPay нередко шлёт 406 amount_is_invalid на мелкие или дробные USDT.
+ * По умолчанию: целые USDT (вверх) и нижний порог 5 USDT (если не задано иначе). Отключение: STREAMPAY_MIN_INVOICE_USDT=0
+ */
+function streamPayNormalizeUsdtInvoiceAmount(
+  paymentType: number,
+  systemCurrencyRaw: string,
+  amount: number,
+  source: string,
+): { amount: number; source: string } {
+  if (paymentType !== 2 || !Number.isFinite(amount) || amount <= 0) {
+    return { amount, source };
+  }
+  const sys = systemCurrencyRaw.replace(/^\ufeff/, "").trim().toUpperCase();
+  if (!sys.includes("USDT")) {
+    return { amount, source };
+  }
+  let a = amount;
+  let src = source;
+  const allowFraction =
+    process.env.STREAMPAY_INVOICE_USDT_ALLOW_FRACTION === "1" ||
+    process.env.STREAMPAY_INVOICE_USDT_ALLOW_FRACTION === "true";
+  if (!allowFraction) {
+    const ceiled = Math.max(1, Math.ceil(a - 1e-9));
+    if (ceiled !== a) {
+      a = ceiled;
+      src = `${src}+usdt_whole_ceil`;
+    }
+  }
+  const minRaw = process.env.STREAMPAY_MIN_INVOICE_USDT?.trim().toLowerCase();
+  const minOff = minRaw === "0" || minRaw === "off" || minRaw === "false";
+  if (minOff) {
+    return { amount: a, source: src };
+  }
+  const minUsdt =
+    minRaw && minRaw !== ""
+      ? Number(String(process.env.STREAMPAY_MIN_INVOICE_USDT).replace(",", "."))
+      : 5;
+  if (!Number.isFinite(minUsdt) || minUsdt <= 0) {
+    return { amount: a, source: src };
+  }
+  if (a < minUsdt) {
+    console.warn(`[streampay] amount ${a} USDT поднят до минимума ${minUsdt} (STREAMPAY_MIN_INVOICE_USDT)`);
+    return { amount: minUsdt, source: `${src}+min_${minUsdt}_usdt` };
+  }
+  return { amount: a, source: src };
+}
+
 /** BOM/пробелы/кавычки в .env (частая причина «invalid_system_currency» при видимом USD). */
 function streamPayNormalizeToken(raw: string): string {
   let s = raw.replace(/^\ufeff/, "").trim();
@@ -1790,6 +1838,15 @@ export function startOrderNotifyHttpServer(
             );
             return;
           }
+          const normalized = streamPayNormalizeUsdtInvoiceAmount(
+            paymentType,
+            systemCurrency,
+            streamPayAmount,
+            amountSource,
+          );
+          streamPayAmount = normalized.amount;
+          amountSource = normalized.source;
+
           const payloadSp: PendingPaymentOrder = {
             ...payload,
             transferMethod: presetLabel
