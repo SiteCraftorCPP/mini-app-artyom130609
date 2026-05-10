@@ -1208,36 +1208,13 @@ function streamPayInvoiceUnitsPerRubFromEnv(): number | null {
   return n;
 }
 
-/** Кнопки мини-аппа → ISO для payment_type 1 + currency. */
-const STREAMPAY_UI_PRESET_TO_FIAT: Record<string, string> = {
+/** Подпись в заказе / лог: какая кнопка в мини-аппе (API всегда по ЛК: USDT + payment_type из env). */
+const STREAMPAY_UI_PRESET_LABEL: Record<string, string> = {
   tenge: "KZT",
   uah: "UAH",
   byn: "BYN",
   azn: "AZN",
 };
-
-function streamPayFiatUnitsPerRubFromEnvOnly(fiatIso: string): number | null {
-  const upper = fiatIso.toUpperCase();
-  const byFiat: Record<string, string> = {
-    KZT: "STREAMPAY_FIAT_KZT_PER_RUB",
-    UAH: "STREAMPAY_FIAT_UAH_PER_RUB",
-    BYN: "STREAMPAY_FIAT_BYN_PER_RUB",
-    AZN: "STREAMPAY_FIAT_AZN_PER_RUB",
-  };
-  const envName = byFiat[upper];
-  if (!envName) {
-    return null;
-  }
-  const raw = process.env[envName]?.trim();
-  if (!raw) {
-    return null;
-  }
-  const n = Number(raw.replace(",", "."));
-  if (!Number.isFinite(n) || n <= 0) {
-    return null;
-  }
-  return n;
-}
 
 /** BOM/пробелы/кавычки в .env (частая причина «invalid_system_currency» при видимом USD). */
 function streamPayNormalizeToken(raw: string): string {
@@ -1693,7 +1670,10 @@ export function startOrderNotifyHttpServer(
             res.end(JSON.stringify({ error: "streampay preset" }));
             return;
           }
-          const fiatFromUi = presetRaw ? STREAMPAY_UI_PRESET_TO_FIAT[presetRaw] : null;
+          const presetLabel =
+            presetRaw && typeof presetRaw === "string"
+              ? STREAMPAY_UI_PRESET_LABEL[presetRaw] ?? presetRaw
+              : null;
           const apiBase =
             process.env.STREAMPAY_API_BASE_URL?.trim() || STREAMPAY_DEFAULT_API_BASE;
           const storeRaw = process.env.STREAMPAY_STORE_ID?.trim();
@@ -1727,22 +1707,6 @@ export function startOrderNotifyHttpServer(
           );
           let paymentTypeVal = streamPayPickPaymentType(extraRaw);
           let currencyOpt = streamPayPickStr("STREAMPAY_CURRENCY", "currency", extraRaw);
-
-          if (fiatFromUi) {
-            const keepSys =
-              process.env.STREAMPAY_PRESET_KEEP_SYSTEM_CURRENCY === "1" ||
-              process.env.STREAMPAY_PRESET_KEEP_SYSTEM_CURRENCY === "true";
-            if (!keepSys) {
-              systemCurrency = fiatFromUi;
-            }
-            const ftRaw = process.env.STREAMPAY_FIAT_PAYMENT_TYPE?.trim();
-            if (ftRaw && /^\d+$/.test(ftRaw)) {
-              paymentTypeVal = Number(ftRaw);
-            } else {
-              paymentTypeVal = 1;
-            }
-            currencyOpt = fiatFromUi;
-          }
 
           if (
             process.env.STREAMPAY_FORCE_ISO4217_LOWER === "1" ||
@@ -1800,40 +1764,19 @@ export function startOrderNotifyHttpServer(
           let streamPayAmount: number;
           let amountSource: string;
           try {
-            if (fiatFromUi) {
-              const manual = streamPayFiatUnitsPerRubFromEnvOnly(fiatFromUi);
-              if (manual != null) {
-                streamPayAmount = Math.round(amountNum * manual * 100) / 100;
-                amountSource = "env_STREAMPAY_FIAT_*_PER_RUB";
-              } else if (streamPayAutoFiatRatesEnabled()) {
-                streamPayAmount = await streamPayConvertRubToFiatAmount(amountNum, fiatFromUi);
-                amountSource = "cbr";
-              } else {
-                res.writeHead(503, { "Content-Type": "application/json", ...corsNotifyHeaders });
-                res.end(
-                  JSON.stringify({
-                    error: "streampay rates",
-                    detail:
-                      "Задайте STREAMPAY_AUTO_FIAT_RATES=1 или множитель STREAMPAY_FIAT_KZT_PER_RUB и т.д.",
-                  }),
-                );
-                return;
-              }
+            const legacy = streamPayInvoiceUnitsPerRubFromEnv();
+            if (legacy != null) {
+              streamPayAmount = Math.round(amountNum * legacy * 100) / 100;
+              amountSource = "env_ORDER_RUB_TO_INVOICE_RATE";
+            } else if (streamPayAutoFiatRatesEnabled()) {
+              streamPayAmount = await streamPayConvertRubToFiatAmount(
+                amountNum,
+                systemCurrency.replace(/^\ufeff/, "").trim(),
+              );
+              amountSource = "cbr_" + systemCurrency.replace(/^\ufeff/, "").trim().toUpperCase();
             } else {
-              const legacy = streamPayInvoiceUnitsPerRubFromEnv();
-              if (legacy != null) {
-                streamPayAmount = Math.round(amountNum * legacy * 100) / 100;
-                amountSource = "env_ORDER_RUB_TO_INVOICE_RATE";
-              } else if (
-                streamPayAutoFiatRatesEnabled() &&
-                systemCurrency.replace(/^\ufeff/, "").trim().toUpperCase().includes("USDT")
-              ) {
-                streamPayAmount = await streamPayConvertRubToFiatAmount(amountNum, "USDT");
-                amountSource = "cbr_usdt";
-              } else {
-                streamPayAmount = amountNum;
-                amountSource = "rub_as_invoice_units";
-              }
+              streamPayAmount = amountNum;
+              amountSource = "rub_as_invoice_units";
             }
           } catch (e) {
             const msg = e instanceof Error ? e.message : String(e);
@@ -1849,8 +1792,8 @@ export function startOrderNotifyHttpServer(
           }
           const payloadSp: PendingPaymentOrder = {
             ...payload,
-            transferMethod: fiatFromUi
-              ? `Оплата · StreamPay (${fiatFromUi})`
+            transferMethod: presetLabel
+              ? `Оплата · StreamPay (${presetLabel})`
               : "Оплата · StreamPay",
             amountExpected: formatAmountForFk(streamPayAmount),
           };
@@ -1881,7 +1824,7 @@ export function startOrderNotifyHttpServer(
             "[streampay] payment/create resolved fields",
             JSON.stringify({
               streampayPreset: presetRaw ?? null,
-              fiatIso: fiatFromUi,
+              presetLabel,
               systemCurrency,
               paymentType,
               currencyForApi: paymentType === 1 ? currencyOpt : null,

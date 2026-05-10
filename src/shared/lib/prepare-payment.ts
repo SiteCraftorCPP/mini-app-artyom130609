@@ -23,7 +23,7 @@ export type PaymentPrepareInput = {
   orderKind: VirtOrderNotifyKind;
   method: PaymentMethodCode;
   amountRub: number;
-  /** Только при method === "streampay": зафиксировать валюту счёта без выбора на стороне StreamPay. */
+  /** Только при method === "streampay": подпись кнопки в мини-аппе (KZT/UAH/…); тело create — как STREAMPAY_SYSTEM_CURRENCY в .env. */
   streampayPreset?: StreampayFiatPreset;
   game?: string;
   server?: string;

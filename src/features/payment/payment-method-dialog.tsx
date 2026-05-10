@@ -68,7 +68,7 @@ type PaymentMethodDialogProps = {
   context: PaymentDialogContext | null;
 };
 
-/** StreamPay: у каждой кнопки свой `streampayPreset` — на бэке фиксируется currency (без выбора на платёжке). */
+/** Кнопки StreamPay: разные подписи + `streampayPreset` в prepare (в заказе/логах); сумма и валюта API как в ЛК (USDT, payment_type из env). */
 const RUB_METHODS: {
   rowKey: string;
   method: PaymentMethodCode;
