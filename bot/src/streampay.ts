@@ -307,6 +307,27 @@ export function streamPaySanitizeExtraForMerge(extra: Record<string, unknown> | 
   return Object.keys(o).length > 0 ? o : null;
 }
 
+export function streamPayPayUrlWithOptionalFiatParam(
+  payUrl: string,
+  fiatIsoFromPreset: string | null | undefined,
+): string {
+  const name = process.env.STREAMPAY_PAY_URL_FIAT_PARAM?.trim();
+  const valueRaw = process.env.STREAMPAY_PAY_URL_FIAT_VALUE?.trim();
+  const value = valueRaw || fiatIsoFromPreset?.trim();
+  if (!name || !value) {
+    return payUrl;
+  }
+  try {
+    const u = new URL(payUrl.trim());
+    if (!u.searchParams.has(name)) {
+      u.searchParams.set(name, value);
+    }
+    return u.toString();
+  } catch {
+    return payUrl;
+  }
+}
+
 export type StreamPayCreateResult = { payUrl: string };
 
 export async function streamPayPostCreate(

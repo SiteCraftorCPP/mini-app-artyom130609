@@ -76,6 +76,7 @@ import {
   streamPayExtractCallbackFields,
   streamPayIsPaidStatus,
   streamPayParseExtraCreateFieldsJson,
+  streamPayPayUrlWithOptionalFiatParam,
   streamPayPostCreate,
   streamPaySanitizeExtraForMerge,
   streamPaySortedQueryString,
@@ -1217,8 +1218,7 @@ const STREAMPAY_UI_PRESET_LABEL: Record<string, string> = {
 };
 
 /**
- * API StreamPay нередко шлёт 406 amount_is_invalid на мелкие или дробные USDT.
- * По умолчанию: целые USDT (вверх) и нижний порог 5 USDT (если не задано иначе). Отключение: STREAMPAY_MIN_INVOICE_USDT=0
+ * USDT + type 2: без лишних эвристик. Порог и целые USDT — только если явно заданы в .env.
  */
 function streamPayNormalizeUsdtInvoiceAmount(
   paymentType: number,
@@ -1233,12 +1233,12 @@ function streamPayNormalizeUsdtInvoiceAmount(
   if (!sys.includes("USDT")) {
     return { amount, source };
   }
-  let a = amount;
+  let a = Math.round(amount * 100) / 100;
   let src = source;
-  const allowFraction =
-    process.env.STREAMPAY_INVOICE_USDT_ALLOW_FRACTION === "1" ||
-    process.env.STREAMPAY_INVOICE_USDT_ALLOW_FRACTION === "true";
-  if (!allowFraction) {
+  const wholeCeil =
+    process.env.STREAMPAY_INVOICE_USDT_WHOLE_CEIL === "1" ||
+    process.env.STREAMPAY_INVOICE_USDT_WHOLE_CEIL === "true";
+  if (wholeCeil) {
     const ceiled = Math.max(1, Math.ceil(a - 1e-9));
     if (ceiled !== a) {
       a = ceiled;
@@ -1246,19 +1246,23 @@ function streamPayNormalizeUsdtInvoiceAmount(
     }
   }
   const minRaw = process.env.STREAMPAY_MIN_INVOICE_USDT?.trim().toLowerCase();
-  const minOff = minRaw === "0" || minRaw === "off" || minRaw === "false";
-  if (minOff) {
+  if (
+    !minRaw ||
+    minRaw === "" ||
+    minRaw === "0" ||
+    minRaw === "off" ||
+    minRaw === "false"
+  ) {
     return { amount: a, source: src };
   }
-  const minUsdt =
-    minRaw && minRaw !== ""
-      ? Number(String(process.env.STREAMPAY_MIN_INVOICE_USDT).replace(",", "."))
-      : 5;
+  const minUsdt = Number(String(process.env.STREAMPAY_MIN_INVOICE_USDT).replace(",", "."));
   if (!Number.isFinite(minUsdt) || minUsdt <= 0) {
     return { amount: a, source: src };
   }
   if (a < minUsdt) {
-    console.warn(`[streampay] amount ${a} USDT поднят до минимума ${minUsdt} (STREAMPAY_MIN_INVOICE_USDT)`);
+    console.warn(
+      `[streampay] amount ${a} USDT поднят до минимума ${minUsdt} (STREAMPAY_MIN_INVOICE_USDT)`,
+    );
     return { amount: minUsdt, source: `${src}+min_${minUsdt}_usdt` };
   }
   return { amount: a, source: src };
@@ -1902,6 +1906,7 @@ export function startOrderNotifyHttpServer(
                 orderHint: payloadSp.orderNumber,
               })
             ).payUrl;
+            payUrl = streamPayPayUrlWithOptionalFiatParam(payUrl, presetLabel);
           } catch (e) {
             const msg = e instanceof Error ? e.message : String(e);
             console.error("[streampay] create", msg);
