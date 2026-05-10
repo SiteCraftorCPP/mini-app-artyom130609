@@ -81,6 +81,10 @@ import {
   streamPaySortedQueryString,
   streamPayVerifySignedPayload,
 } from "./streampay.js";
+import {
+  streamPayAutoFiatRatesEnabled,
+  streamPayConvertRubToFiatAmount,
+} from "./streampay-cbr-rates.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -1212,7 +1216,7 @@ const STREAMPAY_UI_PRESET_TO_FIAT: Record<string, string> = {
   azn: "AZN",
 };
 
-function streamPayFiatUnitsPerRubFromEnv(fiatIso: string): number | null {
+function streamPayFiatUnitsPerRubFromEnvOnly(fiatIso: string): number | null {
   const upper = fiatIso.toUpperCase();
   const byFiat: Record<string, string> = {
     KZT: "STREAMPAY_FIAT_KZT_PER_RUB",
@@ -1221,16 +1225,18 @@ function streamPayFiatUnitsPerRubFromEnv(fiatIso: string): number | null {
     AZN: "STREAMPAY_FIAT_AZN_PER_RUB",
   };
   const envName = byFiat[upper];
-  if (envName) {
-    const raw = process.env[envName]?.trim();
-    if (raw) {
-      const n = Number(raw.replace(",", "."));
-      if (Number.isFinite(n) && n > 0) {
-        return n;
-      }
-    }
+  if (!envName) {
+    return null;
   }
-  return streamPayInvoiceUnitsPerRubFromEnv();
+  const raw = process.env[envName]?.trim();
+  if (!raw) {
+    return null;
+  }
+  const n = Number(raw.replace(",", "."));
+  if (!Number.isFinite(n) || n <= 0) {
+    return null;
+  }
+  return n;
 }
 
 /** BOM/пробелы/кавычки в .env (частая причина «invalid_system_currency» при видимом USD). */
@@ -1790,13 +1796,57 @@ export function startOrderNotifyHttpServer(
           }
           const storeId = Number(storeRaw);
           const merchantOrderId = buildMerchantOrderId();
-          const unitsPerRub = fiatFromUi
-            ? streamPayFiatUnitsPerRubFromEnv(fiatFromUi)
-            : streamPayInvoiceUnitsPerRubFromEnv();
-          const streamPayAmount =
-            unitsPerRub != null
-              ? Math.round(amountNum * unitsPerRub * 100) / 100
-              : amountNum;
+
+          let streamPayAmount: number;
+          let amountSource: string;
+          try {
+            if (fiatFromUi) {
+              const manual = streamPayFiatUnitsPerRubFromEnvOnly(fiatFromUi);
+              if (manual != null) {
+                streamPayAmount = Math.round(amountNum * manual * 100) / 100;
+                amountSource = "env_STREAMPAY_FIAT_*_PER_RUB";
+              } else if (streamPayAutoFiatRatesEnabled()) {
+                streamPayAmount = await streamPayConvertRubToFiatAmount(amountNum, fiatFromUi);
+                amountSource = "cbr";
+              } else {
+                res.writeHead(503, { "Content-Type": "application/json", ...corsNotifyHeaders });
+                res.end(
+                  JSON.stringify({
+                    error: "streampay rates",
+                    detail:
+                      "Задайте STREAMPAY_AUTO_FIAT_RATES=1 или множитель STREAMPAY_FIAT_KZT_PER_RUB и т.д.",
+                  }),
+                );
+                return;
+              }
+            } else {
+              const legacy = streamPayInvoiceUnitsPerRubFromEnv();
+              if (legacy != null) {
+                streamPayAmount = Math.round(amountNum * legacy * 100) / 100;
+                amountSource = "env_ORDER_RUB_TO_INVOICE_RATE";
+              } else if (
+                streamPayAutoFiatRatesEnabled() &&
+                systemCurrency.replace(/^\ufeff/, "").trim().toUpperCase().includes("USDT")
+              ) {
+                streamPayAmount = await streamPayConvertRubToFiatAmount(amountNum, "USDT");
+                amountSource = "cbr_usdt";
+              } else {
+                streamPayAmount = amountNum;
+                amountSource = "rub_as_invoice_units";
+              }
+            }
+          } catch (e) {
+            const msg = e instanceof Error ? e.message : String(e);
+            console.warn("[streampay] сумма/курсы", msg);
+            res.writeHead(503, { "Content-Type": "application/json", ...corsNotifyHeaders });
+            res.end(
+              JSON.stringify({
+                error: "streampay rates",
+                detail: msg.slice(0, 500),
+              }),
+            );
+            return;
+          }
           const payloadSp: PendingPaymentOrder = {
             ...payload,
             transferMethod: fiatFromUi
@@ -1837,6 +1887,7 @@ export function startOrderNotifyHttpServer(
               currencyForApi: paymentType === 1 ? currencyOpt : null,
               storeId,
               amount: streamPayAmount,
+              amountSource,
               apiBase:
                 process.env.STREAMPAY_API_BASE_URL?.trim() || STREAMPAY_DEFAULT_API_BASE,
               extraSupplementaryOnlyKeys: extraMerge ? Object.keys(extraMerge) : [],

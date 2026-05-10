@@ -70,6 +70,11 @@ function mapPrepareError(status: number, body: string): string {
   } catch {
     /* не JSON — nginx/html */
   }
+  if (code === "streampay rates") {
+    return detail
+      ? `Оплата: ${detail}`
+      : "Не удалось получить курс валюты (ЦБ или сеть). Повторите позже.";
+  }
   if (code === "streampay preset") {
     return "Оплата: обновите мини-апп или выберите способ снова.";
   }
