@@ -1854,7 +1854,7 @@ export function startOrderNotifyHttpServer(
           streamPayAmount = normalized.amount;
           amountSource = normalized.source;
 
-          const payloadSp: PendingPaymentOrder = {
+          let payloadSp: PendingPaymentOrder = {
             ...payload,
             transferMethod: presetLabel
               ? `Оплата · StreamPay (${presetLabel})`
@@ -1867,23 +1867,18 @@ export function startOrderNotifyHttpServer(
           const description =
             descParts.join(" ").trim().slice(0, 480) || payloadSp.orderNumber;
           const extraMerge = streamPaySanitizeExtraForMerge(extraRaw);
-          const bodyJson = streamPayBuildCreatePaymentJson(
-            {
-              storeId,
-              customer: String(telegramUserId),
-              externalId: merchantOrderId,
-              description,
-              systemCurrency,
-              paymentType,
-              ...(paymentType === 1 && currencyOpt ? { currency: currencyOpt } : {}),
-              amount: streamPayAmount,
-              successUrl: process.env.STREAMPAY_SUCCESS_URL?.trim() || undefined,
-              failUrl: process.env.STREAMPAY_FAIL_URL?.trim() || undefined,
-              cancelUrl: process.env.STREAMPAY_CANCEL_URL?.trim() || undefined,
-              lang: process.env.STREAMPAY_LANG?.trim() || undefined,
-            },
-            extraMerge,
+
+          const maxAmountTriesRaw = process.env.STREAMPAY_AMOUNT_INVALID_MAX_TRIES?.trim();
+          const maxAmountTries = Math.min(
+            40,
+            Math.max(
+              1,
+              maxAmountTriesRaw && /^\d+$/.test(maxAmountTriesRaw)
+                ? Number(maxAmountTriesRaw)
+                : 15,
+            ),
           );
+
           console.error(
             "[streampay] payment/create resolved fields",
             JSON.stringify({
@@ -1895,23 +1890,78 @@ export function startOrderNotifyHttpServer(
               storeId,
               amount: streamPayAmount,
               amountSource,
+              amountInvalidMaxTries: maxAmountTries,
               apiBase:
                 process.env.STREAMPAY_API_BASE_URL?.trim() || STREAMPAY_DEFAULT_API_BASE,
               extraSupplementaryOnlyKeys: extraMerge ? Object.keys(extraMerge) : [],
             }),
           );
-          console.error("[streampay] payment/create bodyJson", bodyJson);
-          let payUrl: string;
-          try {
-            payUrl = (
-              await streamPayPostCreate(apiBase, bodyJson, seed, {
+
+          let payUrl: string | undefined;
+          let lastCreateErr: Error | null = null;
+          for (let t = 0; t < maxAmountTries; t++) {
+            const bodyJson = streamPayBuildCreatePaymentJson(
+              {
                 storeId,
-                orderHint: payloadSp.orderNumber,
-              })
-            ).payUrl;
-            payUrl = streamPayPayUrlWithOptionalFiatParam(payUrl, presetLabel);
-          } catch (e) {
-            const msg = e instanceof Error ? e.message : String(e);
+                customer: String(telegramUserId),
+                externalId: merchantOrderId,
+                description,
+                systemCurrency,
+                paymentType,
+                ...(paymentType === 1 && currencyOpt ? { currency: currencyOpt } : {}),
+                amount: streamPayAmount,
+                successUrl: process.env.STREAMPAY_SUCCESS_URL?.trim() || undefined,
+                failUrl: process.env.STREAMPAY_FAIL_URL?.trim() || undefined,
+                cancelUrl: process.env.STREAMPAY_CANCEL_URL?.trim() || undefined,
+                lang: process.env.STREAMPAY_LANG?.trim() || undefined,
+              },
+              extraMerge,
+            );
+            console.error(
+              `[streampay] payment/create bodyJson try ${t + 1}/${maxAmountTries}`,
+              bodyJson,
+            );
+            try {
+              payUrl = (
+                await streamPayPostCreate(apiBase, bodyJson, seed, {
+                  storeId,
+                  orderHint: payloadSp.orderNumber,
+                })
+              ).payUrl;
+              payUrl = streamPayPayUrlWithOptionalFiatParam(payUrl, presetLabel);
+              lastCreateErr = null;
+              if (t > 0) {
+                console.warn(
+                  `[streampay] create ok после ${t + 1} попыток, amount=${streamPayAmount} USDT`,
+                );
+              }
+              break;
+            } catch (e) {
+              lastCreateErr = e instanceof Error ? e : new Error(String(e));
+              const msg = lastCreateErr.message;
+              const isUsdtType2 =
+                paymentType === 2 &&
+                systemCurrency.replace(/^\ufeff/, "").trim().toUpperCase().includes("USDT");
+              const invalidAmt =
+                msg.includes("amount_is_invalid") || msg.includes('"amount_is_invalid"');
+              if (isUsdtType2 && invalidAmt && t + 1 < maxAmountTries) {
+                streamPayAmount += 1;
+                amountSource = `${amountSource}+bump_${streamPayAmount}`;
+                payloadSp = {
+                  ...payloadSp,
+                  amountExpected: formatAmountForFk(streamPayAmount),
+                };
+                console.warn(
+                  `[streampay] amount_is_invalid → bump amount=${streamPayAmount} USDT (попытка ${t + 2}/${maxAmountTries})`,
+                );
+                continue;
+              }
+              break;
+            }
+          }
+
+          if (!payUrl) {
+            const msg = lastCreateErr instanceof Error ? lastCreateErr.message : String(lastCreateErr);
             console.error("[streampay] create", msg);
             res.writeHead(502, { "Content-Type": "application/json", ...corsNotifyHeaders });
             res.end(JSON.stringify({ error: "streampay api", detail: msg.slice(0, 800) }));
