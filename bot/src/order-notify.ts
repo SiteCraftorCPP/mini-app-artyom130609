@@ -1218,7 +1218,10 @@ const STREAMPAY_UI_PRESET_LABEL: Record<string, string> = {
 };
 
 /**
- * USDT + type 2: без лишних эвристик. Порог и целые USDT — только если явно заданы в .env.
+ * USDT + type 2: StreamPay часто отклоняет дробные суммы (406 amount_is_invalid).
+ * По умолчанию — округление вверх до следующего целого USDT (1.33 → 2), без искусственного «минимума 5».
+ * Дробная сумма как у ЦБ: STREAMPAY_INVOICE_USDT_ALLOW_FRACTION=1
+ * Жёсткий минимум счёта: только STREAMPAY_MIN_INVOICE_USDT=…
  */
 function streamPayNormalizeUsdtInvoiceAmount(
   paymentType: number,
@@ -1235,14 +1238,14 @@ function streamPayNormalizeUsdtInvoiceAmount(
   }
   let a = Math.round(amount * 100) / 100;
   let src = source;
-  const wholeCeil =
-    process.env.STREAMPAY_INVOICE_USDT_WHOLE_CEIL === "1" ||
-    process.env.STREAMPAY_INVOICE_USDT_WHOLE_CEIL === "true";
-  if (wholeCeil) {
-    const ceiled = Math.max(1, Math.ceil(a - 1e-9));
+  const allowFraction =
+    process.env.STREAMPAY_INVOICE_USDT_ALLOW_FRACTION === "1" ||
+    process.env.STREAMPAY_INVOICE_USDT_ALLOW_FRACTION === "true";
+  if (!allowFraction) {
+    const ceiled = Math.max(1, Math.ceil(a - 1e-12));
     if (ceiled !== a) {
       a = ceiled;
-      src = `${src}+usdt_whole_ceil`;
+      src = `${src}+usdt_ceil_int`;
     }
   }
   const minRaw = process.env.STREAMPAY_MIN_INVOICE_USDT?.trim().toLowerCase();
