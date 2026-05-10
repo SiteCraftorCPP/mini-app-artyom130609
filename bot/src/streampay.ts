@@ -6,6 +6,8 @@
  */
 import { createPrivateKey, createPublicKey, sign, verify } from "node:crypto";
 
+const utf8Encoder = new TextEncoder();
+
 /** Дефолт из документации. */
 export const STREAMPAY_DEFAULT_API_BASE = "https://api.streampay.org";
 
@@ -55,12 +57,13 @@ export function streamPayCreatePublicKey(pubHex64: string): ReturnType<typeof cr
   });
 }
 
-/** Подпись тела запроса к /api/payment/create (строка JSON UTF-8). */
+/** Подпись тела запроса к /api/payment/create (строка JSON UTF-8) — как в доке: TextEncoder + Ed25519. */
 export function streamPaySignUtf8Payload(bodyUtf8: string, seedHex64: string): string {
   const now = new Date();
   const textToSign = bodyUtf8 + streamPayUtcMinute(now);
   const key = streamPayCreatePrivateKey(seedHex64);
-  return sign(null, Buffer.from(textToSign, "utf8"), key).toString("hex");
+  const bytesToSign = utf8Encoder.encode(textToSign);
+  return sign(null, bytesToSign, key).toString("hex");
 }
 
 /**
@@ -198,11 +201,34 @@ function streamPayCurrencyForJson(code: string): string | number {
 /**
  * Тело POST /api/payment/create — порядок ключей как в примере PaymentCreateJs в ЛК.
  * `extraFromEnv` — только дополнительные поля из STREAMPAY_EXTRA_CREATE_FIELDS; валюту/тип/сумму там не дублируй (см. STREAMPAY_CREATE_BODY_CORE_KEYS).
+ *
+ * При `payment_type === 2` по умолчанию — ровно 7 полей из официального примера (без url/lang/extra), пока не задано STREAMPAY_PAYMENT_CREATE_LEGACY_FULL=1.
  */
 export function streamPayBuildCreatePaymentJson(
   i: StreamPayCreatePaymentFields,
   extraFromEnv?: Record<string, unknown> | null,
 ): string {
+  const legacyFull =
+    process.env.STREAMPAY_PAYMENT_CREATE_LEGACY_FULL === "1" ||
+    process.env.STREAMPAY_PAYMENT_CREATE_LEGACY_FULL === "true";
+
+  if (i.paymentType === 2 && !legacyFull) {
+    const amount = Math.round(i.amount * 100) / 100;
+    if (!Number.isFinite(amount) || amount <= 0) {
+      throw new Error("StreamPay: amount в create должно быть конечным числом > 0");
+    }
+    const docBody = {
+      store_id: i.storeId,
+      customer: i.customer,
+      external_id: i.externalId,
+      description: i.description,
+      system_currency: i.systemCurrency.replace(/^\ufeff/, "").trim(),
+      payment_type: Number(i.paymentType),
+      amount,
+    };
+    return JSON.stringify(docBody);
+  }
+
   const paymentTypeOut =
     process.env.STREAMPAY_PAYMENT_TYPE_AS_JSON_STRING === "1" ||
     process.env.STREAMPAY_PAYMENT_TYPE_AS_JSON_STRING === "true"
