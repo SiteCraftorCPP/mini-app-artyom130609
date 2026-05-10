@@ -1,9 +1,13 @@
 /**
- * StreamPay (streampay.org) — как в официальных примерах API из кабинета (PaymentCreateJs / CallbackGetJs / CallbackPostJs).
- * Создание: POST {API_BASE_URL}/api/payment/create + заголовок Signature (Ed25519).
- * Подпись: JSON-тело + UTC время YYYYMMDD:HHMM (без секунд), как в доке.
+ * StreamPay (api.streampay.org) — официальная документация API.
+ * Создание: POST {API_BASE_URL}/api/payment/create, заголовки: signature (нижний регистр), Content-type: application/json.
+ * Подпись: JSON-тело (UTF-8) + UTC YYYYMMDD:HHMM, Ed25519 PKCS#8 seed 32 байта.
+ * Пример тела: store_id, customer, external_id, description, system_currency (напр. "USDT"), payment_type: 2, amount.
  */
 import { createPrivateKey, createPublicKey, sign, verify } from "node:crypto";
+
+/** Дефолт из документации. */
+export const STREAMPAY_DEFAULT_API_BASE = "https://api.streampay.org";
 
 /** PKCS#8 prefix + 32-byte seed — см. пример «Private key» в интеграции. */
 const STREAMPAY_PRIVATE_DER_PREFIX_HEX = "302e020100300506032b657004220420";
@@ -300,9 +304,8 @@ export async function streamPayPostCreate(
   const r = await fetch(url, {
     method: "POST",
     headers: {
-      Signature: signature,
-      "Content-Type": "application/json",
-      Accept: "application/json",
+      signature,
+      "Content-type": "application/json",
     },
     body: bodyJson,
   });

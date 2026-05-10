@@ -38,3 +38,14 @@ for (const k of keys) {
   const show = v === undefined ? "(undefined)" : JSON.stringify(v);
   console.log(`${k}=${show}`);
 }
+
+const apiBase = (process.env.STREAMPAY_API_BASE_URL || "").trim() || "https://api.streampay.org";
+const curUrl = `${apiBase.replace(/\/$/, "")}/api/payment/currencies`;
+try {
+  const r = await fetch(curUrl);
+  const text = await r.text();
+  const preview = text.length > 1200 ? `${text.slice(0, 1200)}…` : text;
+  console.log(`\nProbe GET ${curUrl}\n  status: ${r.status}\n  body: ${preview}`);
+} catch (e) {
+  console.warn("\nProbe currencies failed:", e instanceof Error ? e.message : e);
+}

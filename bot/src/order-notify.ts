@@ -71,6 +71,7 @@ import {
 } from "./payment-pending-store.js";
 import { putKztSession } from "./kzt-receipt-store.js";
 import {
+  STREAMPAY_DEFAULT_API_BASE,
   streamPayBuildCreatePaymentJson,
   streamPayExtractCallbackFields,
   streamPayIsPaidStatus,
@@ -1184,9 +1185,15 @@ function amountsMatchFreekassa(expected: string, got: string): boolean {
   return Math.abs(a - b) < 0.01;
 }
 
-/** Сколько UAH за 1 RUB заказа (мини-апп шлёт amountRub). Пусто — в StreamPay уходит та же числовая сумма, что и ₽ в заказе. */
-function streamPayUahPerOneRubFromEnv(): number | null {
-  const raw = process.env.STREAMPAY_UAH_PER_RUB?.trim();
+/**
+ * Сколько единиц system_currency («системной валюты» счёта, напр. USDT) на 1 ₽ заказа.
+ * Мини-апп шлёт amountRub. Пусто — amount в API = amountRub (как число).
+ * Алиас для ясности: STREAMPAY_ORDER_RUB_TO_INVOICE_RATE (если задан — он приоритетнее UAH_*).
+ */
+function streamPayInvoiceUnitsPerRubFromEnv(): number | null {
+  const raw =
+    process.env.STREAMPAY_ORDER_RUB_TO_INVOICE_RATE?.trim() ||
+    process.env.STREAMPAY_UAH_PER_RUB?.trim();
   if (!raw) {
     return null;
   }
@@ -1638,7 +1645,7 @@ export function startOrderNotifyHttpServer(
 
         if (body.method === "streampay") {
           const apiBase =
-            process.env.STREAMPAY_API_BASE_URL?.trim() || "https://streampay.org";
+            process.env.STREAMPAY_API_BASE_URL?.trim() || STREAMPAY_DEFAULT_API_BASE;
           const storeRaw = process.env.STREAMPAY_STORE_ID?.trim();
           const seed = process.env.STREAMPAY_PRIVATE_KEY_HEX?.trim();
           if (!storeRaw || !/^\d+$/.test(storeRaw)) {
@@ -1722,10 +1729,10 @@ export function startOrderNotifyHttpServer(
           }
           const storeId = Number(storeRaw);
           const merchantOrderId = buildMerchantOrderId();
-          const uahPerRub = streamPayUahPerOneRubFromEnv();
+          const unitsPerRub = streamPayInvoiceUnitsPerRubFromEnv();
           const streamPayAmount =
-            uahPerRub != null
-              ? Math.round(amountNum * uahPerRub * 100) / 100
+            unitsPerRub != null
+              ? Math.round(amountNum * unitsPerRub * 100) / 100
               : amountNum;
           const payloadSp: PendingPaymentOrder = {
             ...payload,
@@ -1764,7 +1771,7 @@ export function startOrderNotifyHttpServer(
               storeId,
               amount: streamPayAmount,
               apiBase:
-                process.env.STREAMPAY_API_BASE_URL?.trim() || "https://streampay.org",
+                process.env.STREAMPAY_API_BASE_URL?.trim() || STREAMPAY_DEFAULT_API_BASE,
               extraSupplementaryOnlyKeys: extraMerge ? Object.keys(extraMerge) : [],
             }),
           );
@@ -1990,7 +1997,7 @@ export function startOrderNotifyHttpServer(
         res.writeHead(503, corsNotifyHeaders).end("no streampay public key");
         return;
       }
-      const sigRaw = req.headers["signature"];
+      const sigRaw = req.headers["signature"] ?? req.headers["Signature"];
       const signatureHex =
         typeof sigRaw === "string" ? sigRaw : Array.isArray(sigRaw) ? (sigRaw[0] ?? "") : "";
       if (!signatureHex) {
