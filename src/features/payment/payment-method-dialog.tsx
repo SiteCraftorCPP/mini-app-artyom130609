@@ -67,11 +67,15 @@ type PaymentMethodDialogProps = {
   context: PaymentDialogContext | null;
 };
 
-const RUB_METHODS: { id: PaymentMethodCode; label: string }[] = [
-  { id: "sbp", label: PAYMENT_TEXT.methodSbp },
-  { id: "mir", label: PAYMENT_TEXT.methodMir },
-  { id: "card_rub", label: PAYMENT_TEXT.methodCard },
-  { id: "streampay", label: PAYMENT_TEXT.methodStreamPay },
+/** Все варианты с `streampay` ведут на один и тот же prepare/streampay (одна ссылка оплаты); различаются только подпись кнопки. */
+const RUB_METHODS: { rowKey: string; method: PaymentMethodCode; label: string }[] = [
+  { rowKey: "sbp", method: "sbp", label: PAYMENT_TEXT.methodSbp },
+  { rowKey: "mir", method: "mir", label: PAYMENT_TEXT.methodMir },
+  { rowKey: "card_rub", method: "card_rub", label: PAYMENT_TEXT.methodCard },
+  { rowKey: "streampay-tenge", method: "streampay", label: "ТЕНГЕ" },
+  { rowKey: "streampay-uah", method: "streampay", label: "ГРИВНЫ" },
+  { rowKey: "streampay-byn", method: "streampay", label: "БЕЛОРУССКИЙ РУБЛЬ" },
+  { rowKey: "streampay-aze", method: "streampay", label: "АЗЕЙБАРДЖАН" },
 ];
 
 /** Крупные кнопки под палец, читаемый текст */
@@ -505,12 +509,12 @@ export function PaymentMethodDialog({
             <div className="flex flex-col gap-3">
               {RUB_METHODS.map((m) => (
                 <Button
-                  key={m.id}
+                  key={m.rowKey}
                   type="button"
                   size="default"
                   disabled={busy}
                   className={methodBtnClass}
-                  onClick={() => void onSelectRub(m.id)}
+                  onClick={() => void onSelectRub(m.method)}
                 >
                   {m.label}
                 </Button>
