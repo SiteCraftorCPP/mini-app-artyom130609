@@ -2168,13 +2168,19 @@ export function startOrderNotifyHttpServer(
           }
           if (!amountsMatchFreekassa(pending.amountExpected, fields.amount)) {
             console.warn(
-              "[streampay] сумма не совпала",
+              "[streampay] сумма не совпала, обновляем заказ",
               fields.externalId,
-              pending.amountExpected,
-              fields.amount,
+              "ожидалось:", pending.amountExpected,
+              "фактически:", fields.amount,
             );
-            res.writeHead(200, corsNotifyHeaders).end();
-            return;
+            const expectedNum = parseFloat(pending.amountExpected);
+            const actualNum = parseFloat(fields.amount);
+            if (!isNaN(expectedNum) && !isNaN(actualNum) && expectedNum > 0) {
+              const ratio = actualNum / expectedNum;
+              pending.amountRub = Math.round((pending.amountRub ?? 0) * ratio * 100) / 100;
+              pending.amountExpected = fields.amount;
+              pending.transferMethod = `${pending.transferMethod} (Сумма изменена: ${actualNum} вместо ${expectedNum})`;
+            }
           }
           markIntidProcessed(fields.invoice);
           await deliverPaidPendingOrder(bot, miniAppUrl, pending);
@@ -2222,13 +2228,19 @@ export function startOrderNotifyHttpServer(
         }
         if (!amountsMatchFreekassa(pending.amountExpected, fields.amount)) {
           console.warn(
-            "[streampay] сумма не совпала",
+            "[streampay] сумма не совпала, обновляем заказ",
             fields.externalId,
-            pending.amountExpected,
-            fields.amount,
+            "ожидалось:", pending.amountExpected,
+            "фактически:", fields.amount,
           );
-          res.writeHead(200, corsNotifyHeaders).end();
-          return;
+          const expectedNum = parseFloat(pending.amountExpected);
+          const actualNum = parseFloat(fields.amount);
+          if (!isNaN(expectedNum) && !isNaN(actualNum) && expectedNum > 0) {
+            const ratio = actualNum / expectedNum;
+            pending.amountRub = Math.round((pending.amountRub ?? 0) * ratio * 100) / 100;
+            pending.amountExpected = fields.amount;
+            pending.transferMethod = `${pending.transferMethod} (Сумма изменена: ${actualNum} вместо ${expectedNum})`;
+          }
         }
         markIntidProcessed(fields.invoice);
         await deliverPaidPendingOrder(bot, miniAppUrl, pending);

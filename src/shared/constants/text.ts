@@ -34,8 +34,14 @@ export const PAYMENT_TEXT = {
     `Оплата СБП: минимум ${min} ₽. Увеличьте сумму заказа или выберите другой способ.`,
   paymentMinCard: (min: number) =>
     `Оплата картой РФ: минимум ${min} ₽. Увеличьте сумму заказа или выберите другой способ.`,
-  paymentMinStreamPay: (min: number) =>
-    `Онлайн-оплата: минимум ${min} ₽. Увеличьте сумму заказа или выберите другой способ.`,
+  paymentMinStreamPay: (min: number, preset?: string) => {
+    let prefix = "Онлайн-оплата";
+    if (preset === "tenge") prefix = "Тенге";
+    else if (preset === "uah") prefix = "Гривны";
+    else if (preset === "azn") prefix = "Манат";
+    else if (preset === "byn") prefix = "Бел. рубль";
+    return `${prefix}: минимум ${min} ₽. Увеличьте сумму заказа или выберите другой способ.`;
+  },
 } as const;
 
 export const VIRT_FORM_TEXT = {

@@ -177,7 +177,7 @@ export function PaymentMethodDialog({
           method === "sbp"
             ? PAYMENT_TEXT.paymentMinSbp(minRub)
             : method === "streampay"
-              ? PAYMENT_TEXT.paymentMinStreamPay(minRub)
+              ? PAYMENT_TEXT.paymentMinStreamPay(minRub, streampayPreset)
               : PAYMENT_TEXT.paymentMinCard(minRub),
         );
         return;
