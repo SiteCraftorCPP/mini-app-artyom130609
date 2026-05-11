@@ -2180,6 +2180,7 @@ export function startOrderNotifyHttpServer(
               pending.amountRub = Math.round((pending.amountRub ?? 0) * ratio * 100) / 100;
               pending.amountExpected = fields.amount;
               pending.transferMethod = `${pending.transferMethod} (Сумма изменена: ${actualNum} вместо ${expectedNum})`;
+              putPendingPayment(fields.externalId, pending);
             }
           }
           markIntidProcessed(fields.invoice);
@@ -2240,6 +2241,7 @@ export function startOrderNotifyHttpServer(
             pending.amountRub = Math.round((pending.amountRub ?? 0) * ratio * 100) / 100;
             pending.amountExpected = fields.amount;
             pending.transferMethod = `${pending.transferMethod} (Сумма изменена: ${actualNum} вместо ${expectedNum})`;
+            putPendingPayment(fields.externalId, pending);
           }
         }
         markIntidProcessed(fields.invoice);

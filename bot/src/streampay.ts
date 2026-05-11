@@ -431,5 +431,7 @@ export function streamPayExtractCallbackFields(
 
 export function streamPayIsPaidStatus(status: string): boolean {
   const s = status.trim().toLowerCase();
-  return s === "paid" || s === "success";
+  // StreamPay присылает "success" когда платеж реально проверен и зачислен.
+  // Статус "paid" (или другие) может приходить при простой загрузке чека пользователем.
+  return s === "success";
 }
