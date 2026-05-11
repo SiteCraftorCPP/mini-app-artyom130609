@@ -1762,6 +1762,17 @@ export function startOrderNotifyHttpServer(
           let paymentTypeVal = streamPayPickPaymentType(extraRaw);
           let currencyOpt = streamPayPickStr("STREAMPAY_CURRENCY", "currency", extraRaw);
 
+          // Динамическое переопределение для фиатных кнопок (если включено)
+          if (
+            presetLabel &&
+            (process.env.STREAMPAY_DYNAMIC_FIAT_INVOICE === "1" ||
+              process.env.STREAMPAY_DYNAMIC_FIAT_INVOICE === "true")
+          ) {
+            systemCurrency = presetLabel; // KZT, UAH, BYN, AZN
+            paymentTypeVal = 1;
+            currencyOpt = presetLabel;
+          }
+
           if (
             process.env.STREAMPAY_FORCE_ISO4217_LOWER === "1" ||
             process.env.STREAMPAY_FORCE_ISO4217_LOWER === "true"
