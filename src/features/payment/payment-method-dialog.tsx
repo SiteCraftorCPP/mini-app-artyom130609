@@ -1,27 +1,20 @@
-import { ArrowLeft, Loader2, X } from "lucide-react";
+import { Loader2, X } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
-import { useWebApp } from "@vkruglikov/react-telegram-web-app";
 
 import {
-  PAYMENT_MIN_KZT,
   minRubForPaymentMethod,
-  minimalRubForKztPay,
-  rubMeetsKztMinimum,
 } from "@/shared/constants/payment-method-limits";
-import { KZT_REQUISITES, rubToKztAmount } from "@/shared/constants/payment-requisites-kzt";
 import { CURRENCY } from "@/shared/constants/common";
-import { PAYMENT_TEXT, TEXT } from "@/shared/constants/text";
+import { PAYMENT_TEXT } from "@/shared/constants/text";
 import { formatNumberWithSpaces } from "@/shared/lib/format-numbers";
 import {
-  type KztPrepareInput,
   type PaymentMethodCode,
   type PaymentPrepareInput,
   type StreampayFiatPreset,
   openPaymentUrl,
-  requestKztPrepare,
   requestPaymentPrepare,
 } from "@/shared/lib/prepare-payment";
-import { showErrorMessage, showSuccessMessage } from "@/shared/lib/notify";
+import { showErrorMessage } from "@/shared/lib/notify";
 import { Button } from "@/shared/ui/button";
 import {
   Dialog,
@@ -78,10 +71,10 @@ const RUB_METHODS: {
   { rowKey: "sbp", method: "sbp", label: PAYMENT_TEXT.methodSbp },
   { rowKey: "mir", method: "mir", label: PAYMENT_TEXT.methodMir },
   { rowKey: "card_rub", method: "card_rub", label: PAYMENT_TEXT.methodCard },
-  { rowKey: "streampay-tenge", method: "streampay", label: "ТЕНГЕ", streampayPreset: "tenge" },
-  { rowKey: "streampay-uah", method: "streampay", label: "ГРИВНЫ", streampayPreset: "uah" },
-  { rowKey: "streampay-byn", method: "streampay", label: "БЕЛОРУССКИЙ РУБЛЬ", streampayPreset: "byn" },
-  { rowKey: "streampay-aze", method: "streampay", label: "АЗЕЙБАРДЖАН", streampayPreset: "azn" },
+  { rowKey: "streampay-tenge", method: "streampay", label: "Тенге (Казахстан)", streampayPreset: "tenge" },
+  { rowKey: "streampay-uah", method: "streampay", label: "Гривны (Украина)", streampayPreset: "uah" },
+  { rowKey: "streampay-aze", method: "streampay", label: "Манат (Азербайджан)", streampayPreset: "azn" },
+  { rowKey: "streampay-byn", method: "streampay", label: "Белорусский рубль", streampayPreset: "byn" },
 ];
 
 /** Крупные кнопки под палец, читаемый текст */
@@ -136,44 +129,6 @@ function buildPrepareInput(
   };
 }
 
-function buildKztPrepareInput(
-  initData: string,
-  amountRub: number,
-  ctx: PaymentDialogContext,
-): KztPrepareInput {
-  if (ctx.orderKind === "virt") {
-    return {
-      initData,
-      orderKind: "virt",
-      amountRub,
-      game: ctx.game,
-      server: ctx.server,
-      bankAccount: ctx.bankAccount,
-      virtAmountLabel: ctx.virtAmountLabel,
-      transferMethod: ctx.transferMethod,
-      promoCode: ctx.promoCode,
-    };
-  }
-  if (ctx.orderKind === "account") {
-    return {
-      initData,
-      orderKind: "account",
-      amountRub,
-      game: ctx.game,
-      server: ctx.server,
-      transferMethod: ctx.transferMethod,
-      accountMode: ctx.accountMode,
-      accountOptionLabel: ctx.accountOptionLabel,
-    };
-  }
-  return {
-    initData,
-    orderKind: "other_service",
-    amountRub,
-    otherService: ctx.otherService,
-  };
-}
-
 function formatErr(e: unknown): string {
   if (e instanceof Error && e.message) {
     return e.message;
@@ -188,15 +143,10 @@ export function PaymentMethodDialog({
   amountRub,
   context,
 }: PaymentMethodDialogProps) {
-  const webApp = useWebApp();
-  const [step, setStep] = useState<"list" | "kzt">("list");
-  const [kztPhase, setKztPhase] = useState<"details" | "goBot">("details");
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     if (open) {
-      setStep("list");
-      setKztPhase("details");
       setBusy(false);
     }
   }, [open]);
@@ -204,23 +154,12 @@ export function PaymentMethodDialog({
   const resetAndClose = useCallback(
     (v: boolean) => {
       if (!v) {
-        setStep("list");
-        setKztPhase("details");
         setBusy(false);
       }
       onOpenChange(v);
     },
     [onOpenChange],
   );
-
-  const copy = useCallback(async (label: string, value: string) => {
-    try {
-      await navigator.clipboard.writeText(value);
-      showSuccessMessage(TEXT.notification.copied);
-    } catch {
-      showErrorMessage(label);
-    }
-  }, []);
 
   const onSelectRub = useCallback(
     async (method: PaymentMethodCode, streampayPreset?: StreampayFiatPreset) => {
@@ -270,70 +209,6 @@ export function PaymentMethodDialog({
     [amountRub, context, initData, resetAndClose],
   );
 
-  const onKztMarkPaidClick = useCallback(() => {
-    if (!initData.trim() || !context) {
-      showErrorMessage("Откройте магазин из Telegram (кнопка в боте), не из обычного браузера.");
-      return;
-    }
-    if (!Number.isFinite(amountRub) || amountRub <= 0) {
-      showErrorMessage("Некорректная сумма. Вернитесь к форме и проверьте рубли.");
-      return;
-    }
-    if (!rubMeetsKztMinimum(amountRub)) {
-      const approxRub = formatNumberWithSpaces(minimalRubForKztPay()).replace(/\s/g, "\u00a0");
-      showErrorMessage(PAYMENT_TEXT.paymentMinKzt(PAYMENT_MIN_KZT, approxRub));
-      return;
-    }
-    setKztPhase("goBot");
-  }, [amountRub, context, initData]);
-
-  const onKztGoToBot = useCallback(async () => {
-    if (!initData.trim() || !context) {
-      showErrorMessage("Откройте магазин из Telegram (кнопка в боте), не из обычного браузера.");
-      return;
-    }
-    if (!Number.isFinite(amountRub) || amountRub <= 0) {
-      showErrorMessage("Некорректная сумма. Вернитесь к форме и проверьте рубли.");
-      return;
-    }
-    setBusy(true);
-    try {
-      const body = buildKztPrepareInput(initData, amountRub, context);
-      const res = await requestKztPrepare(body);
-      const url = `https://t.me/${res.botUsername}?start=${encodeURIComponent(res.startParam)}`;
-      const w = webApp as {
-        openTelegramLink?: (u: string) => void;
-        openLink?: (u: string, o?: { try_instant_view?: boolean }) => void;
-      };
-      if (typeof w.openTelegramLink === "function") {
-        w.openTelegramLink(url);
-      } else if (typeof w.openLink === "function") {
-        w.openLink(url, { try_instant_view: false });
-      } else {
-        openPaymentUrl(url);
-      }
-      resetAndClose(false);
-    } catch (e) {
-      showErrorMessage(formatErr(e));
-    } finally {
-      setBusy(false);
-    }
-  }, [amountRub, context, initData, resetAndClose, webApp]);
-
-  const openKztDetailsStep = useCallback(() => {
-    if (!Number.isFinite(amountRub) || amountRub <= 0) {
-      showErrorMessage("Некорректная сумма. Вернитесь к форме и проверьте рубли.");
-      return;
-    }
-    if (!rubMeetsKztMinimum(amountRub)) {
-      const approxRub = formatNumberWithSpaces(minimalRubForKztPay()).replace(/\s/g, "\u00a0");
-      showErrorMessage(PAYMENT_TEXT.paymentMinKzt(PAYMENT_MIN_KZT, approxRub));
-      return;
-    }
-    setKztPhase("details");
-    setStep("kzt");
-  }, [amountRub]);
-
   if (!context) {
     return null;
   }
@@ -342,13 +217,6 @@ export function PaymentMethodDialog({
     /\s/g,
     "\u00a0",
   );
-  const amountKztLine =
-    Number.isFinite(amountRub) && amountRub > 0
-      ? `${formatNumberWithSpaces(rubToKztAmount(Math.round(amountRub * 100) / 100))} ₸`.replace(
-          /\s/g,
-          "\u00a0",
-        )
-      : "";
 
   return (
     <Dialog open={open} onOpenChange={resetAndClose}>
@@ -360,36 +228,14 @@ export function PaymentMethodDialog({
         className="flex !max-h-[min(92dvh,700px)] !w-[min(100vw-0.5rem,26rem)] flex-col p-0"
         aria-describedby={undefined}
       >
-        {/* шапка: RUB — сумма; KZT — только заголовок (без лишнего текста) */}
         <div
           className={cn(
             "border-app-border-soft text-text-primary flex shrink-0 flex-col gap-2 border-b px-4 pt-3 pb-3.5",
-            step === "kzt" && "border-b-0 pb-2",
           )}
         >
           <div className="flex w-full min-w-0 items-start justify-between gap-2">
             <div className="flex w-9 shrink-0 justify-start">
-              {step === "kzt" ? (
-                <button
-                  type="button"
-                  className="text-app-text-muted flex size-8 items-center justify-center rounded-[4px] border-0 bg-white/5 transition hover:bg-white/10 hover:brightness-110"
-                  onClick={() => {
-                    if (step === "kzt" && kztPhase === "goBot") {
-                      setKztPhase("details");
-                      return;
-                    }
-                    if (step === "kzt") {
-                      setStep("list");
-                      setKztPhase("details");
-                    }
-                  }}
-                  aria-label={PAYMENT_TEXT.backToMethods}
-                >
-                  <ArrowLeft className="h-4 w-4" />
-                </button>
-              ) : (
-                <span className="inline-block size-8 shrink-0" aria-hidden />
-              )}
+              <span className="inline-block size-8 shrink-0" aria-hidden />
             </div>
             <div className="min-w-0 flex-1 px-1 text-center">
               <AppText
@@ -397,17 +243,15 @@ export function PaymentMethodDialog({
                 variant="primaryStrong"
                 className="text-base leading-tight font-bold tracking-tight"
               >
-                {step === "list" ? PAYMENT_TEXT.title : PAYMENT_TEXT.kztBlockTitle}
+                {PAYMENT_TEXT.title}
               </AppText>
-              {step === "list" && (
-                <AppText
-                  tag={TAG.p}
-                  variant="darkStrong"
-                  className="text-app-text-muted mt-1.5 text-center text-xs font-medium"
-                >
-                  {PAYMENT_TEXT.subtitleMethods}
-                </AppText>
-              )}
+              <AppText
+                tag={TAG.p}
+                variant="darkStrong"
+                className="text-app-text-muted mt-1.5 text-center text-xs font-medium"
+              >
+                {PAYMENT_TEXT.subtitleMethods}
+              </AppText>
             </div>
             <div className="flex w-9 shrink-0 justify-end">
               <DialogClose
@@ -418,108 +262,35 @@ export function PaymentMethodDialog({
               </DialogClose>
             </div>
           </div>
-          {step === "list" && (
-            <div className="border-app-border-soft tw-bg-gradient-badge-background/90 flex w-full items-center justify-center rounded-2xl border py-2.5 text-white">
-              <AppText tag={TAG.span} variant="primaryStrong" className="text-sm font-bold tabular-nums">
-                {amountLine}
-              </AppText>
-            </div>
-          )}
+          <div className="border-app-border-soft tw-bg-gradient-badge-background/90 flex w-full items-center justify-center rounded-2xl border py-2.5 text-white">
+            <AppText tag={TAG.span} variant="primaryStrong" className="text-sm font-bold tabular-nums">
+              {amountLine}
+            </AppText>
+          </div>
         </div>
 
         <div className="relative flex min-h-0 flex-1 flex-col">
-        <div
-          className={cn(
-            "flex min-h-0 flex-1 flex-col gap-0 overflow-y-auto overscroll-contain px-4 pb-5 pt-1",
-            busy && "pointer-events-none opacity-90",
-          )}
-        >
-          {busy && (
-            <div className="text-app-text-muted absolute inset-0 z-10 flex items-center justify-center bg-black/25 backdrop-blur-[2px]">
-              <div className="bg-surface-base flex items-center gap-2.5 rounded-2xl border border-white/20 px-4 py-3 shadow-lg">
-                <Loader2
-                  className="text-app-highlight h-6 w-6 shrink-0 animate-spin"
-                  aria-hidden
-                />
-                <AppText tag={TAG.span} variant="darkStrong" className="text-sm">
-                  {PAYMENT_TEXT.preparing}
-                </AppText>
-              </div>
-            </div>
-          )}
-
-          {step === "kzt" && kztPhase === "goBot" ? (
-            <div className="mt-2 flex flex-1 flex-col justify-start gap-5 px-1 pb-6">
-              <AppText
-                tag={TAG.p}
-                variant="darkStrong"
-                className="text-center text-sm font-semibold leading-snug text-white"
-              >
-                {PAYMENT_TEXT.kztGoToBotBody}
-              </AppText>
-              <Button
-                type="button"
-                size="default"
-                disabled={busy}
-                className={cn(methodBtnClass, "!font-bold")}
-                onClick={() => void onKztGoToBot()}
-              >
-                {PAYMENT_TEXT.kztGoToBotButton}
-              </Button>
-            </div>
-          ) : step === "kzt" ? (
-            <div className="mt-2 flex flex-1 flex-col justify-start gap-4 px-1 pb-6">
-              {amountKztLine ? (
-                <div className="border-app-border-soft tw-bg-gradient-badge-background/90 flex w-full flex-col items-center justify-center gap-0.5 rounded-2xl border py-3 text-white">
-                  <AppText
-                    tag={TAG.span}
-                    variant="primaryStrong"
-                    className="text-xs font-semibold uppercase tracking-wide opacity-90"
-                  >
-                    {PAYMENT_TEXT.kztAmountDueLine}
-                  </AppText>
-                  <AppText tag={TAG.span} variant="primaryStrong" className="text-base font-bold tabular-nums">
-                    {amountKztLine}
+          <div
+            className={cn(
+              "flex min-h-0 flex-1 flex-col gap-0 overflow-y-auto overscroll-contain px-4 pb-5 pt-1",
+              busy && "pointer-events-none opacity-90",
+            )}
+          >
+            {busy && (
+              <div className="text-app-text-muted absolute inset-0 z-10 flex items-center justify-center bg-black/25 backdrop-blur-[2px]">
+                <div className="bg-surface-base flex items-center gap-2.5 rounded-2xl border border-white/20 px-4 py-3 shadow-lg">
+                  <Loader2
+                    className="text-app-highlight h-6 w-6 shrink-0 animate-spin"
+                    aria-hidden
+                  />
+                  <AppText tag={TAG.span} variant="darkStrong" className="text-sm">
+                    {PAYMENT_TEXT.preparing}
                   </AppText>
                 </div>
-              ) : null}
-              <div className="flex flex-col gap-3">
-                <Button
-                  type="button"
-                  size="default"
-                  className={methodBtnClass}
-                  onClick={() => void copy("Halyk", KZT_REQUISITES.halyk)}
-                >
-                  {PAYMENT_TEXT.copyHalyk}
-                </Button>
-                <Button
-                  type="button"
-                  size="default"
-                  className={methodBtnClass}
-                  onClick={() => void copy("Kaspi", KZT_REQUISITES.kaspi)}
-                >
-                  {PAYMENT_TEXT.copyKaspi}
-                </Button>
               </div>
-              <AppText
-                tag={TAG.p}
-                variant="darkStrong"
-                className="text-app-text-muted px-0.5 text-center text-xs font-medium leading-snug whitespace-pre-line"
-              >
-                {PAYMENT_TEXT.kztInstructions}
-              </AppText>
-              <Button
-                type="button"
-                size="default"
-                disabled={busy}
-                className={cn(methodBtnClass, "!font-bold")}
-                onClick={onKztMarkPaidClick}
-              >
-                {PAYMENT_TEXT.kztPaidButton}
-              </Button>
-            </div>
-          ) : (
-            <div className="flex flex-col gap-3">
+            )}
+
+            <div className="mt-2 flex flex-col gap-3">
               {RUB_METHODS.map((m) => (
                 <Button
                   key={m.rowKey}
@@ -532,18 +303,8 @@ export function PaymentMethodDialog({
                   {m.label}
                 </Button>
               ))}
-              <Button
-                type="button"
-                size="default"
-                disabled={busy}
-                className={cn(methodBtnClass, "mt-0.5")}
-                onClick={openKztDetailsStep}
-              >
-                {PAYMENT_TEXT.methodKzt}
-              </Button>
             </div>
-          )}
-        </div>
+          </div>
         </div>
       </DialogContent>
     </Dialog>

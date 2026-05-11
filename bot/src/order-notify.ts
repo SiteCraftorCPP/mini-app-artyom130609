@@ -69,7 +69,6 @@ import {
   putPendingPayment,
   type PendingPaymentOrder,
 } from "./payment-pending-store.js";
-import { putKztSession } from "./kzt-receipt-store.js";
 import {
   STREAMPAY_DEFAULT_API_BASE,
   streamPayBuildCreatePaymentJson,
@@ -1345,7 +1344,7 @@ function fkMethodId(m: "sbp" | "mir" | "card_rub"): number {
   return resolveFreeKassaMethodId(m);
 }
 
-/** Тело prepare / kzt-prepare без поля method (KZT не использует FreeKassa). */
+/** Тело prepare без поля method */
 export type PaymentPrepareBodyBase = Omit<PaymentPrepareJson, "method">;
 
 type BuildPendingFail = { ok: false; status: number; error: string };
@@ -2113,60 +2112,6 @@ export function startOrderNotifyHttpServer(
       return;
     }
 
-    if (req.method === "POST" && url === "/notify/payment/kzt-prepare") {
-      if (!botToken) {
-        res.writeHead(503, corsNotifyHeaders).end(JSON.stringify({ error: "no bot token" }));
-        return;
-      }
-      try {
-        const body = await readJsonBody<PaymentPrepareBodyBase>(req);
-        const built = buildPendingPayloadForPaymentBody(body, botToken);
-        if (!built.ok) {
-          res.writeHead(built.status, { "Content-Type": "application/json", ...corsNotifyHeaders });
-          res.end(JSON.stringify({ error: built.error }));
-          return;
-        }
-        let { payload } = built;
-        const kztTransferSuffix = "Перевод в тенге (KZT) по реквизитам";
-        if (payload.orderKind === "virt" || payload.orderKind === "account") {
-          payload = {
-            ...payload,
-            transferMethod: kztTransferSuffix,
-          };
-        } else if (payload.orderKind === "other_service") {
-          const base = payload.transferMethod?.trim() || "Другие услуги";
-          payload = {
-            ...payload,
-            transferMethod: `${base} · ${kztTransferSuffix}`,
-          };
-        }
-        const token = randomBytes(9).toString("hex");
-        putKztSession(token, {
-          token,
-          telegramUserId: payload.telegramUserId,
-          state: "await_photo",
-          pending: payload,
-          createdAt: Date.now(),
-        });
-        const botUsername = resolveReferralBotHandle();
-        res.writeHead(200, { "Content-Type": "application/json", ...corsNotifyHeaders });
-        res.end(
-          JSON.stringify({
-            ok: true,
-            startParam: `kzt_${token}`,
-            botUsername,
-            orderNumber: payload.orderNumber,
-            orderId: payload.orderId,
-          }),
-        );
-      } catch (e) {
-        console.error("[payment] /notify/payment/kzt-prepare", e);
-        res.writeHead(500, { "Content-Type": "application/json", ...corsNotifyHeaders });
-        res.end(JSON.stringify({ error: "server" }));
-      }
-      return;
-    }
-
     if ((req.method === "GET" || req.method === "POST") && url === "/notify/streampay") {
       const pubHex = process.env.STREAMPAY_PUBLIC_KEY_HEX?.trim();
       if (!pubHex) {
@@ -2373,7 +2318,6 @@ export function startOrderNotifyHttpServer(
         url === "/notify/sell-virt-webapp" ||
         url === "/notify/virt-order-success" ||
         url === "/notify/payment/prepare" ||
-        url === "/notify/payment/kzt-prepare" ||
         url === "/notify/freekassa" ||
         url === "/notify/streampay" ||
         url === "/notify/referral" ||

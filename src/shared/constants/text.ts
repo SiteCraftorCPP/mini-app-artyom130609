@@ -24,36 +24,18 @@ export const TEXT = {
 export const PAYMENT_TEXT = {
   title: "Оплата",
   subtitleMethods: "Выберите способ",
-  kztBlockTitle: "Перевод в тенге (KZT)",
-  kztNoteP1: "Счета ниже — для ручного перевода. О заказе в боте сразу не узнает система: подтверждение вручную.",
-  kztNoteP2: "Нужен автоматический учёт — выберите СБП или карту (RUB) на предыдущем экране.",
   backToMethods: "← К способам оплаты",
   preparing: "Создаём ссылку…",
-  copyHalyk: "Скопировать Halyk Bank",
-  copyKaspi: "Скопировать Kaspi.kz",
-  kztClose: "Готово",
-  halykLabel: "Halyk Bank",
-  kaspiLabel: "Kaspi.kz",
   recipient: "Получатель",
   methodSbp: "СБП (RUB)",
   methodMir: "КАРТА РФ (МИР, СБЕРКИДС)",
   methodCard: "КАРТА РФ #2 (VISA, MASTERCARD)",
-  methodKzt: "Тенге (KZT) — реквизиты",
-  kztInstructions:
-    "Скопируйте подходящие для вас банковские реквизиты и выполните перевод.\nПосле оплаты нажмите кнопку «Я оплатил».",
-  kztPaidButton: "Я оплатил",
-  kztAmountDueLine: "Сумма к оплате",
-  kztGoToBotBody:
-    "Чтобы продолжить оформление заказа, выйдите из магазина и перейдите в бота.",
-  kztGoToBotButton: "Перейти к боту",
   paymentMinSbp: (min: number) =>
     `Оплата СБП: минимум ${min} ₽. Увеличьте сумму заказа или выберите другой способ.`,
   paymentMinCard: (min: number) =>
     `Оплата картой РФ: минимум ${min} ₽. Увеличьте сумму заказа или выберите другой способ.`,
   paymentMinStreamPay: (min: number) =>
     `Онлайн-оплата: минимум ${min} ₽. Увеличьте сумму заказа или выберите другой способ.`,
-  paymentMinKzt: (minKzt: number, approxRub: string) =>
-    `Оплата в тенге: минимум ${minKzt} ₸ (около ${approxRub} ₽ с учётом курса). Увеличьте сумму заказа.`,
 } as const;
 
 export const VIRT_FORM_TEXT = {
