@@ -171,7 +171,7 @@ export function PaymentMethodDialog({
         showErrorMessage("Некорректная сумма. Вернитесь к форме и проверьте рубли.");
         return;
       }
-      const minRub = minRubForPaymentMethod(method);
+      const minRub = minRubForPaymentMethod(method, streampayPreset);
       if (amountRub + 1e-9 < minRub) {
         showErrorMessage(
           method === "sbp"
