@@ -311,9 +311,7 @@ export function streamPayPayUrlWithOptionalFiatParam(
   payUrl: string,
   fiatIsoFromPreset: string | null | undefined,
 ): string {
-  // Если у нас есть параметр валюты, мы можем добавить его в URL, чтобы сразу открылся нужный метод.
-  // Например, ?currency=KZT
-  const name = process.env.STREAMPAY_PAY_URL_FIAT_PARAM?.trim() || "currency";
+  const name = process.env.STREAMPAY_PAY_URL_FIAT_PARAM?.trim();
   const valueRaw = process.env.STREAMPAY_PAY_URL_FIAT_VALUE?.trim();
   const value = valueRaw || fiatIsoFromPreset?.trim();
   if (!name || !value) {
@@ -322,7 +320,7 @@ export function streamPayPayUrlWithOptionalFiatParam(
   try {
     const u = new URL(payUrl.trim());
     if (!u.searchParams.has(name)) {
-      u.searchParams.set(name, value.toUpperCase());
+      u.searchParams.set(name, value);
     }
     return u.toString();
   } catch {
