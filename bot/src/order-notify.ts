@@ -1831,11 +1831,14 @@ export function startOrderNotifyHttpServer(
               streamPayAmount = Math.round(amountNum * legacy * 100) / 100;
               amountSource = "env_ORDER_RUB_TO_INVOICE_RATE";
             } else if (streamPayAutoFiatRatesEnabled()) {
+              // ВАЖНО: конвертируем рубли в целевую фиатную валюту (например, KZT),
+              // а не в systemCurrency (который теперь всегда USDT).
+              const targetCurrency = presetLabel || systemCurrency.replace(/^\ufeff/, "").trim();
               streamPayAmount = await streamPayConvertRubToFiatAmount(
                 amountNum,
-                systemCurrency.replace(/^\ufeff/, "").trim(),
+                targetCurrency
               );
-              amountSource = "cbr_" + systemCurrency.replace(/^\ufeff/, "").trim().toUpperCase();
+              amountSource = "cbr_" + targetCurrency.toUpperCase();
             } else {
               streamPayAmount = amountNum;
               amountSource = "rub_as_invoice_units";
