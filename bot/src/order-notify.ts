@@ -1857,12 +1857,20 @@ export function startOrderNotifyHttpServer(
           }
           const normalized = streamPayNormalizeUsdtInvoiceAmount(
             paymentType,
-            systemCurrency,
+            presetLabel || systemCurrency,
             streamPayAmount,
             amountSource,
           );
           streamPayAmount = normalized.amount;
           amountSource = normalized.source;
+
+          // Для фиата (paymentType === 1) StreamPay часто требует целые числа
+          // или суммы без копеек, если они слишком большие.
+          // Округляем фиатные суммы до целых.
+          if (paymentType === 1) {
+            streamPayAmount = Math.ceil(streamPayAmount);
+            amountSource = amountSource + "+fiat_ceil_int";
+          }
 
           let payloadSp: PendingPaymentOrder = {
             ...payload,
