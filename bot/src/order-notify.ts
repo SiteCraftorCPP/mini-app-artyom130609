@@ -2185,6 +2185,7 @@ export function startOrderNotifyHttpServer(
             return;
           }
           if (!streamPayIsPaidStatus(fields.status)) {
+            console.warn("[streampay] игнорируем статус", fields.status, fields.externalId);
             res.writeHead(200, corsNotifyHeaders).end();
             return;
           }
@@ -2246,6 +2247,7 @@ export function startOrderNotifyHttpServer(
           return;
         }
         if (!streamPayIsPaidStatus(fields.status)) {
+          console.warn("[streampay] игнорируем статус (POST)", fields.status, fields.externalId);
           res.writeHead(200, corsNotifyHeaders).end();
           return;
         }
