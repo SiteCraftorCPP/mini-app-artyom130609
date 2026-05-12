@@ -212,26 +212,6 @@ export function streamPayBuildCreatePaymentJson(
     process.env.STREAMPAY_PAYMENT_CREATE_LEGACY_FULL === "1" ||
     process.env.STREAMPAY_PAYMENT_CREATE_LEGACY_FULL === "true";
 
-  if (i.paymentType === 2 && !legacyFull) {
-    const amount = Math.round(i.amount * 100) / 100;
-    if (!Number.isFinite(amount) || amount <= 0) {
-      throw new Error("StreamPay: amount в create должно быть конечным числом > 0");
-    }
-    const docBody: Record<string, unknown> = {
-      store_id: i.storeId,
-      customer: i.customer,
-      external_id: i.externalId,
-      description: i.description,
-      system_currency: i.systemCurrency.replace(/^\ufeff/, "").trim(),
-      payment_type: Number(i.paymentType),
-    };
-    if (i.currency) {
-      docBody.currency = streamPayCurrencyForJson(i.currency);
-    }
-    docBody.amount = amount;
-    return JSON.stringify(docBody);
-  }
-
   const paymentTypeOut =
     process.env.STREAMPAY_PAYMENT_TYPE_AS_JSON_STRING === "1" ||
     process.env.STREAMPAY_PAYMENT_TYPE_AS_JSON_STRING === "true"
