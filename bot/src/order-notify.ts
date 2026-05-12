@@ -1826,22 +1826,40 @@ export function startOrderNotifyHttpServer(
           let streamPayAmount: number;
           let amountSource: string;
           try {
-            const legacy = streamPayInvoiceUnitsPerRubFromEnv();
-            if (legacy != null) {
-              streamPayAmount = Math.round(amountNum * legacy * 100) / 100;
-              amountSource = "env_ORDER_RUB_TO_INVOICE_RATE";
+            const targetCurrency = presetLabel || systemCurrency.replace(/^\ufeff/, "").trim();
+            const manualRateRaw = process.env[`STREAMPAY_RATE_${targetCurrency.toUpperCase()}`]?.trim();
+
+            if (manualRateRaw && Number.isFinite(Number(manualRateRaw.replace(",", ".")))) {
+              const rate = Number(manualRateRaw.replace(",", "."));
+              streamPayAmount = amountNum * rate;
+              amountSource = `env_STREAMPAY_RATE_${targetCurrency.toUpperCase()}`;
             } else if (streamPayAutoFiatRatesEnabled()) {
               // ВАЖНО: конвертируем рубли в целевую фиатную валюту (например, KZT),
               // а не в systemCurrency (который теперь всегда USDT).
-              const targetCurrency = presetLabel || systemCurrency.replace(/^\ufeff/, "").trim();
               streamPayAmount = await streamPayConvertRubToFiatAmount(
                 amountNum,
                 targetCurrency
               );
               amountSource = "cbr_" + targetCurrency.toUpperCase();
+              
+              // Добавляем возможность накинуть процент (маржу) поверх курса ЦБ
+              const marginRaw = process.env.STREAMPAY_FIAT_MARGIN_PERCENT?.trim();
+              if (marginRaw) {
+                const margin = Number(marginRaw.replace(",", "."));
+                if (Number.isFinite(margin) && margin > 0) {
+                  streamPayAmount = streamPayAmount * (1 + margin / 100);
+                  amountSource += `+margin_${margin}%`;
+                }
+              }
             } else {
-              streamPayAmount = amountNum;
-              amountSource = "rub_as_invoice_units";
+              const legacy = streamPayInvoiceUnitsPerRubFromEnv();
+              if (legacy != null) {
+                streamPayAmount = Math.round(amountNum * legacy * 100) / 100;
+                amountSource = "env_ORDER_RUB_TO_INVOICE_RATE";
+              } else {
+                streamPayAmount = amountNum;
+                amountSource = "rub_as_invoice_units";
+              }
             }
           } catch (e) {
             const msg = e instanceof Error ? e.message : String(e);
