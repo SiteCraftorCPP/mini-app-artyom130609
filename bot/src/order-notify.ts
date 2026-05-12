@@ -1763,7 +1763,9 @@ export function startOrderNotifyHttpServer(
           let currencyOpt = streamPayPickStr("STREAMPAY_CURRENCY", "currency", extraRaw);
 
           if (presetLabel) {
-            systemCurrency = presetLabel;
+            // ВАЖНО: StreamPay требует, чтобы system_currency всегда совпадала с валютой магазина (USDT)
+            // даже если payment_type = 1 и мы хотим выставить счет в фиате.
+            systemCurrency = "USDT";
             paymentTypeVal = 1;
             currencyOpt = presetLabel;
           }
