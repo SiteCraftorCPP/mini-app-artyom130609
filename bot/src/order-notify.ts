@@ -2342,13 +2342,20 @@ export function startOrderNotifyHttpServer(
         }
         if (!amountsMatchFreekassa(pending.amountExpected, amount)) {
           console.warn(
-            "[freekassa] сумма не совпала",
+            "[freekassa] сумма не совпала, обновляем заказ",
             mOrder,
-            pending.amountExpected,
-            amount,
+            "ожидалось:", pending.amountExpected,
+            "фактически:", amount,
           );
-          res.writeHead(200, { "Content-Type": "text/plain" }).end("NO");
-          return;
+          const expectedNum = parseFloat(pending.amountExpected);
+          const actualNum = parseFloat(amount);
+          if (!isNaN(expectedNum) && !isNaN(actualNum) && expectedNum > 0) {
+            const ratio = actualNum / expectedNum;
+            pending.amountRub = Math.round((pending.amountRub ?? 0) * ratio * 100) / 100;
+            pending.amountExpected = amount;
+            pending.transferMethod = `${pending.transferMethod} (Сумма изменена: ${actualNum} вместо ${expectedNum})`;
+            putPendingPayment(mOrder, pending);
+          }
         }
         if (intid) {
           markIntidProcessed(intid);
