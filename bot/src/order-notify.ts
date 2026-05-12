@@ -1762,6 +1762,12 @@ export function startOrderNotifyHttpServer(
           let paymentTypeVal = streamPayPickPaymentType(extraRaw);
           let currencyOpt = streamPayPickStr("STREAMPAY_CURRENCY", "currency", extraRaw);
 
+          if (presetLabel) {
+            systemCurrency = presetLabel;
+            paymentTypeVal = 1;
+            currencyOpt = presetLabel;
+          }
+
           if (
             process.env.STREAMPAY_FORCE_ISO4217_LOWER === "1" ||
             process.env.STREAMPAY_FORCE_ISO4217_LOWER === "true"

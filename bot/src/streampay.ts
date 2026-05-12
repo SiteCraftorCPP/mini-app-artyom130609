@@ -217,15 +217,18 @@ export function streamPayBuildCreatePaymentJson(
     if (!Number.isFinite(amount) || amount <= 0) {
       throw new Error("StreamPay: amount в create должно быть конечным числом > 0");
     }
-    const docBody = {
+    const docBody: Record<string, unknown> = {
       store_id: i.storeId,
       customer: i.customer,
       external_id: i.externalId,
       description: i.description,
       system_currency: i.systemCurrency.replace(/^\ufeff/, "").trim(),
       payment_type: Number(i.paymentType),
-      amount,
     };
+    if (i.currency) {
+      docBody.currency = streamPayCurrencyForJson(i.currency);
+    }
+    docBody.amount = amount;
     return JSON.stringify(docBody);
   }
 
@@ -247,7 +250,7 @@ export function streamPayBuildCreatePaymentJson(
     system_currency: streamPayCurrencyForJson(i.systemCurrency),
     payment_type: paymentTypeOut,
   };
-  if (i.paymentType === 1 && i.currency) {
+  if (i.currency) {
     o.currency = streamPayCurrencyForJson(i.currency);
   }
   o.amount = amountOut;
