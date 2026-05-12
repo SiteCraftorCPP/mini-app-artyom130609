@@ -1762,6 +1762,28 @@ export function startOrderNotifyHttpServer(
           let paymentTypeVal = streamPayPickPaymentType(extraRaw);
           let currencyOpt = streamPayPickStr("STREAMPAY_CURRENCY", "currency", extraRaw);
 
+          // По просьбе пользователя: если выбран конкретный фиатный метод (KZT, UAH, AZN, BYN),
+          // подставляем его напрямую в system_currency, чтобы избежать конвертации через USDT
+          // и сразу выставлять счет в нужной валюте. Формат тела остается 1в1 как в документации (payment_type: 2).
+          if (presetLabel) {
+            systemCurrency = presetLabel;
+            paymentTypeVal = 2;
+          }
+
+          // Переопределяем валюту на выбранную пользователем (KZT, UAH, AZN, BYN)
+          // чтобы избежать промежуточной конвертации из USDT и экрана выбора валюты
+          if (presetLabel) {
+            systemCurrency = presetLabel;
+            paymentTypeVal = 2; // В документации указан payment_type: 2
+          }
+
+          // Переопределяем валюту на выбранную пользователем (KZT, UAH, AZN, BYN)
+          // чтобы избежать промежуточной конвертации из USDT и экрана выбора валюты
+          if (presetLabel) {
+            systemCurrency = presetLabel;
+            paymentTypeVal = 2; // В документации указан payment_type: 2
+          }
+
           if (
             process.env.STREAMPAY_FORCE_ISO4217_LOWER === "1" ||
             process.env.STREAMPAY_FORCE_ISO4217_LOWER === "true"
