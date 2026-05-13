@@ -11,15 +11,17 @@ export const PAYMENT_MIN_RUB_SBP = 500;
 export const PAYMENT_MIN_RUB_MIR = 500;
 export const PAYMENT_MIN_RUB_CARD = 500;
 
-export const PAYMENT_MIN_RUB_STREAMPAY_KZT = 300;
-export const PAYMENT_MIN_RUB_STREAMPAY_UAH = 700;
-export const PAYMENT_MIN_RUB_STREAMPAY_AZN_BYN = 500;
+export const PAYMENT_MIN_RUB_STREAMPAY_KZT = 145; // ~1000 KZT
+export const PAYMENT_MIN_RUB_STREAMPAY_UAH = 465; // ~300 UAH
+export const PAYMENT_MIN_RUB_STREAMPAY_BYN = 240; // ~10 BYN
+export const PAYMENT_MIN_RUB_STREAMPAY_AZN = 375; // ~10 AZN
 
 export function minRubForPaymentMethod(method: PaymentMethodCode, preset?: StreampayFiatPreset): number {
   if (method === "streampay") {
     if (preset === "tenge") return PAYMENT_MIN_RUB_STREAMPAY_KZT;
     if (preset === "uah") return PAYMENT_MIN_RUB_STREAMPAY_UAH;
-    if (preset === "azn" || preset === "byn") return PAYMENT_MIN_RUB_STREAMPAY_AZN_BYN;
+    if (preset === "byn") return PAYMENT_MIN_RUB_STREAMPAY_BYN;
+    if (preset === "azn") return PAYMENT_MIN_RUB_STREAMPAY_AZN;
     return 500;
   }
   if (method === "sbp") {
