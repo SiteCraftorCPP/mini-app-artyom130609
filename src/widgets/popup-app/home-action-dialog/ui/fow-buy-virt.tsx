@@ -17,7 +17,12 @@ export const FlowBuyVirt = ({ flow }: FlowBuyVirtProps) => {
   }
 
   if (flow.selectedVirt) {
-    return <VirtRequestForm virt={flow.selectedVirt} />;
+    return (
+      <VirtRequestForm
+        key={`${flow.selectedVirt.id}:${flow.selectedVirt.minAmountRub}`}
+        virt={flow.selectedVirt}
+      />
+    );
   }
 
   return <FlowDefault flow={flow} />;

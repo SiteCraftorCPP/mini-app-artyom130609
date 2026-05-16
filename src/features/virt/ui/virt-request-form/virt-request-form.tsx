@@ -41,6 +41,7 @@ export const VirtRequestForm = ({ virt }: VirtRequestFormProps) => {
   const {
     displayAmountRub,
     form,
+    formAmountMinRub,
     handleAmountRubInput,
     handleAmountVirtInput,
     handleAmountsCommit,
@@ -147,7 +148,7 @@ export const VirtRequestForm = ({ virt }: VirtRequestFormProps) => {
               lockVirtsForPromo={lockVirtsForPromo}
               initialAmountRub={initialAmountRub}
               initialAmountVirts={initialAmountVirts}
-              minAmountRub={virt.minAmountRub}
+              minAmountRub={formAmountMinRub}
               onAmountRubInput={handleAmountRubInput}
               onAmountVirtInput={handleAmountVirtInput}
               onAmountsCommit={handleAmountsCommit}

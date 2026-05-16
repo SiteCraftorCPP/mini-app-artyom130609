@@ -10,6 +10,7 @@ import {
 import { useForm } from "react-hook-form";
 
 import { DEFAULT } from "@/shared/constants/default";
+import { effectiveVirtFormMinAmountRub } from "@/shared/constants/payment-method-limits";
 import { VIRT_FORM_TEXT } from "@/shared/constants/text";
 import { formatNumberWithSpaces } from "@/shared/lib/format-numbers";
 import { showErrorMessage } from "@/shared/lib/notify";
@@ -50,8 +51,9 @@ type AmountFieldName = "amountRub" | "amountVirts";
 
 export const useVirtRequestForm = ({ virt }: UseVirtRequestFormParams) => {
   const webApp = useWebApp();
+  const amountMinRub = effectiveVirtFormMinAmountRub(virt.minAmountRub);
   const form = useForm<VirtRequestFormValues>({
-    resolver: zodResolver(createVirtRequestSchema(virt.minAmountRub)),
+    resolver: zodResolver(createVirtRequestSchema(amountMinRub)),
     defaultValues: getDefaultValues(virt),
   });
   const [paymentOpen, setPaymentOpen] = useState(false);
@@ -74,7 +76,7 @@ export const useVirtRequestForm = ({ virt }: UseVirtRequestFormParams) => {
     amountVirtInputRef.current = defaultValues.amountVirts;
     setDisplayAmountRub(defaultValues.amountRub);
     setLastEditedForAmount("amountRub");
-  }, [form, virt]);
+  }, [form, virt, amountMinRub]);
 
   const handleAmountRubInput = useCallback((value: string) => {
     lastEditedAmountFieldRef.current = "amountRub";
@@ -217,6 +219,7 @@ export const useVirtRequestForm = ({ virt }: UseVirtRequestFormParams) => {
   return {
     displayAmountRub,
     form,
+    formAmountMinRub: amountMinRub,
     handleAmountRubInput,
     handleAmountVirtInput,
     handleAmountsCommit,
