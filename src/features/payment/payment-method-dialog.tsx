@@ -1,6 +1,7 @@
 import { Loader2, X } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
+import { useAuthMe } from "@/entities/user/hooks/use-auth-me";
 import {
   minRubForPaymentMethod,
 } from "@/shared/constants/payment-method-limits";
@@ -140,8 +141,6 @@ function formatErr(e: unknown): string {
   return String(e);
 }
 
-import { useAuthMe } from "@/entities/user/hooks/use-auth-me";
-
 export function PaymentMethodDialog({
   open,
   onOpenChange,
@@ -151,19 +150,20 @@ export function PaymentMethodDialog({
 }: PaymentMethodDialogProps) {
   const [busy, setBusy] = useState(false);
   const [useBalance, setUseBalance] = useState(false);
-  const { data: user } = useAuthMe();
+  const { data: user, refetch: refetchUser } = useAuthMe();
 
-  const balance = user?.balance || 0;
-  const canUseBalance = balance > 0;
+  const balance = user?.balance ?? 0;
   const balanceToDeduct = useBalance ? Math.min(balance, amountRub) : 0;
   const amountToPay = amountRub - balanceToDeduct;
+  const canPayFullyWithBalance = balance >= amountRub;
 
   useEffect(() => {
     if (open) {
       setBusy(false);
       setUseBalance(false);
+      void refetchUser();
     }
-  }, [open]);
+  }, [open, refetchUser]);
 
   const resetAndClose = useCallback(
     (v: boolean) => {
@@ -175,8 +175,12 @@ export function PaymentMethodDialog({
     [onOpenChange],
   );
 
-  const onSelectRub = useCallback(
-    async (method: PaymentMethodCode | "balance", streampayPreset?: StreampayFiatPreset) => {
+  const submitPayment = useCallback(
+    async (
+      method: PaymentMethodCode | "balance",
+      streampayPreset?: StreampayFiatPreset,
+      deductFromBalance = false,
+    ) => {
       if (!initData.trim() || !context) {
         showErrorMessage("Откройте магазин из Telegram (кнопка в боте), не из обычного браузера.");
         return;
@@ -186,9 +190,35 @@ export function PaymentMethodDialog({
         return;
       }
 
-      if (method !== "balance") {
+      const willUseBalance = deductFromBalance || useBalance;
+      const remainder = willUseBalance ? Math.max(0, amountRub - balance) : amountRub;
+
+      if (method === "balance") {
+        if (balance <= 0) {
+          showErrorMessage("На балансе нет средств.");
+          return;
+        }
+        if (balance < amountRub) {
+          showErrorMessage(
+            `На балансе ${formatNumberWithSpaces(balance)} ${CURRENCY.RUB} — недостаточно. Включите «Частично с баланса» и выберите способ доплаты.`,
+          );
+          return;
+        }
+      } else if (willUseBalance && remainder > 0) {
         const minRub = minRubForPaymentMethod(method, streampayPreset);
-        if (amountToPay + 1e-9 < minRub) {
+        if (remainder + 1e-9 < minRub) {
+          showErrorMessage(
+            method === "sbp"
+              ? PAYMENT_TEXT.paymentMinSbp(minRub)
+              : method === "streampay"
+                ? PAYMENT_TEXT.paymentMinStreamPay(minRub, streampayPreset)
+                : PAYMENT_TEXT.paymentMinCard(minRub),
+          );
+          return;
+        }
+      } else if (!willUseBalance) {
+        const minRub = minRubForPaymentMethod(method, streampayPreset);
+        if (amountRub + 1e-9 < minRub) {
           showErrorMessage(
             method === "sbp"
               ? PAYMENT_TEXT.paymentMinSbp(minRub)
@@ -203,16 +233,17 @@ export function PaymentMethodDialog({
       setBusy(true);
       try {
         const body = buildPrepareInput(
-          method,
+          method === "balance" ? "sbp" : method,
           initData,
           amountRub,
           context,
           streampayPreset,
-          useBalance,
+          method === "balance" ? true : willUseBalance,
         );
-        const res = await requestPaymentPrepare(body as any);
+        const res = await requestPaymentPrepare(body as PaymentPrepareInput & { useBalance?: boolean });
         if (res.payUrl === "balance_success") {
           showSuccessMessage("Оплата успешно списана с баланса!");
+          void refetchUser();
           resetAndClose(false);
           return;
         }
@@ -230,7 +261,7 @@ export function PaymentMethodDialog({
         setBusy(false);
       }
     },
-    [amountRub, amountToPay, context, initData, resetAndClose, useBalance],
+    [amountRub, balance, context, initData, refetchUser, resetAndClose, useBalance],
   );
 
   if (!context) {
@@ -238,6 +269,10 @@ export function PaymentMethodDialog({
   }
 
   const amountLine = `${formatNumberWithSpaces(Math.round(amountToPay * 100) / 100)} ${CURRENCY.RUB}`.replace(
+    /\s/g,
+    "\u00a0",
+  );
+  const balanceLine = `${formatNumberWithSpaces(Math.round(balance * 100) / 100)} ${CURRENCY.RUB}`.replace(
     /\s/g,
     "\u00a0",
   );
@@ -315,17 +350,32 @@ export function PaymentMethodDialog({
             )}
 
             <div className="mt-2 flex flex-col gap-3">
-              {canUseBalance && (
-                <div 
+              <Button
+                type="button"
+                size="default"
+                disabled={busy || balance <= 0}
+                className={cn(methodBtnClass, "flex-col items-center gap-0.5 py-3", balance <= 0 && "opacity-60")}
+                onClick={() => void submitPayment("balance", undefined, true)}
+              >
+                <span>Оплатить с баланса</span>
+                <span className="text-xs font-medium opacity-90">
+                  {balance > 0
+                    ? `Доступно: ${balanceLine}`
+                    : "На балансе 0 ₽"}
+                </span>
+              </Button>
+
+              {balance > 0 && balance < amountRub && (
+                <div
                   className="border-app-border-soft flex cursor-pointer items-center justify-between rounded-[14px] border px-4 py-3 shadow-[0_4px_12px_var(--app-shadow)] tw-bg-popup-submit hover:brightness-110 active:brightness-90"
                   onClick={() => !busy && setUseBalance(!useBalance)}
                 >
                   <div className="flex flex-col">
                     <AppText tag={TAG.span} variant="primaryStrong" className="text-[15px] font-bold text-white">
-                      Списать с баланса
+                      Частично с баланса
                     </AppText>
                     <AppText tag={TAG.span} variant="darkStrong" className="text-app-text-muted mt-0.5 text-xs font-medium">
-                      Доступно: {formatNumberWithSpaces(balance)} {CURRENCY.RUB}
+                      Списать {formatNumberWithSpaces(Math.min(balance, amountRub))} {CURRENCY.RUB}, остальное — картой / СБП
                     </AppText>
                   </div>
                   <div className={cn("relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors duration-200 ease-in-out", useBalance ? "bg-app-highlight" : "bg-app-border-soft")}>
@@ -334,17 +384,7 @@ export function PaymentMethodDialog({
                 </div>
               )}
 
-              {amountToPay === 0 ? (
-                <Button
-                  type="button"
-                  size="default"
-                  disabled={busy}
-                  className={methodBtnClass}
-                  onClick={() => void onSelectRub("balance")}
-                >
-                  Оплатить с баланса
-                </Button>
-              ) : (
+              {!(canPayFullyWithBalance && !useBalance) &&
                 RUB_METHODS.map((m) => (
                   <Button
                     key={m.rowKey}
@@ -352,7 +392,7 @@ export function PaymentMethodDialog({
                     size="default"
                     disabled={busy}
                     className={methodBtnClass}
-                    onClick={() => void onSelectRub(m.method, m.streampayPreset)}
+                    onClick={() => void submitPayment(m.method, m.streampayPreset)}
                   >
                     {m.label}
                     {useBalance && (
@@ -361,8 +401,7 @@ export function PaymentMethodDialog({
                       </span>
                     )}
                   </Button>
-                ))
-              )}
+                ))}
             </div>
           </div>
         </div>
