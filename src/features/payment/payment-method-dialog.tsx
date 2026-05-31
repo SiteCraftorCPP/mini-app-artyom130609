@@ -155,7 +155,6 @@ export function PaymentMethodDialog({
   const balance = user?.balance ?? 0;
   const balanceToDeduct = useBalance ? Math.min(balance, amountRub) : 0;
   const amountToPay = amountRub - balanceToDeduct;
-  const canPayFullyWithBalance = balance >= amountRub;
 
   useEffect(() => {
     if (open) {
@@ -384,24 +383,23 @@ export function PaymentMethodDialog({
                 </div>
               )}
 
-              {!(canPayFullyWithBalance && !useBalance) &&
-                RUB_METHODS.map((m) => (
-                  <Button
-                    key={m.rowKey}
-                    type="button"
-                    size="default"
-                    disabled={busy}
-                    className={methodBtnClass}
-                    onClick={() => void submitPayment(m.method, m.streampayPreset)}
-                  >
-                    {m.label}
-                    {useBalance && (
-                      <span className="ml-2 text-xs opacity-80">
-                        (к доплате {formatNumberWithSpaces(Math.round(amountToPay * 100) / 100)} {CURRENCY.RUB})
-                      </span>
-                    )}
-                  </Button>
-                ))}
+              {RUB_METHODS.map((m) => (
+                <Button
+                  key={m.rowKey}
+                  type="button"
+                  size="default"
+                  disabled={busy}
+                  className={methodBtnClass}
+                  onClick={() => void submitPayment(m.method, m.streampayPreset)}
+                >
+                  {m.label}
+                  {useBalance && (
+                    <span className="ml-2 text-xs opacity-80">
+                      (к доплате {formatNumberWithSpaces(Math.round(amountToPay * 100) / 100)} {CURRENCY.RUB})
+                    </span>
+                  )}
+                </Button>
+              ))}
             </div>
           </div>
         </div>
