@@ -713,15 +713,29 @@ export async function notifyAdminsNewOrder(
   lines.push("", `Покупатель (Telegram id): ${payload.telegramUserId}`);
 
   const text = lines.join("\n");
-  for (const aid of admins) {
+
+  // Читаем ID канала из .env
+  const channelIdRaw = process.env.ORDERS_CHANNEL_ID?.trim();
+  if (channelIdRaw) {
     try {
-      await bot.api.sendMessage(aid, text, {
+      await bot.api.sendMessage(channelIdRaw, text, {
         link_preview_options: { is_disabled: true },
       });
     } catch (e) {
-      console.warn(`[admin-notify] не удалось отправить админу ${aid}:`, e);
+      console.warn(`[admin-notify] не удалось отправить в канал ${channelIdRaw}:`, e);
     }
   }
+
+  // Больше не шлём в личку админам
+  // for (const aid of admins) {
+  //   try {
+  //     await bot.api.sendMessage(aid, text, {
+  //       link_preview_options: { is_disabled: true },
+  //     });
+  //   } catch (e) {
+  //     console.warn(`[admin-notify] не удалось отправить админу ${aid}:`, e);
+  //   }
+  // }
 }
 
 export async function sendVirtOrderSuccess(

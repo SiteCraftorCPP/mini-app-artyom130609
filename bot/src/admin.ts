@@ -2237,6 +2237,21 @@ export function installAdminModule(bot: Bot<Context>, adminIds: Set<number>) {
     });
     const completedOrder = moved ?? getAdminOrderById(pendingOrderId);
     if (completedOrder) {
+      // Отправляем информацию о закрытом заказе и прибыли в канал
+      const channelIdRaw = process.env.ORDERS_CHANNEL_ID?.trim();
+      if (channelIdRaw) {
+        const profitLines = [
+          `💰 Заказ закрыт: ${pendingOrderId}`,
+          `Сумма: ${completedOrder.amountRub?.toFixed(2) ?? 0} ₽`,
+          `Чистая прибыль: ${amountStr} ₽`
+        ].join("\n");
+        try {
+          await bot.api.sendMessage(channelIdRaw, profitLines);
+        } catch (e) {
+          console.error(`[admin-profit] не удалось отправить в канал ${channelIdRaw}:`, e);
+        }
+      }
+
       const uid = Number(completedOrder.telegramUserId);
       if (Number.isFinite(uid) && uid > 0) {
         const cat = completedOrder.categoryLabel;
