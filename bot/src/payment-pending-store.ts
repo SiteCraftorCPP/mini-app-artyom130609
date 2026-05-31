@@ -39,6 +39,7 @@ export type PendingPaymentOrder = {
   transferMethod?: string;
   promoCode?: string;
   otherService?: OtherServicePendingMeta;
+  balanceToDeduct?: number;
 };
 
 type FileShape = {

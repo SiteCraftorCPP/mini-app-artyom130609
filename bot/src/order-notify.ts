@@ -1,5 +1,4 @@
 import { createServer } from "node:http";
-import { getReferralUser } from "./referrals-store.js";
 import { randomInt, randomBytes } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, resolve, basename } from "node:path";
@@ -69,6 +68,7 @@ import {
   putPendingPayment,
   type PendingPaymentOrder,
 } from "./payment-pending-store.js";
+import { getReferralUser, changeBalanceAdmin } from "./referrals-store.js";
 import {
   STREAMPAY_DEFAULT_API_BASE,
   streamPayBuildCreatePaymentJson,
@@ -109,6 +109,7 @@ export type VirtOrderSuccessPayload = {
   bankAccount?: string;
   amountRub?: number;
   promoCode?: string;
+  otherService?: import("./payment-pending-store.js").OtherServicePendingMeta;
   /** Из initData / ctx при создании заказа — для строки покупателя в админке. */
   telegramUsername?: string;
   telegramFirstName?: string;
@@ -1332,8 +1333,9 @@ function streamPayPickPaymentType(extra: Record<string, unknown> | null): number
 type PaymentPrepareJson = {
   initData: string;
   orderKind: "virt" | "account" | "other_service";
-  method: "sbp" | "mir" | "card_rub" | "streampay";
+  method: "sbp" | "mir" | "card_rub" | "streampay" | "balance";
   amountRub: number;
+  useBalance?: boolean;
   /** Фиксированная фиатная ветка StreamPay (см. кнопки в мини-аппе). */
   streampayPreset?: "tenge" | "uah" | "byn" | "azn";
   game?: string;
@@ -1373,35 +1375,46 @@ type BuildPendingResult = BuildPendingOk | BuildPendingFail;
  * Общая сборка pending-заказа для оплаты (FK или KZT с чеком).
  * Не создаёт merchant id и не вызывает FreeKassa.
  */
-export function buildPendingPayloadForPaymentBody(
-  body: PaymentPrepareBodyBase,
-  botToken: string,
-): BuildPendingResult {
-  if (typeof body.initData !== "string" || !body.initData.length) {
-    return { ok: false, status: 400, error: "initData" };
-  }
-  if (
-    body.orderKind !== "virt" &&
-    body.orderKind !== "account" &&
-    body.orderKind !== "other_service"
-  ) {
-    return { ok: false, status: 400, error: "orderKind" };
-  }
-  const amountNum = Number(body.amountRub);
-  if (!Number.isFinite(amountNum) || amountNum <= 0) {
-    return { ok: false, status: 400, error: "amount" };
-  }
-  const webUser = parseValidatedWebAppUser(body.initData, botToken);
-  if (!webUser) {
-    return { ok: false, status: 401, error: "bad initData" };
-  }
-  const telegramUserId = webUser.id;
-  const pendingTgUsername = webUser.username ?? undefined;
-  const pendingTgFirst = webUser.firstName ?? undefined;
-  const orderId = `o-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-  const suffix = Date.now().toString(36).toUpperCase().slice(-6);
-  const orderNumber = `#${suffix}`;
-  const oa = formatAmountForFk(amountNum);
+  export function buildPendingPayloadForPaymentBody(
+    body: PaymentPrepareBodyBase,
+    botToken: string,
+  ): BuildPendingResult {
+    if (typeof body.initData !== "string" || !body.initData.length) {
+      return { ok: false, status: 400, error: "initData" };
+    }
+    if (
+      body.orderKind !== "virt" &&
+      body.orderKind !== "account" &&
+      body.orderKind !== "other_service"
+    ) {
+      return { ok: false, status: 400, error: "orderKind" };
+    }
+    let amountNum = Number(body.amountRub);
+    if (!Number.isFinite(amountNum) || amountNum <= 0) {
+      return { ok: false, status: 400, error: "amount" };
+    }
+    const webUser = parseValidatedWebAppUser(body.initData, botToken);
+    if (!webUser) {
+      return { ok: false, status: 401, error: "bad initData" };
+    }
+    const telegramUserId = webUser.id;
+    
+    let balanceToDeduct = 0;
+    if (body.useBalance) {
+      const user = getReferralUser(telegramUserId);
+      const bal = user?.balance || 0;
+      if (bal > 0) {
+        balanceToDeduct = Math.min(bal, amountNum);
+        amountNum = amountNum - balanceToDeduct;
+      }
+    }
+
+    const pendingTgUsername = webUser.username ?? undefined;
+    const pendingTgFirst = webUser.firstName ?? undefined;
+    const orderId = `o-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+    const suffix = Date.now().toString(36).toUpperCase().slice(-6);
+    const orderNumber = `#${suffix}`;
+    const oa = formatAmountForFk(amountNum);
 
   if (body.orderKind === "other_service") {
     const osIn = body.otherService;
@@ -1471,6 +1484,7 @@ export function buildPendingPayloadForPaymentBody(
         mainName: main?.name ?? null,
         cardSummary: item.description.slice(0, 300),
       },
+      balanceToDeduct,
     };
     return { ok: true, payload, amountNum };
   }
@@ -1497,21 +1511,25 @@ export function buildPendingPayloadForPaymentBody(
     virtAmountLabel: body.virtAmountLabel,
     transferMethod: transfer,
     promoCode: body.promoCode?.trim() || undefined,
+    balanceToDeduct,
   };
   return { ok: true, payload, amountNum };
 }
 
 /** После подтверждения оплаты (FK webhook или ручное «чек ОК» для KZT). */
-export async function deliverPaidPendingOrder(
-  bot: Bot,
-  miniAppUrl: string,
-  pending: PendingPaymentOrder,
-  options?: { skipAdminBroadcast?: boolean },
-): Promise<void> {
-  const skipAdmin = options?.skipAdminBroadcast === true;
-  if (pending.promoCode) {
-    consumePromoCode(pending.promoCode);
-  }
+  export async function deliverPaidPendingOrder(
+    bot: Bot,
+    miniAppUrl: string,
+    pending: PendingPaymentOrder,
+    options?: { skipAdminBroadcast?: boolean },
+  ): Promise<void> {
+    const skipAdmin = options?.skipAdminBroadcast === true;
+    if (pending.balanceToDeduct) {
+      changeBalanceAdmin(pending.telegramUserId, pending.balanceToDeduct, false, "system");
+    }
+    if (pending.promoCode) {
+      consumePromoCode(pending.promoCode);
+    }
   if (pending.orderKind === "other_service" && pending.otherService) {
     const os = pending.otherService;
     try {
@@ -1722,10 +1740,39 @@ export function startOrderNotifyHttpServer(
           res.end(JSON.stringify({ error: built.error }));
           return;
         }
-        const { payload, amountNum } = built;
-        const telegramUserId = payload.telegramUserId;
+          const { payload, amountNum } = built;
+          const telegramUserId = payload.telegramUserId;
 
-        if (body.method === "streampay") {
+          if (amountNum === 0) {
+            if (payload.balanceToDeduct) {
+              changeBalanceAdmin(telegramUserId, payload.balanceToDeduct, false, "system");
+            }
+            if (payload.promoCode) {
+              consumePromoCode(payload.promoCode);
+            }
+            const successPayload: VirtOrderSuccessPayload = {
+              telegramUserId,
+              telegramUsername: payload.telegramUsername,
+              telegramFirstName: payload.telegramFirstName,
+              orderNumber: payload.orderNumber,
+              orderId: payload.orderId,
+              orderKind: payload.orderKind,
+              game: payload.game,
+              server: payload.server,
+              bankAccount: payload.bankAccount,
+              amountRub: payload.amountRub,
+              virtAmountLabel: payload.virtAmountLabel,
+              transferMethod: payload.transferMethod,
+              promoCode: payload.promoCode,
+              otherService: payload.otherService,
+            };
+            await sendVirtOrderSuccess(bot, miniAppUrl, successPayload);
+            res.writeHead(200, { "Content-Type": "application/json", ...corsNotifyHeaders });
+            res.end(JSON.stringify({ payUrl: "balance_success", merchantOrderId: "balance", orderId: payload.orderId, orderNumber: payload.orderNumber }));
+            return;
+          }
+
+          if (body.method === "streampay") {
           const presetRaw = body.streampayPreset;
           const allowedPreset = new Set(["tenge", "uah", "byn", "azn"]);
           if (presetRaw != null && typeof presetRaw !== "string") {
