@@ -25,9 +25,11 @@ export async function notifyOrderCompletionToOwners(
   order: AdminOrderRow,
   profitRub: number,
 ): Promise<void> {
-  const channelIdRaw = process.env.ORDERS_CHANNEL_ID?.trim();
+  const channelIdRaw = process.env.ORDER_COMPLETION_CHANNEL_ID?.trim();
   if (!channelIdRaw) {
-    console.warn("[order-completion-notify] ORDERS_CHANNEL_ID не задан, уведомление о закрытии заказа не отправлено");
+    console.warn(
+      "[order-completion-notify] ORDER_COMPLETION_CHANNEL_ID не задан, уведомление о закрытии заказа не отправлено",
+    );
     return;
   }
 
