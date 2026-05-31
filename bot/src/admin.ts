@@ -49,7 +49,6 @@ import {
   STAT_PERIOD_TITLES,
   STATS_HEADER,
   msgProfitPrompt,
-  msgProfitSaved,
 } from "./texts.js";
 import { getAllUserIds, getUniqueUserCount, getUserStatsForRange } from "./user-usage-store.js";
 import { sendOrderCompletedToBuyer } from "./order-notify.js";
@@ -2229,30 +2228,13 @@ export function installAdminModule(bot: Bot<Context>, adminIds: Set<number>) {
     const moved = closeActiveOrder(pendingOrderId, closedAtLine, {
       profitRub: value,
     });
-    if (completedOrderTemp && completedOrderTemp.amountRub) {
-      addReferralBonus(Number(completedOrderTemp.telegramUserId), completedOrderTemp.amountRub, completedOrderTemp.publicOrderId ?? pendingOrderId);
-    }
-    await ctx.reply(msgProfitSaved(pendingOrderId, amountStr), {
-      reply_markup: backToAdminKeyboard(),
-    });
-    const completedOrder = moved ?? getAdminOrderById(pendingOrderId);
-    if (completedOrder) {
-      // Отправляем информацию о закрытом заказе и прибыли в канал
-      const channelIdRaw = process.env.ORDERS_CHANNEL_ID?.trim();
-      if (channelIdRaw) {
-        const profitLines = [
-          `💰 Заказ закрыт: ${pendingOrderId}`,
-          `Сумма: ${completedOrder.amountRub?.toFixed(2) ?? 0} ₽`,
-          `Чистая прибыль: ${amountStr} ₽`
-        ].join("\n");
-        try {
-          await bot.api.sendMessage(channelIdRaw, profitLines);
-        } catch (e) {
-          console.error(`[admin-profit] не удалось отправить в канал ${channelIdRaw}:`, e);
-        }
+      if (completedOrderTemp && completedOrderTemp.amountRub) {
+        addReferralBonus(Number(completedOrderTemp.telegramUserId), completedOrderTemp.amountRub, completedOrderTemp.publicOrderId ?? pendingOrderId);
       }
 
-      const uid = Number(completedOrder.telegramUserId);
+      const completedOrder = moved ?? getAdminOrderById(pendingOrderId);
+      if (completedOrder) {
+        const uid = Number(completedOrder.telegramUserId);
       if (Number.isFinite(uid) && uid > 0) {
         const cat = completedOrder.categoryLabel;
         const accountOrDelivery = pendingAccountData.get(pendingOrderId);

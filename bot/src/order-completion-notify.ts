@@ -2,40 +2,6 @@ import type { Bot } from "grammy";
 
 import type { AdminOrderRow } from "./orders-store.js";
 
-const DEFAULT_OWNER_NOTIFY_IDS: readonly number[] = [1_944_803_821, 7_600_749_840];
-
-function parseIdList(raw: string): number[] {
-  const out: number[] = [];
-  for (const part of raw.split(/[\s,;]+/)) {
-    const s = part.trim();
-    if (/^\d+$/.test(s)) {
-      out.push(Number(s));
-    }
-  }
-  return out;
-}
-
-/**
- * Кому слать блок «Номер заказа / Оборот / Чистая прибыль / Покупатель» после учёта прибыли.
- * Не зависит от того, какой админ нажал «выполнить» — только эти id (плюс опциональный тест).
- * ORDER_COMPLETION_NOTIFY_IDS — полностью задаёт список (тогда дефолт не подмешивается).
- * ORDER_COMPLETION_NOTIFY_TEST_ID — доп. id к списку (удобно для теста без смены основного env).
- */
-export function resolveOrderCompletionNotifyRecipientIds(): number[] {
-  const explicit = process.env.ORDER_COMPLETION_NOTIFY_IDS?.trim();
-  const testId = process.env.ORDER_COMPLETION_NOTIFY_TEST_ID?.trim();
-  let ids: number[];
-  if (explicit) {
-    ids = parseIdList(explicit);
-  } else {
-    ids = [...DEFAULT_OWNER_NOTIFY_IDS];
-  }
-  if (testId && /^\d+$/.test(testId)) {
-    ids.push(Number(testId));
-  }
-  return [...new Set(ids)];
-}
-
 function formatBuyerLine(order: AdminOrderRow): string {
   const uid = order.telegramUserId?.trim() || "—";
   const u = order.telegramUsername?.trim().replace(/^@/, "");
@@ -59,10 +25,12 @@ export async function notifyOrderCompletionToOwners(
   order: AdminOrderRow,
   profitRub: number,
 ): Promise<void> {
-  const recipients = resolveOrderCompletionNotifyRecipientIds();
-  if (recipients.length === 0) {
+  const channelIdRaw = process.env.ORDERS_CHANNEL_ID?.trim();
+  if (!channelIdRaw) {
+    console.warn("[order-completion-notify] ORDERS_CHANNEL_ID не задан, уведомление о закрытии заказа не отправлено");
     return;
   }
+
   const lines = [
     "Номер заказа:",
     formatOrderRef(order),
@@ -77,29 +45,13 @@ export async function notifyOrderCompletionToOwners(
     formatBuyerLine(order),
   ];
   const text = lines.join("\n");
-  const ok: number[] = [];
-  const failed: number[] = [];
-  for (const chatId of recipients) {
-    try {
-      await bot.api.sendMessage(chatId, text, {
-        link_preview_options: { is_disabled: true },
-      });
-      ok.push(chatId);
-    } catch (e) {
-      failed.push(chatId);
-      console.warn("[order-completion-notify] не удалось отправить", chatId, order.id, e);
-    }
-  }
-  const ref = formatOrderRef(order);
-  if (ok.length > 0) {
-    console.info(
-      "[order-completion-notify] отправлено",
-      ref,
-      `orderId=${order.id ?? "—"}`,
-      `chat_ids_ok=[${ok.join(",")}]`,
-      failed.length ? `chat_ids_fail=[${failed.join(",")}]` : "",
-    );
-  } else if (recipients.length > 0) {
-    console.warn("[order-completion-notify] ни одному получателю не отправлено", ref, order.id);
+  
+  try {
+    await bot.api.sendMessage(channelIdRaw, text, {
+      link_preview_options: { is_disabled: true },
+    });
+    console.info("[order-completion-notify] отправлено в канал", formatOrderRef(order));
+  } catch (e) {
+    console.error("[order-completion-notify] не удалось отправить в канал", channelIdRaw, order.id, e);
   }
 }
