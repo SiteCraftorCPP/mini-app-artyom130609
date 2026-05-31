@@ -14,7 +14,7 @@ import {
   openPaymentUrl,
   requestPaymentPrepare,
 } from "@/shared/lib/prepare-payment";
-import { showErrorMessage } from "@/shared/lib/notify";
+import { showErrorMessage, showSuccessMessage } from "@/shared/lib/notify";
 import { Button } from "@/shared/ui/button";
 import {
   Dialog,
@@ -82,19 +82,20 @@ const methodBtnClass =
   "min-h-14 w-full justify-center rounded-[14px] border border-app-border-soft px-3 py-3.5 text-left text-sm leading-snug font-semibold text-white shadow-[0_8px_20px_var(--app-shadow)] tw-bg-popup-submit hover:brightness-110 active:brightness-90 sm:text-[15px]";
 
 function buildPrepareInput(
-  method: PaymentMethodCode,
+  method: PaymentMethodCode | "balance",
   initData: string,
   amountRub: number,
   ctx: PaymentDialogContext,
   streampayPreset?: StreampayFiatPreset,
-): PaymentPrepareInput {
+  useBalance?: boolean,
+): PaymentPrepareInput & { useBalance?: boolean } {
   const sp =
     method === "streampay" && streampayPreset ? { streampayPreset } : {};
   if (ctx.orderKind === "virt") {
     return {
       initData,
       orderKind: "virt",
-      method,
+      method: method as PaymentMethodCode,
       amountRub,
       game: ctx.game,
       server: ctx.server,
@@ -102,6 +103,7 @@ function buildPrepareInput(
       virtAmountLabel: ctx.virtAmountLabel,
       transferMethod: ctx.transferMethod,
       promoCode: ctx.promoCode,
+      useBalance,
       ...sp,
     };
   }
@@ -109,22 +111,24 @@ function buildPrepareInput(
     return {
       initData,
       orderKind: "account",
-      method,
+      method: method as PaymentMethodCode,
       amountRub,
       game: ctx.game,
       server: ctx.server,
       transferMethod: ctx.transferMethod,
       accountMode: ctx.accountMode,
       accountOptionLabel: ctx.accountOptionLabel,
+      useBalance,
       ...sp,
     };
   }
   return {
     initData,
     orderKind: "other_service",
-    method,
+    method: method as PaymentMethodCode,
     amountRub,
     otherService: ctx.otherService,
+    useBalance,
     ...sp,
   };
 }
@@ -136,6 +140,8 @@ function formatErr(e: unknown): string {
   return String(e);
 }
 
+import { useAuthMe } from "@/entities/user/hooks/use-auth-me";
+
 export function PaymentMethodDialog({
   open,
   onOpenChange,
@@ -144,10 +150,18 @@ export function PaymentMethodDialog({
   context,
 }: PaymentMethodDialogProps) {
   const [busy, setBusy] = useState(false);
+  const [useBalance, setUseBalance] = useState(false);
+  const { data: user } = useAuthMe();
+
+  const balance = user?.balance || 0;
+  const canUseBalance = balance > 0;
+  const balanceToDeduct = useBalance ? Math.min(balance, amountRub) : 0;
+  const amountToPay = amountRub - balanceToDeduct;
 
   useEffect(() => {
     if (open) {
       setBusy(false);
+      setUseBalance(false);
     }
   }, [open]);
 
@@ -162,7 +176,7 @@ export function PaymentMethodDialog({
   );
 
   const onSelectRub = useCallback(
-    async (method: PaymentMethodCode, streampayPreset?: StreampayFiatPreset) => {
+    async (method: PaymentMethodCode | "balance", streampayPreset?: StreampayFiatPreset) => {
       if (!initData.trim() || !context) {
         showErrorMessage("Откройте магазин из Telegram (кнопка в боте), не из обычного браузера.");
         return;
@@ -171,17 +185,21 @@ export function PaymentMethodDialog({
         showErrorMessage("Некорректная сумма. Вернитесь к форме и проверьте рубли.");
         return;
       }
-      const minRub = minRubForPaymentMethod(method, streampayPreset);
-      if (amountRub + 1e-9 < minRub) {
-        showErrorMessage(
-          method === "sbp"
-            ? PAYMENT_TEXT.paymentMinSbp(minRub)
-            : method === "streampay"
-              ? PAYMENT_TEXT.paymentMinStreamPay(minRub, streampayPreset)
-              : PAYMENT_TEXT.paymentMinCard(minRub),
-        );
-        return;
+
+      if (method !== "balance") {
+        const minRub = minRubForPaymentMethod(method, streampayPreset);
+        if (amountToPay + 1e-9 < minRub) {
+          showErrorMessage(
+            method === "sbp"
+              ? PAYMENT_TEXT.paymentMinSbp(minRub)
+              : method === "streampay"
+                ? PAYMENT_TEXT.paymentMinStreamPay(minRub, streampayPreset)
+                : PAYMENT_TEXT.paymentMinCard(minRub),
+          );
+          return;
+        }
       }
+
       setBusy(true);
       try {
         const body = buildPrepareInput(
@@ -190,8 +208,14 @@ export function PaymentMethodDialog({
           amountRub,
           context,
           streampayPreset,
+          useBalance,
         );
-        const res = await requestPaymentPrepare(body);
+        const res = await requestPaymentPrepare(body as any);
+        if (res.payUrl === "balance_success") {
+          showSuccessMessage("Оплата успешно списана с баланса!");
+          resetAndClose(false);
+          return;
+        }
         const opened = openPaymentUrl(res.payUrl);
         if (opened) {
           resetAndClose(false);
@@ -206,14 +230,14 @@ export function PaymentMethodDialog({
         setBusy(false);
       }
     },
-    [amountRub, context, initData, resetAndClose],
+    [amountRub, amountToPay, context, initData, resetAndClose, useBalance],
   );
 
   if (!context) {
     return null;
   }
 
-  const amountLine = `${formatNumberWithSpaces(Math.round(amountRub * 100) / 100)} ${CURRENCY.RUB}`.replace(
+  const amountLine = `${formatNumberWithSpaces(Math.round(amountToPay * 100) / 100)} ${CURRENCY.RUB}`.replace(
     /\s/g,
     "\u00a0",
   );
@@ -291,18 +315,54 @@ export function PaymentMethodDialog({
             )}
 
             <div className="mt-2 flex flex-col gap-3">
-              {RUB_METHODS.map((m) => (
+              {canUseBalance && (
+                <div 
+                  className="border-app-border-soft flex cursor-pointer items-center justify-between rounded-[14px] border px-4 py-3 shadow-[0_4px_12px_var(--app-shadow)] tw-bg-popup-submit hover:brightness-110 active:brightness-90"
+                  onClick={() => !busy && setUseBalance(!useBalance)}
+                >
+                  <div className="flex flex-col">
+                    <AppText tag={TAG.span} variant="primaryStrong" className="text-[15px] font-bold text-white">
+                      Списать с баланса
+                    </AppText>
+                    <AppText tag={TAG.span} variant="darkStrong" className="text-app-text-muted mt-0.5 text-xs font-medium">
+                      Доступно: {formatNumberWithSpaces(balance)} {CURRENCY.RUB}
+                    </AppText>
+                  </div>
+                  <div className={cn("relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors duration-200 ease-in-out", useBalance ? "bg-app-highlight" : "bg-app-border-soft")}>
+                    <span className={cn("pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out", useBalance ? "translate-x-5" : "translate-x-0.5")} />
+                  </div>
+                </div>
+              )}
+
+              {amountToPay === 0 ? (
                 <Button
-                  key={m.rowKey}
                   type="button"
                   size="default"
                   disabled={busy}
                   className={methodBtnClass}
-                  onClick={() => void onSelectRub(m.method, m.streampayPreset)}
+                  onClick={() => void onSelectRub("balance")}
                 >
-                  {m.label}
+                  Оплатить с баланса
                 </Button>
-              ))}
+              ) : (
+                RUB_METHODS.map((m) => (
+                  <Button
+                    key={m.rowKey}
+                    type="button"
+                    size="default"
+                    disabled={busy}
+                    className={methodBtnClass}
+                    onClick={() => void onSelectRub(m.method, m.streampayPreset)}
+                  >
+                    {m.label}
+                    {useBalance && (
+                      <span className="ml-2 text-xs opacity-80">
+                        (к доплате {formatNumberWithSpaces(Math.round(amountToPay * 100) / 100)} {CURRENCY.RUB})
+                      </span>
+                    )}
+                  </Button>
+                ))
+              )}
             </div>
           </div>
         </div>
