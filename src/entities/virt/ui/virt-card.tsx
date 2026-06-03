@@ -1,17 +1,17 @@
 import type { Virt } from "../model";
 
-import { VIRT_GRADIENT_CLASSES } from "@/shared/constants/virt-gradients";
+import {
+  VIRT_CARD_INNER_HEIGHT_PX,
+  VIRT_CARD_INNER_INSET_X_PX,
+  VIRT_CARD_INNER_INSET_Y_PX,
+  VIRT_CARD_INNER_WIDTH_PERCENT,
+  VIRT_CARD_OUTER_HEIGHT_PX,
+  resolveVirtCardLogoStyle,
+  resolveVirtCardTheme,
+  virtCardLogoCss,
+} from "@/shared/constants/virt-card-theme";
 import { cn } from "@/shared/utils";
-import { AppText } from "@/ui/app-text";
 import { Button } from "@/ui/button";
-
-import { VirtCardBlackRussia } from "./virt-card-black-russia";
-
-const getVirtInitials = (name: string) => {
-  const [firstWord = "", secondWord = ""] = name.split(" ");
-
-  return `${firstWord.charAt(0)}${secondWord.charAt(0)}`.trim() || "V";
-};
 
 type VirtCardProps = {
   className?: string;
@@ -26,16 +26,8 @@ export const VirtCard = ({
   onClick,
   interactive = true,
 }: VirtCardProps) => {
-  if (virt.slug === "black-russia") {
-    return (
-      <VirtCardBlackRussia
-        className={className}
-        virt={virt}
-        onClick={onClick}
-        interactive={interactive}
-      />
-    );
-  }
+  const theme = resolveVirtCardTheme(virt.slug);
+  const logo = resolveVirtCardLogoStyle(virt.slug);
 
   return (
     <Button
@@ -44,43 +36,63 @@ export const VirtCard = ({
       size="virtCard"
       onClick={onClick}
       disabled={interactive && !onClick}
-      className={cn("tw-shadow-virt-card", className, {
+      className={cn(className, {
         "cursor-default hover:cursor-default": !interactive,
       })}
+      style={{ height: VIRT_CARD_OUTER_HEIGHT_PX }}
     >
+      {/* Слой 1: вся плашка #C75041 → #DB7160 */}
       <span
-        className={cn(
-          "m-px flex w-full items-center gap-3 rounded-[10px] px-3 py-4",
-          VIRT_GRADIENT_CLASSES[virt.gradientToken],
-        )}
+        className="absolute inset-0 rounded-full"
+        style={{ background: theme.outerGradient }}
+        aria-hidden
+      />
+
+      {/* Слой 2: левая капсула 223×81 #FF0003 → #B50B0A */}
+      <span
+        className="absolute rounded-full"
+        style={{
+          left: VIRT_CARD_INNER_INSET_X_PX,
+          top: VIRT_CARD_INNER_INSET_Y_PX,
+          width: `${VIRT_CARD_INNER_WIDTH_PERCENT}%`,
+          height: VIRT_CARD_INNER_HEIGHT_PX,
+          background: theme.innerGradient,
+        }}
+        aria-hidden
+      />
+
+      {/* Текст — Montserrat 900, 18px (ок) */}
+      <span
+        className="absolute z-[1] flex items-center justify-center"
+        style={{
+          left: VIRT_CARD_INNER_INSET_X_PX,
+          top: VIRT_CARD_INNER_INSET_Y_PX,
+          width: `${VIRT_CARD_INNER_WIDTH_PERCENT}%`,
+          height: VIRT_CARD_INNER_HEIGHT_PX,
+        }}
       >
         <span
-          className={cn(
-            "size-15",
-            {
-              "flex size-8 shrink-0 items-center justify-center rounded-lg text-xs font-bold text-white":
-                !virt.logo,
-            },
-          )}
+          className="truncate px-4 text-center font-[Montserrat] text-[18px] font-black leading-none text-white"
+          style={{ fontWeight: 900 }}
         >
-          {virt.logo ? (
-            <img
-              src={virt.logo}
-              alt=""
-              className={cn("size-full object-contain", {
-                "scale-150": virt.slug === "province-rp",
-              })}
-              width="100%"
-              height="100%"
-            />
-          ) : (
-            getVirtInitials(virt.name)
-          )}
-        </span>
-        <AppText variant="primaryStrong" size="xxxl">
           {virt.name}
-        </AppText>
+        </span>
       </span>
+
+      {virt.logo ? (
+        <span
+          className="pointer-events-none absolute z-[2]"
+          style={virtCardLogoCss(logo)}
+          aria-hidden
+        >
+          <img
+            src={virt.logo}
+            alt=""
+            draggable={false}
+            className="block size-full object-cover object-center"
+          />
+        </span>
+      ) : null}
     </Button>
   );
 };

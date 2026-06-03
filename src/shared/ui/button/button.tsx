@@ -25,7 +25,7 @@ const buttonVariants = cva(
         support:
           "bg-background-card w-full justify-start rounded-[8px] text-white shadow-[0_8px_20px_var(--app-shadow)] hover:brightness-110 active:brightness-90",
         virtCard:
-          "relative flex h-[58px] w-full items-stretch overflow-hidden rounded-full border-0 bg-transparent p-0 text-left whitespace-normal shadow-[0_2px_14px_rgba(0,0,0,0.28)] hover:brightness-105 active:brightness-95 sm:h-[62px]",
+          "relative box-border flex w-full items-stretch overflow-hidden rounded-full border-2 border-white/30 bg-transparent p-0 text-left whitespace-normal shadow-none hover:brightness-[1.02] active:brightness-95",
         accouuntVirt: "flex-col gap-1 rounded-[6px] p-0 justify-start",
       },
       menuState: {

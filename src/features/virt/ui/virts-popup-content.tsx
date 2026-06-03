@@ -79,7 +79,7 @@ export const VirtsPopupContent = ({
   }
 
   return (
-    <ul className="flex flex-col gap-2 px-4 pb-4">
+    <ul className="flex flex-col gap-3 px-4 pb-4">
       {data?.map((virt) => (
         <li key={virt.id}>
           <VirtCard virt={virt} interactive={false} />

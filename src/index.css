@@ -245,24 +245,24 @@
   --home-action-mint-dark: rgba(22, 125, 104, 1);
   --home-action-green-light: rgba(83, 229, 166, 1);
   --home-action-green-dark: rgba(36, 132, 91, 1);
-  --virt-red-500: rgba(220, 39, 10, 1);
-  --virt-red-700: rgba(156, 51, 34, 1);
-  --virt-purple-500: rgba(193, 10, 227, 1);
-  --virt-purple-700: rgba(92, 0, 107, 1);
-  --virt-blue-500: rgba(13, 174, 248, 1);
-  --virt-blue-700: rgba(4, 68, 167, 1);
-  --virt-yellow-500: rgba(240, 212, 5, 1);
-  --virt-yellow-700: rgba(236, 127, 26, 1);
-  --virt-pink-500: rgba(255, 88, 182, 1);
-  --virt-pink-700: rgba(134, 22, 84, 1);
-  --virt-dark-500: rgba(53, 55, 99, 1);
-  --virt-dark-700: rgba(23, 19, 33, 1);
-  --virt-orange-500: rgba(255, 102, 0, 1);
-  --virt-orange-700: rgba(204, 82, 0, 1);
-  --virt-grey-500: rgba(160, 160, 160, 1);
-  --virt-grey-700: rgba(100, 100, 100, 1);
-  --virt-gold-500: rgba(255, 215, 0, 1);
-  --virt-gold-700: rgba(204, 172, 0, 1);
+  --virt-red-500: #ff0100;
+  --virt-red-700: #6d2222;
+  --virt-purple-500: #ec19ee;
+  --virt-purple-700: #78007f;
+  --virt-blue-500: #00b6f5;
+  --virt-blue-700: #0053ab;
+  --virt-yellow-500: #e8b21f;
+  --virt-yellow-700: #e8b21f;
+  --virt-pink-500: #e34fa2;
+  --virt-pink-700: #bc2378;
+  --virt-dark-500: #25265b;
+  --virt-dark-700: #23223c;
+  --virt-orange-500: #fab808;
+  --virt-orange-700: #ff8000;
+  --virt-grey-500: #ebf6eb;
+  --virt-grey-700: #759c9b;
+  --virt-gold-500: #fed731;
+  --virt-gold-700: #e6a519;
   --overlay-dark: rgba(0, 0, 0, 0.08);
   --black-30: rgba(0, 0, 0, 0.3);
   --white-16: rgba(255, 255, 255, 0.16);
@@ -362,48 +362,48 @@
   );
   --gradient-virt-card-red: linear-gradient(
     90deg,
-    var(--virt-red-500) 0%,
-    var(--virt-red-700) 100%
+    var(--virt-red-700) 0%,
+    var(--virt-red-500) 100%
   );
   --gradient-virt-card-purple: linear-gradient(
     90deg,
-    var(--virt-purple-500) 0%,
-    var(--virt-purple-700) 100%
+    var(--virt-purple-700) 0%,
+    var(--virt-purple-500) 100%
   );
   --gradient-virt-card-blue: linear-gradient(
     90deg,
-    var(--virt-blue-500) 0%,
-    var(--virt-blue-700) 100%
+    var(--virt-blue-700) 0%,
+    var(--virt-blue-500) 100%
   );
   --gradient-virt-card-yellow: linear-gradient(
     90deg,
-    var(--virt-yellow-500) 0%,
-    var(--virt-yellow-700) 100%
+    var(--virt-yellow-700) 0%,
+    var(--virt-yellow-500) 100%
   );
   --gradient-virt-card-pink: linear-gradient(
     90deg,
-    var(--virt-pink-500) 0%,
-    var(--virt-pink-700) 100%
+    var(--virt-pink-700) 0%,
+    var(--virt-pink-500) 100%
   );
   --gradient-virt-card-dark: linear-gradient(
     90deg,
-    var(--virt-dark-500) 0%,
-    var(--virt-dark-700) 100%
+    var(--virt-dark-700) 0%,
+    var(--virt-dark-500) 100%
   );
   --gradient-virt-card-orange: linear-gradient(
     90deg,
-    var(--virt-orange-500) 0%,
-    var(--virt-orange-700) 100%
+    var(--virt-orange-700) 0%,
+    var(--virt-orange-500) 100%
   );
   --gradient-virt-card-grey: linear-gradient(
     90deg,
-    var(--virt-grey-500) 0%,
-    var(--virt-grey-700) 100%
+    var(--virt-grey-700) 0%,
+    var(--virt-grey-500) 100%
   );
   --gradient-virt-card-gold: linear-gradient(
     90deg,
-    var(--virt-gold-500) 0%,
-    var(--virt-gold-700) 100%
+    var(--virt-gold-700) 0%,
+    var(--virt-gold-500) 100%
   );
 
   --app-panel-foreground: rgba(19, 22, 35, 1);
