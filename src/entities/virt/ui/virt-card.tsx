@@ -13,6 +13,8 @@ import {
 import { cn } from "@/shared/utils";
 import { Button } from "@/ui/button";
 
+import { VirtCardBlackRussia } from "./virt-card-black-russia";
+
 type VirtCardProps = {
   className?: string;
   interactive?: boolean;
@@ -26,6 +28,17 @@ export const VirtCard = ({
   onClick,
   interactive = true,
 }: VirtCardProps) => {
+  if (virt.slug === "black-russia") {
+    return (
+      <VirtCardBlackRussia
+        className={className}
+        virt={virt}
+        onClick={onClick}
+        interactive={interactive}
+      />
+    );
+  }
+
   const theme = resolveVirtCardTheme(virt.slug);
   const logo = resolveVirtCardLogoStyle(virt.slug);
 

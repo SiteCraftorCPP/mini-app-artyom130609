@@ -74,17 +74,15 @@ export const VIRT_CARD_THEME: Record<string, VirtCardTheme> = {
 
 /**
  * Figma Rectangle 87 (Black Russia):
- * 103.36×115.24, rotate −33.11°. translateXPx подобран под overflow после rotate.
+ * 103.36×115.24, top −14.63px, right 18.42px, rotate −33.11° (против часовой).
  */
 export const VIRT_CARD_LOGO_STYLE: Partial<Record<string, VirtCardLogoStyle>> = {
   "black-russia": {
     widthPx: 103.36,
     heightPx: 115.24,
-    rotateDeg: -33.11,
-    rightPx: 38,
-    topPx: -11,
-    transformOrigin: "50% 52%",
-    translateXPx: -22,
+    rotateDeg: 33.11,
+    rightPx: 18.42,
+    topPx: -14.63,
   },
   "matryoshka-rp": {
     widthPx: 98,
