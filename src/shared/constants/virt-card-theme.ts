@@ -25,6 +25,11 @@ export type VirtCardLogoStyle = {
   rightPx: number;
   /** От верхнего края плашки (может быть отрицательным) */
   topPx: number;
+  /** Точка вращения (Figma) */
+  transformOrigin?: string;
+  /** Доп. сдвиг после rotate, px от плашки 335.83×85.58 */
+  translateXPx?: number;
+  translateYPx?: number;
 };
 
 /** Black Russia — только цвета из Figma, без выдуманных оттенков. */
@@ -69,15 +74,17 @@ export const VIRT_CARD_THEME: Record<string, VirtCardTheme> = {
 
 /**
  * Figma Rectangle 87 (Black Russia):
- * 103.36×115.24, top −14.63px, right 18.42px, rotate −33.11° (против часовой).
+ * 103.36×115.24, rotate −33.11°. translateXPx подобран под overflow после rotate.
  */
 export const VIRT_CARD_LOGO_STYLE: Partial<Record<string, VirtCardLogoStyle>> = {
   "black-russia": {
     widthPx: 103.36,
     heightPx: 115.24,
     rotateDeg: -33.11,
-    rightPx: 18.42,
-    topPx: -14.63,
+    rightPx: 38,
+    topPx: -11,
+    transformOrigin: "50% 52%",
+    translateXPx: -22,
   },
   "matryoshka-rp": {
     widthPx: 98,
@@ -160,12 +167,27 @@ export function resolveVirtCardLogoStyle(slug: string): VirtCardLogoStyle {
 
 /** Figma px → % относительно плашки 335.83×85.58 (масштаб на любой ширине). */
 export function virtCardLogoCss(logo: VirtCardLogoStyle): CSSProperties {
+  const transforms: string[] = [];
+  if (logo.rotateDeg !== 0) {
+    transforms.push(`rotate(${logo.rotateDeg}deg)`);
+  }
+  if (logo.translateXPx) {
+    transforms.push(
+      `translateX(${(logo.translateXPx / VIRT_CARD_OUTER_WIDTH_PX) * 100}%)`,
+    );
+  }
+  if (logo.translateYPx) {
+    transforms.push(
+      `translateY(${(logo.translateYPx / VIRT_CARD_OUTER_HEIGHT_PX) * 100}%)`,
+    );
+  }
+
   return {
     width: `${(logo.widthPx / VIRT_CARD_OUTER_WIDTH_PX) * 100}%`,
     height: `${(logo.heightPx / VIRT_CARD_OUTER_HEIGHT_PX) * 100}%`,
     right: `${(logo.rightPx / VIRT_CARD_OUTER_WIDTH_PX) * 100}%`,
     top: `${(logo.topPx / VIRT_CARD_OUTER_HEIGHT_PX) * 100}%`,
-    transform: logo.rotateDeg !== 0 ? `rotate(${logo.rotateDeg}deg)` : undefined,
-    transformOrigin: "center center",
+    transform: transforms.length > 0 ? transforms.join(" ") : undefined,
+    transformOrigin: logo.transformOrigin ?? "center center",
   };
 }
