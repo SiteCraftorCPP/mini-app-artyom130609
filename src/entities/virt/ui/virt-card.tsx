@@ -2,6 +2,7 @@ import type { Virt } from "../model";
 
 import {
   VIRT_CARD_INNER_HEIGHT_PX,
+  VIRT_CARD_INNER_INSET_X_PX,
   VIRT_CARD_INNER_INSET_Y_PX,
   VIRT_CARD_INNER_WIDTH_PERCENT,
   VIRT_CARD_OUTER_HEIGHT_PX,
@@ -39,17 +40,18 @@ export const VirtCard = ({
       })}
       style={{ height: VIRT_CARD_OUTER_HEIGHT_PX }}
     >
-      {/* Внешняя плашка: #C75041 → #DB7160 */}
+      {/* Слой 1: вся плашка #C75041 → #DB7160 */}
       <span
         className="absolute inset-0 rounded-full"
         style={{ background: theme.outerGradient }}
         aria-hidden
       />
 
-      {/* Левая капсула 223×81: #FF0003 → #B50B0A */}
+      {/* Слой 2: левая капсула 223×81 #FF0003 → #B50B0A */}
       <span
-        className="absolute left-[2px] rounded-full"
+        className="absolute rounded-full"
         style={{
+          left: VIRT_CARD_INNER_INSET_X_PX,
           top: VIRT_CARD_INNER_INSET_Y_PX,
           width: `${VIRT_CARD_INNER_WIDTH_PERCENT}%`,
           height: VIRT_CARD_INNER_HEIGHT_PX,
@@ -58,17 +60,18 @@ export const VirtCard = ({
         aria-hidden
       />
 
-      {/* Montserrat Black 900, 18px, center — Figma */}
+      {/* Текст — Montserrat 900, 18px (ок) */}
       <span
-        className="absolute left-[2px] z-[1] flex items-center justify-center"
+        className="absolute z-[1] flex items-center justify-center"
         style={{
+          left: VIRT_CARD_INNER_INSET_X_PX,
           top: VIRT_CARD_INNER_INSET_Y_PX,
           width: `${VIRT_CARD_INNER_WIDTH_PERCENT}%`,
           height: VIRT_CARD_INNER_HEIGHT_PX,
         }}
       >
         <span
-          className="truncate px-4 text-center font-[Montserrat] text-[18px] font-black leading-none tracking-normal text-white"
+          className="truncate px-4 text-center font-[Montserrat] text-[18px] font-black leading-none text-white"
           style={{ fontWeight: 900 }}
         >
           {virt.name}
@@ -81,13 +84,13 @@ export const VirtCard = ({
           alt=""
           aria-hidden
           draggable={false}
-          className="pointer-events-none absolute z-[2] object-contain object-right"
+          className="pointer-events-none absolute z-[2]"
           style={{
             width: logo.widthPx,
             height: logo.heightPx,
             right: logo.rightPx,
-            top: logo.topPx != null ? `${logo.topPx}%` : "50%",
-            transform: `translateY(-50%) rotate(${logo.rotateDeg}deg)`,
+            top: logo.topPx,
+            transform: logo.rotateDeg !== 0 ? `rotate(${logo.rotateDeg}deg)` : undefined,
             transformOrigin: "center center",
           }}
         />
