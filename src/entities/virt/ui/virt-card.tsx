@@ -4,8 +4,8 @@ import {
   VIRT_CARD_INNER_HEIGHT_PX,
   VIRT_CARD_INNER_INSET_Y_PX,
   VIRT_CARD_INNER_WIDTH_PERCENT,
-  VIRT_CARD_LOGO_CLASS,
   VIRT_CARD_OUTER_HEIGHT_PX,
+  resolveVirtCardLogoStyle,
   resolveVirtCardTheme,
 } from "@/shared/constants/virt-card-theme";
 import { cn } from "@/shared/utils";
@@ -25,6 +25,7 @@ export const VirtCard = ({
   interactive = true,
 }: VirtCardProps) => {
   const theme = resolveVirtCardTheme(virt.slug);
+  const logo = resolveVirtCardLogoStyle(virt.slug);
 
   return (
     <Button
@@ -38,14 +39,14 @@ export const VirtCard = ({
       })}
       style={{ height: VIRT_CARD_OUTER_HEIGHT_PX }}
     >
-      {/* Тёмный фон всей плашки (#6D2222 и т.д.) — виден справа */}
+      {/* Внешняя плашка: #C75041 → #DB7160 */}
       <span
         className="absolute inset-0 rounded-full"
-        style={{ backgroundColor: theme.outer }}
+        style={{ background: theme.outerGradient }}
         aria-hidden
       />
 
-      {/* Яркая левая капсула 223×81 с градиентом (#FF0100 → #B50B0A) */}
+      {/* Левая капсула 223×81: #FF0003 → #B50B0A */}
       <span
         className="absolute left-[2px] rounded-full"
         style={{
@@ -57,7 +58,7 @@ export const VirtCard = ({
         aria-hidden
       />
 
-      {/* Текст по центру капсулы */}
+      {/* Montserrat Black 900, 18px, center — Figma */}
       <span
         className="absolute left-[2px] z-[1] flex items-center justify-center"
         style={{
@@ -66,7 +67,10 @@ export const VirtCard = ({
           height: VIRT_CARD_INNER_HEIGHT_PX,
         }}
       >
-        <span className="truncate px-4 text-center text-[17px] font-bold leading-[24px] tracking-tight text-white">
+        <span
+          className="truncate px-4 text-center font-[Montserrat] text-[18px] font-black leading-none tracking-normal text-white"
+          style={{ fontWeight: 900 }}
+        >
           {virt.name}
         </span>
       </span>
@@ -77,11 +81,15 @@ export const VirtCard = ({
           alt=""
           aria-hidden
           draggable={false}
-          className={cn(
-            "pointer-events-none absolute top-1/2 right-0 z-[2] -translate-y-1/2 object-contain object-right",
-            VIRT_CARD_LOGO_CLASS[virt.slug] ??
-              "h-[110px] w-auto max-w-[105px] translate-x-[4px]",
-          )}
+          className="pointer-events-none absolute z-[2] object-contain object-right"
+          style={{
+            width: logo.widthPx,
+            height: logo.heightPx,
+            right: logo.rightPx,
+            top: logo.topPx != null ? `${logo.topPx}%` : "50%",
+            transform: `translateY(-50%) rotate(${logo.rotateDeg}deg)`,
+            transformOrigin: "center center",
+          }}
         />
       ) : null}
     </Button>

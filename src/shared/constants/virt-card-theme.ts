@@ -1,86 +1,144 @@
 /** Figma: внешняя 335.83×85.58, внутренняя капсула 223.17×81.25 */
 export const VIRT_CARD_OUTER_HEIGHT_PX = 85.58;
 export const VIRT_CARD_INNER_HEIGHT_PX = 81.25;
+/** 223.17 / 335.83 */
 export const VIRT_CARD_INNER_WIDTH_PERCENT = 66.45;
 export const VIRT_CARD_INNER_INSET_Y_PX =
   (VIRT_CARD_OUTER_HEIGHT_PX - VIRT_CARD_INNER_HEIGHT_PX) / 2;
 
 export type VirtCardTheme = {
-  /** Фон всей плашки (тёмный, справа под логотип) — 1-й цвет пары */
-  outer: string;
-  /** Градиент левой капсулы: яркий → чуть темнее (2-й цвет пары) */
+  /** Градиент всей плашки (Figma: Rectangle 335×86) */
+  outerGradient: string;
+  /** Градиент левой капсулы (Figma: Rectangle 86, 223×81) */
   innerGradient: string;
+};
+
+export type VirtCardLogoStyle = {
+  widthPx: number;
+  heightPx: number;
+  rotateDeg: number;
+  rightPx: number;
+  topPx?: number;
 };
 
 /**
  * Цвета 1:1 из Figma.
- * Пара пользователя: outer (тёмный фон) + inner (яркая капсула слева с градиентом).
+ * Black Russia: outer #C75041→#DB7160, inner #FF0003→#B50B0A.
  */
 export const VIRT_CARD_THEME: Record<string, VirtCardTheme> = {
   "black-russia": {
-    outer: "#6D2222",
-    innerGradient: "linear-gradient(90deg, #FF0100 0%, #B50B0A 100%)",
+    outerGradient: "linear-gradient(90deg, #C75041 0%, #DB7160 100%)",
+    innerGradient: "linear-gradient(90deg, #FF0003 0%, #B50B0A 100%)",
   },
   "matryoshka-rp": {
-    outer: "#78007F",
+    outerGradient: "linear-gradient(90deg, #933899 0%, #78007F 100%)",
     innerGradient: "linear-gradient(90deg, #EC19EE 0%, #9A0BA3 100%)",
   },
   "gta-v-rp": {
-    outer: "#E8B21F",
+    outerGradient: "linear-gradient(90deg, #D4A018 0%, #E8B21F 100%)",
     innerGradient: "linear-gradient(90deg, #F5D04A 0%, #E8B21F 100%)",
   },
   "grand-mobile-rp": {
-    outer: "#23223C",
+    outerGradient: "linear-gradient(90deg, #2E3055 0%, #23223C 100%)",
     innerGradient: "linear-gradient(90deg, #25265B 0%, #1A1B35 100%)",
   },
   "arizona-rp": {
-    outer: "#0053AB",
+    outerGradient: "linear-gradient(90deg, #0068C4 0%, #0053AB 100%)",
     innerGradient: "linear-gradient(90deg, #00B6F5 0%, #007ACC 100%)",
   },
   "majestic-rp": {
-    outer: "#BC2378",
+    outerGradient: "linear-gradient(90deg, #D43A92 0%, #BC2378 100%)",
     innerGradient: "linear-gradient(90deg, #E34FA2 0%, #A01A62 100%)",
   },
   "province-rp": {
-    outer: "#759C9B",
+    outerGradient: "linear-gradient(90deg, #8FAFAE 0%, #759C9B 100%)",
     innerGradient: "linear-gradient(90deg, #EBF6EB 0%, #A8C4C3 100%)",
   },
   "radmir-rp": {
-    outer: "#FF8000",
+    outerGradient: "linear-gradient(90deg, #FF991A 0%, #FF8000 100%)",
     innerGradient: "linear-gradient(90deg, #FAB808 0%, #E69500 100%)",
   },
   "amazing-rp": {
-    outer: "#E6A519",
+    outerGradient: "linear-gradient(90deg, #F0B828 0%, #E6A519 100%)",
     innerGradient: "linear-gradient(90deg, #FED731 0%, #D49212 100%)",
   },
 };
 
-/** Логотип справа в тёмной зоне, частично обрезан. */
-export const VIRT_CARD_LOGO_CLASS: Partial<Record<string, string>> = {
-  "black-russia": "h-[115px] w-auto max-w-[112px] translate-x-[4px]",
-  "matryoshka-rp": "h-[112px] w-auto max-w-[108px] translate-x-[2px]",
-  "gta-v-rp": "h-[110px] w-auto max-w-[100px] translate-x-[6px]",
-  "grand-mobile-rp": "h-[104px] w-auto max-w-[96px] translate-x-[2px]",
-  "arizona-rp": "h-[108px] w-auto max-w-[110px] translate-x-[4px]",
-  "majestic-rp": "h-[86px] w-auto max-w-[130px] translate-x-0",
-  "province-rp": "h-[118px] w-auto max-w-[120px] translate-x-[6px]",
-  "radmir-rp": "h-[112px] w-auto max-w-[108px] translate-x-[4px]",
-  "amazing-rp": "h-[110px] w-auto max-w-[100px] translate-x-[6px]",
+/** Figma Rectangle 87: 103.36×115.24, rotate −33.11° */
+export const VIRT_CARD_LOGO_STYLE: Partial<Record<string, VirtCardLogoStyle>> = {
+  "black-russia": {
+    widthPx: 103.36,
+    heightPx: 115.24,
+    rotateDeg: -33.11,
+    rightPx: 6,
+    topPx: 50,
+  },
+  "matryoshka-rp": {
+    widthPx: 98,
+    heightPx: 108,
+    rotateDeg: 0,
+    rightPx: 4,
+  },
+  "gta-v-rp": {
+    widthPx: 96,
+    heightPx: 106,
+    rotateDeg: 0,
+    rightPx: 8,
+  },
+  "grand-mobile-rp": {
+    widthPx: 92,
+    heightPx: 100,
+    rotateDeg: 0,
+    rightPx: 6,
+  },
+  "arizona-rp": {
+    widthPx: 100,
+    heightPx: 108,
+    rotateDeg: 0,
+    rightPx: 6,
+  },
+  "majestic-rp": {
+    widthPx: 120,
+    heightPx: 82,
+    rotateDeg: 0,
+    rightPx: 0,
+  },
+  "province-rp": {
+    widthPx: 110,
+    heightPx: 118,
+    rotateDeg: 0,
+    rightPx: 8,
+  },
+  "radmir-rp": {
+    widthPx: 98,
+    heightPx: 110,
+    rotateDeg: 0,
+    rightPx: 6,
+  },
+  "amazing-rp": {
+    widthPx: 96,
+    heightPx: 106,
+    rotateDeg: 0,
+    rightPx: 8,
+  },
 };
 
 export function resolveVirtCardTheme(slug: string): VirtCardTheme {
   return (
     VIRT_CARD_THEME[slug] ?? {
-      outer: "#333333",
+      outerGradient: "linear-gradient(90deg, #444444 0%, #333333 100%)",
       innerGradient: "linear-gradient(90deg, #666666 0%, #444444 100%)",
     }
   );
 }
 
-/** @deprecated используй resolveVirtCardTheme */
-export function resolveVirtCardGradient(slug: string): { from: string; to: string } {
-  const t = resolveVirtCardTheme(slug);
-  return { from: t.outer, to: t.outer };
+export function resolveVirtCardLogoStyle(slug: string): VirtCardLogoStyle {
+  return (
+    VIRT_CARD_LOGO_STYLE[slug] ?? {
+      widthPx: 100,
+      heightPx: 108,
+      rotateDeg: 0,
+      rightPx: 6,
+    }
+  );
 }
-
-export const VIRT_CARD_TEXT_PANEL_WIDTH: Partial<Record<string, string>> = {};
