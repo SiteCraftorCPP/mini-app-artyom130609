@@ -1,7 +1,4 @@
-/**
- * Пулы ник / id (как в реальных уведомлениях). История/50 заказов — мок до API, но такие же поля, что в проде.
- * Синхронно с bot/src/order-demo-constants.ts (копия для сборки бота).
- */
+/** Дублирует bot/src/order-demo-constants.ts. */
 const ORDER_REF_ALPHABET = "0123456789ABCDEFGHJKLMNPQRSTUVWXYZ";
 
 export const DEMO_ORDER_BUYERS: ReadonlyArray<{

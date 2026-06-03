@@ -62,7 +62,6 @@ type PaymentMethodDialogProps = {
   context: PaymentDialogContext | null;
 };
 
-/** Кнопки StreamPay: разные подписи + `streampayPreset` в prepare (в заказе/логах); сумма и валюта API как в ЛК (USDT, payment_type из env). */
 const RUB_METHODS: {
   rowKey: string;
   method: PaymentMethodCode;
@@ -78,7 +77,6 @@ const RUB_METHODS: {
   { rowKey: "streampay-byn", method: "streampay", label: "Белорусский рубль", streampayPreset: "byn" },
 ];
 
-/** Крупные кнопки под палец, читаемый текст */
 const methodBtnClass =
   "min-h-14 w-full justify-center rounded-[14px] border border-app-border-soft px-3 py-3.5 text-left text-sm leading-snug font-semibold text-white shadow-[0_8px_20px_var(--app-shadow)] tw-bg-popup-submit hover:brightness-110 active:brightness-90 sm:text-[15px]";
 

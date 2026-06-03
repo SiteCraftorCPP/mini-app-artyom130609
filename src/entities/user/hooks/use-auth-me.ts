@@ -24,7 +24,6 @@ function resolveInitData(webApp: any): string {
   return "";
 }
 
-/** `initDataUnsafe` иногда пуст на первом кадре, а `user=...` в `initData` уже есть. */
 function parseUserFromInitDataString(initData: string): TgUserLike {
   if (!initData) return null;
   try {

@@ -660,18 +660,17 @@ function resolveAdminTelegramIdsFromEnv(): number[] {
   return [...new Set(out)];
 }
 
-/** Рассылка админам (TELEGRAM_ADMIN_ID / TELEGRAM_ADMIN_IDS) о новом оформлении заказа. */
+/** Уведомление о новом заказе в канал ORDERS_CHANNEL_ID. */
 export async function notifyAdminsNewOrder(
   bot: Bot,
   payload: VirtOrderSuccessPayload,
 ): Promise<void> {
-  const admins = resolveAdminTelegramIdsFromEnv();
-  if (admins.length === 0) {
-    console.warn(
-      "[admin-notify] TELEGRAM_ADMIN_ID / TELEGRAM_ADMIN_IDS не заданы — админы не получат уведомление о новом заказе.",
-    );
+  const channelIdRaw = process.env.ORDERS_CHANNEL_ID?.trim();
+  if (!channelIdRaw) {
+    console.warn("[admin-notify] ORDERS_CHANNEL_ID не задан — уведомление о новом заказе не отправлено");
     return;
   }
+
   const seq = bumpAdminOrderSequence();
   const kind =
     payload.orderKind === "account"
@@ -715,28 +714,13 @@ export async function notifyAdminsNewOrder(
 
   const text = lines.join("\n");
 
-  // Читаем ID канала из .env
-  const channelIdRaw = process.env.ORDERS_CHANNEL_ID?.trim();
-  if (channelIdRaw) {
-    try {
-      await bot.api.sendMessage(channelIdRaw, text, {
-        link_preview_options: { is_disabled: true },
-      });
-    } catch (e) {
-      console.warn(`[admin-notify] не удалось отправить в канал ${channelIdRaw}:`, e);
-    }
+  try {
+    await bot.api.sendMessage(channelIdRaw, text, {
+      link_preview_options: { is_disabled: true },
+    });
+  } catch (e) {
+    console.warn(`[admin-notify] не удалось отправить в канал ${channelIdRaw}:`, e);
   }
-
-  // Больше не шлём в личку админам
-  // for (const aid of admins) {
-  //   try {
-  //     await bot.api.sendMessage(aid, text, {
-  //       link_preview_options: { is_disabled: true },
-  //     });
-  //   } catch (e) {
-  //     console.warn(`[admin-notify] не удалось отправить админу ${aid}:`, e);
-  //   }
-  // }
 }
 
 export async function sendVirtOrderSuccess(
@@ -1824,8 +1808,6 @@ export function startOrderNotifyHttpServer(
           let currencyOpt = streamPayPickStr("STREAMPAY_CURRENCY", "currency", extraRaw);
 
           if (presetLabel) {
-            // ВАЖНО: StreamPay требует, чтобы system_currency всегда совпадала с валютой магазина (USDT)
-            // даже если payment_type = 1 и мы хотим выставить счет в фиате.
             systemCurrency = "USDT";
             paymentTypeVal = 1;
             currencyOpt = presetLabel;
@@ -1895,15 +1877,12 @@ export function startOrderNotifyHttpServer(
               streamPayAmount = amountNum * rate;
               amountSource = `env_STREAMPAY_RATE_${targetCurrency.toUpperCase()}`;
             } else if (streamPayAutoFiatRatesEnabled()) {
-              // ВАЖНО: конвертируем рубли в целевую фиатную валюту (например, KZT),
-              // а не в systemCurrency (который теперь всегда USDT).
               streamPayAmount = await streamPayConvertRubToFiatAmount(
                 amountNum,
                 targetCurrency
               );
               amountSource = "cbr_" + targetCurrency.toUpperCase();
-              
-              // Добавляем возможность накинуть процент (маржу) поверх курса ЦБ
+
               const marginRaw = process.env.STREAMPAY_FIAT_MARGIN_PERCENT?.trim();
               if (marginRaw) {
                 const margin = Number(marginRaw.replace(",", "."));

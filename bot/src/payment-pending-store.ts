@@ -25,7 +25,6 @@ export type PendingPaymentOrder = {
   amountExpected: string;
   sent: boolean;
   telegramUserId: number;
-  /** Из подписанного initData при оплате (не показываем клиенту в карточке иначе). */
   telegramUsername?: string;
   telegramFirstName?: string;
   orderNumber: string;
