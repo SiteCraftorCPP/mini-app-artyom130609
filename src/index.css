@@ -259,8 +259,8 @@
   --virt-dark-700: rgba(23, 19, 33, 1);
   --virt-orange-500: rgba(255, 102, 0, 1);
   --virt-orange-700: rgba(204, 82, 0, 1);
-  --virt-grey-500: rgba(160, 160, 160, 1);
-  --virt-grey-700: rgba(100, 100, 100, 1);
+  --virt-grey-500: rgba(168, 186, 186, 1);
+  --virt-grey-700: rgba(108, 128, 128, 1);
   --virt-gold-500: rgba(255, 215, 0, 1);
   --virt-gold-700: rgba(204, 172, 0, 1);
   --overlay-dark: rgba(0, 0, 0, 0.08);
@@ -362,48 +362,48 @@
   );
   --gradient-virt-card-red: linear-gradient(
     90deg,
-    var(--virt-red-500) 0%,
-    var(--virt-red-700) 100%
+    var(--virt-red-700) 0%,
+    var(--virt-red-500) 100%
   );
   --gradient-virt-card-purple: linear-gradient(
     90deg,
-    var(--virt-purple-500) 0%,
-    var(--virt-purple-700) 100%
+    var(--virt-purple-700) 0%,
+    var(--virt-purple-500) 100%
   );
   --gradient-virt-card-blue: linear-gradient(
     90deg,
-    var(--virt-blue-500) 0%,
-    var(--virt-blue-700) 100%
+    var(--virt-blue-700) 0%,
+    var(--virt-blue-500) 100%
   );
   --gradient-virt-card-yellow: linear-gradient(
     90deg,
-    var(--virt-yellow-500) 0%,
-    var(--virt-yellow-700) 100%
+    var(--virt-yellow-700) 0%,
+    var(--virt-yellow-500) 100%
   );
   --gradient-virt-card-pink: linear-gradient(
     90deg,
-    var(--virt-pink-500) 0%,
-    var(--virt-pink-700) 100%
+    var(--virt-pink-700) 0%,
+    var(--virt-pink-500) 100%
   );
   --gradient-virt-card-dark: linear-gradient(
     90deg,
-    var(--virt-dark-500) 0%,
-    var(--virt-dark-700) 100%
+    var(--virt-dark-700) 0%,
+    var(--virt-dark-500) 100%
   );
   --gradient-virt-card-orange: linear-gradient(
     90deg,
-    var(--virt-orange-500) 0%,
-    var(--virt-orange-700) 100%
+    var(--virt-orange-700) 0%,
+    var(--virt-orange-500) 100%
   );
   --gradient-virt-card-grey: linear-gradient(
     90deg,
-    var(--virt-grey-500) 0%,
-    var(--virt-grey-700) 100%
+    var(--virt-grey-700) 0%,
+    var(--virt-grey-500) 100%
   );
   --gradient-virt-card-gold: linear-gradient(
     90deg,
-    var(--virt-gold-500) 0%,
-    var(--virt-gold-700) 100%
+    var(--virt-gold-700) 0%,
+    var(--virt-gold-500) 100%
   );
 
   --app-panel-foreground: rgba(19, 22, 35, 1);
