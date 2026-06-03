@@ -8,6 +8,7 @@ import {
   VIRT_CARD_OUTER_HEIGHT_PX,
   resolveVirtCardLogoStyle,
   resolveVirtCardTheme,
+  virtCardLogoCss,
 } from "@/shared/constants/virt-card-theme";
 import { cn } from "@/shared/utils";
 import { Button } from "@/ui/button";
@@ -79,21 +80,18 @@ export const VirtCard = ({
       </span>
 
       {virt.logo ? (
-        <img
-          src={virt.logo}
-          alt=""
-          aria-hidden
-          draggable={false}
+        <span
           className="pointer-events-none absolute z-[2]"
-          style={{
-            width: logo.widthPx,
-            height: logo.heightPx,
-            right: logo.rightPx,
-            top: logo.topPx,
-            transform: logo.rotateDeg !== 0 ? `rotate(${logo.rotateDeg}deg)` : undefined,
-            transformOrigin: "center center",
-          }}
-        />
+          style={virtCardLogoCss(logo)}
+          aria-hidden
+        >
+          <img
+            src={virt.logo}
+            alt=""
+            draggable={false}
+            className="block size-full object-cover object-center"
+          />
+        </span>
       ) : null}
     </Button>
   );

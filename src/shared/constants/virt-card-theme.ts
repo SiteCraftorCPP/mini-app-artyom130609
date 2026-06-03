@@ -1,4 +1,7 @@
+import type { CSSProperties } from "react";
+
 /** Figma: внешняя 335.83×85.58, внутренняя капсула 223.17×81.25 */
+export const VIRT_CARD_OUTER_WIDTH_PX = 335.83;
 export const VIRT_CARD_OUTER_HEIGHT_PX = 85.58;
 export const VIRT_CARD_INNER_HEIGHT_PX = 81.25;
 /** 223.17 / 335.83 */
@@ -66,13 +69,13 @@ export const VIRT_CARD_THEME: Record<string, VirtCardTheme> = {
 
 /**
  * Figma Rectangle 87 (Black Russia):
- * 103.36×115.24, top −14.63px, right 18.42px, rotate +33.11° (медведь смотрит влево).
+ * 103.36×115.24, top −14.63px, right 18.42px, rotate −33.11° (против часовой).
  */
 export const VIRT_CARD_LOGO_STYLE: Partial<Record<string, VirtCardLogoStyle>> = {
   "black-russia": {
     widthPx: 103.36,
     heightPx: 115.24,
-    rotateDeg: 33.11,
+    rotateDeg: -33.11,
     rightPx: 18.42,
     topPx: -14.63,
   },
@@ -153,4 +156,16 @@ export function resolveVirtCardLogoStyle(slug: string): VirtCardLogoStyle {
       topPx: -6,
     }
   );
+}
+
+/** Figma px → % относительно плашки 335.83×85.58 (масштаб на любой ширине). */
+export function virtCardLogoCss(logo: VirtCardLogoStyle): CSSProperties {
+  return {
+    width: `${(logo.widthPx / VIRT_CARD_OUTER_WIDTH_PX) * 100}%`,
+    height: `${(logo.heightPx / VIRT_CARD_OUTER_HEIGHT_PX) * 100}%`,
+    right: `${(logo.rightPx / VIRT_CARD_OUTER_WIDTH_PX) * 100}%`,
+    top: `${(logo.topPx / VIRT_CARD_OUTER_HEIGHT_PX) * 100}%`,
+    transform: logo.rotateDeg !== 0 ? `rotate(${logo.rotateDeg}deg)` : undefined,
+    transformOrigin: "center center",
+  };
 }
