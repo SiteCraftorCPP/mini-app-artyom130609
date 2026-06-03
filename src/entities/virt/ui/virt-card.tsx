@@ -5,6 +5,8 @@ import { cn } from "@/shared/utils";
 import { AppText } from "@/ui/app-text";
 import { Button } from "@/ui/button";
 
+import { VirtCardBlackRussia } from "./virt-card-black-russia";
+
 const getVirtInitials = (name: string) => {
   const [firstWord = "", secondWord = ""] = name.split(" ");
 
@@ -24,6 +26,17 @@ export const VirtCard = ({
   onClick,
   interactive = true,
 }: VirtCardProps) => {
+  if (virt.slug === "black-russia") {
+    return (
+      <VirtCardBlackRussia
+        className={className}
+        virt={virt}
+        onClick={onClick}
+        interactive={interactive}
+      />
+    );
+  }
+
   return (
     <Button
       type="button"
