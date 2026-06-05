@@ -5,6 +5,9 @@ import svgr from "vite-plugin-svgr";
 import tsconfigPaths from "vite-tsconfig-paths";
 
 export default defineConfig({
+  build: {
+    assetsInlineLimit: 512_000,
+  },
   plugins: [
     react(),
     tsconfigPaths(),
