@@ -70,8 +70,6 @@ export const VirtCard = ({
               className="size-full object-contain object-right"
               width="100%"
               height="100%"
-              loading="eager"
-              decoding="sync"
             />
           ) : (
             getVirtInitials(virt.name)
