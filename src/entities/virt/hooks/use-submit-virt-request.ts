@@ -11,7 +11,6 @@ export type SubmitVirtRequestPayload = {
   server: string;
 };
 
-/** После интеграции API подставьте реальные id/номер из ответа бэкенда. */
 export type SubmitVirtRequestResult = SubmitVirtRequestPayload & {
   orderId: string;
   orderNumber: string;

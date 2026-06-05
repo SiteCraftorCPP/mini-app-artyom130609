@@ -1,4 +1,3 @@
-/** Дублирует bot/src/order-demo-constants.ts. */
 const ORDER_REF_ALPHABET = "0123456789ABCDEFGHJKLMNPQRSTUVWXYZ";
 
 export const DEMO_ORDER_BUYERS: ReadonlyArray<{
@@ -15,7 +14,6 @@ export const DEMO_ORDER_BUYERS: ReadonlyArray<{
   { telegramUsername: "shadow_br", telegramUserId: "9001122334" },
 ];
 
-/** Стабильный 8-симв. номер заказа (как 72NN9IPP) по индексу. */
 export function demoOrderPublicId(index: number): string {
   const seed = (index + 1) * 1_000_003 + 917_273;
   let n = Math.abs(seed) % 1_000_000_000;

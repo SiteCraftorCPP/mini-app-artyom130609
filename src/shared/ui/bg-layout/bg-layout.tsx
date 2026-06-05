@@ -5,10 +5,6 @@ import { APP_THEME } from "@/shared/constants/theme";
 
 type BgLayoutProps = HTMLAttributes<HTMLDivElement>;
 
-/**
- * Базовый градиент + позиционированные «светящиеся» круги (как в макете).
- * Круги — только radial-gradient с rgba, без filter:blur / noise / color-mix (меньше «точек» в WebView).
- */
 export const BgLayout = ({ children }: BgLayoutProps) => {
   return (
     <div

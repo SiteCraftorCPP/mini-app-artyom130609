@@ -15,7 +15,6 @@ function resolveBaseUrl(): string {
 
 export type PaymentMethodCode = "sbp" | "mir" | "card_rub" | "streampay";
 
-/** Соответствует кнопкам ТЕНГЕ / ГРИВНЫ / BYN / AZN — бот шлёт в StreamPay как выбранную фиатную валюту (payment_type 1 + currency). */
 export type StreampayFiatPreset = "tenge" | "uah" | "byn" | "azn";
 
 export type PaymentPrepareInput = {
@@ -23,7 +22,6 @@ export type PaymentPrepareInput = {
   orderKind: VirtOrderNotifyKind;
   method: PaymentMethodCode;
   amountRub: number;
-  /** Только при method === "streampay": подпись кнопки в мини-аппе (KZT/UAH/…); тело create — как STREAMPAY_SYSTEM_CURRENCY в .env. */
   streampayPreset?: StreampayFiatPreset;
   game?: string;
   server?: string;
@@ -33,7 +31,6 @@ export type PaymentPrepareInput = {
   promoCode?: string;
   accountMode?: string;
   accountOptionLabel?: string;
-  /** Для orderKind === "other_service" */
   otherService?: {
     itemId: string;
     gameId: string;
@@ -142,9 +139,6 @@ function mapPrepareError(status: number, body: string): string {
   return `Ошибка оплаты (код ${status}). Попробуйте снова или напишите в поддержку.`;
 }
 
-/**
- * FreeKassa: URL оплаты. Уведомление в бот — только после /notify/freekassa (сервер).
- */
 export async function requestPaymentPrepare(
   body: PaymentPrepareInput,
 ): Promise<PaymentPrepareResult> {
@@ -198,10 +192,6 @@ type TgOpenLink = (
   o?: { try_instant_view?: boolean; try_browser?: "chrome" | "firefox" | "mozilla" | "opera" | "safari" | "wvb" }
 ) => void;
 
-/**
- * Открывает внешнюю ссылку оплаты. После `await fetch` в Mini App `openLink` иногда молчит — перебираем варианты.
- * @returns true, если сработал хотя бы один способ
- */
 export function openPaymentUrl(payUrl: string): boolean {
   const url = payUrl.trim();
   if (!/^https?:\/\//i.test(url)) {

@@ -1,7 +1,3 @@
-/**
- * Серверы Majestic RP (мини-апп: выбор в форме). Обновлять по списку с сервера.
- * Формат: "№ | ИМЯ" — как в игре/от заказчика.
- */
 export const MAJESTIC_RP_SERVER_OPTIONS: string[] = [
   "1 | New York",
   "2 | Detroit",

@@ -4,7 +4,6 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* Смягчённые альфы + без translateZ — меньше муара/точек при наслоении в WebView */
 @utility tw-bg-glow-large {
   background: radial-gradient(
     circle at center,
@@ -59,36 +58,80 @@
   background: var(--gradient-virt-card-red);
 }
 
+@utility tw-bg-gradient-virt-card-text-red {
+  background: var(--gradient-virt-card-text-red);
+}
+
 @utility tw-bg-gradient-virt-card-purple {
   background: var(--gradient-virt-card-purple);
+}
+
+@utility tw-bg-gradient-virt-card-text-purple {
+  background: var(--gradient-virt-card-text-purple);
 }
 
 @utility tw-bg-gradient-virt-card-blue {
   background: var(--gradient-virt-card-blue);
 }
 
+@utility tw-bg-gradient-virt-card-text-blue {
+  background: var(--gradient-virt-card-text-blue);
+}
+
 @utility tw-bg-gradient-virt-card-yellow {
   background: var(--gradient-virt-card-yellow);
+}
+
+@utility tw-bg-gradient-virt-card-text-yellow {
+  background: var(--gradient-virt-card-text-yellow);
 }
 
 @utility tw-bg-gradient-virt-card-pink {
   background: var(--gradient-virt-card-pink);
 }
 
+@utility tw-bg-gradient-virt-card-text-pink {
+  background: var(--gradient-virt-card-text-pink);
+}
+
 @utility tw-bg-gradient-virt-card-dark {
   background: var(--gradient-virt-card-dark);
 }
 
-@utility tw-bg-gradient-virt-card-orange {
-  background: var(--gradient-virt-card-orange);
+@utility tw-bg-gradient-virt-card-text-dark {
+  background: var(--gradient-virt-card-text-dark);
 }
 
-@utility tw-bg-gradient-virt-card-grey {
-  background: var(--gradient-virt-card-grey);
+@utility tw-bg-gradient-virt-card-province {
+  background: var(--gradient-virt-card-province);
 }
 
-@utility tw-bg-gradient-virt-card-gold {
-  background: var(--gradient-virt-card-gold);
+@utility tw-bg-gradient-virt-card-text-province {
+  background: var(--gradient-virt-card-text-province);
+}
+
+@utility tw-bg-gradient-virt-card-radmir {
+  background: var(--gradient-virt-card-radmir);
+}
+
+@utility tw-bg-gradient-virt-card-text-radmir {
+  background: var(--gradient-virt-card-text-radmir);
+}
+
+@utility tw-bg-gradient-virt-card-amazing {
+  background: var(--gradient-virt-card-amazing);
+}
+
+@utility tw-bg-gradient-virt-card-text-amazing {
+  background: var(--gradient-virt-card-text-amazing);
+}
+
+@utility tw-bg-gradient-service-card-primary {
+  background: var(--gradient-service-card-primary);
+}
+
+@utility tw-bg-gradient-service-card-secondary {
+  background: var(--gradient-service-card-secondary);
 }
 
 @utility tw-bg-gradient-primary {
@@ -163,16 +206,13 @@
   --maxWidthForm: 270px;
   --radius: 0.625rem;
   --popup-viewport-offset: 8px;
-  /* Резерв: «стабильная» высота выставляется в AppWebProvider; без неё — fallback. */
   --buy-account-popup-height: min(90dvh, calc(0.9 * var(--app-stable-vh-px, 100dvh)));
   --bottom-nav-height: 80px;
   --bottom-nav-offset: 16px;
   --app-content-bottom-space: calc(
     var(--bottom-nav-height) + var(--bottom-nav-offset)
   );
-  /* Минимум под нативную шапку Mini App («Закрыть»), если --tg-* = 0 */
   --app-telegram-top-clearance: 120px;
-  /* Попапы (Dialog): меньше, чем главный экран — контент выше */
   --app-telegram-popup-top-clearance: 52px;
 
   --background: oklch(1 0 0);
@@ -302,7 +342,6 @@
 
 [data-theme="artshop"] {
   --app-background: var(--deep-aqua-black);
-  /* Подложка; круги сверху — отдельные слои без blur */
   --app-background-gradient: linear-gradient(
     168deg,
     #112f32 0%,
@@ -322,8 +361,9 @@
   );
   --gradient-virt-card-border: linear-gradient(
     155deg,
-    var(--white) 0%,
-    var(--white-0) 100%
+    rgba(255, 255, 255, 0.86) 0%,
+    rgba(255, 255, 255, 0.34) 48%,
+    rgba(255, 255, 255, 0.08) 100%
   );
   --gradient-popup-surface: linear-gradient(
     155deg,
@@ -362,48 +402,103 @@
   );
   --gradient-virt-card-red: linear-gradient(
     90deg,
-    var(--virt-red-500) 0%,
-    var(--virt-red-700) 100%
+    #6d2222 0%,
+    #ff0100 100%
+  );
+  --gradient-virt-card-text-red: linear-gradient(
+    90deg,
+    #ff0003 0%,
+    #b50b0a 100%
   );
   --gradient-virt-card-purple: linear-gradient(
     90deg,
-    var(--virt-purple-500) 0%,
-    var(--virt-purple-700) 100%
+    #6d2375 0%,
+    #e21cde 100%
+  );
+  --gradient-virt-card-text-purple: linear-gradient(
+    90deg,
+    #e21cde 0%,
+    #ba18c8 100%
   );
   --gradient-virt-card-blue: linear-gradient(
     90deg,
-    var(--virt-blue-500) 0%,
-    var(--virt-blue-700) 100%
+    #145a93 0%,
+    #168fe0 100%
+  );
+  --gradient-virt-card-text-blue: linear-gradient(
+    90deg,
+    #1e9ee8 0%,
+    #1275c2 100%
   );
   --gradient-virt-card-yellow: linear-gradient(
     90deg,
-    var(--virt-yellow-500) 0%,
-    var(--virt-yellow-700) 100%
+    #8b6512 0%,
+    #ffc928 100%
+  );
+  --gradient-virt-card-text-yellow: linear-gradient(
+    90deg,
+    #ffd238 0%,
+    #f2b313 100%
   );
   --gradient-virt-card-pink: linear-gradient(
     90deg,
-    var(--virt-pink-500) 0%,
-    var(--virt-pink-700) 100%
+    #7d2552 0%,
+    #e13e9a 100%
+  );
+  --gradient-virt-card-text-pink: linear-gradient(
+    90deg,
+    #e849a2 0%,
+    #bd2370 100%
   );
   --gradient-virt-card-dark: linear-gradient(
     90deg,
-    var(--virt-dark-500) 0%,
-    var(--virt-dark-700) 100%
+    #171321 0%,
+    #353763 100%
   );
-  --gradient-virt-card-orange: linear-gradient(
+  --gradient-virt-card-text-dark: linear-gradient(
     90deg,
-    var(--virt-orange-500) 0%,
-    var(--virt-orange-700) 100%
+    #353763 0%,
+    #22243f 100%
   );
-  --gradient-virt-card-grey: linear-gradient(
+  --gradient-virt-card-province: linear-gradient(
     90deg,
-    var(--virt-grey-500) 0%,
-    var(--virt-grey-700) 100%
+    #7fa7a6 0%,
+    #e3e3e3 100%
   );
-  --gradient-virt-card-gold: linear-gradient(
+  --gradient-virt-card-text-province: linear-gradient(
     90deg,
-    var(--virt-gold-500) 0%,
-    var(--virt-gold-700) 100%
+    #b7d2d1 0%,
+    #9fc3c2 100%
+  );
+  --gradient-virt-card-radmir: linear-gradient(
+    90deg,
+    #ffd400 0%,
+    #d77c21 100%
+  );
+  --gradient-virt-card-text-radmir: linear-gradient(
+    90deg,
+    #ffd400 0%,
+    #f59a17 100%
+  );
+  --gradient-virt-card-amazing: linear-gradient(
+    90deg,
+    #fed731 0%,
+    #e4a217 100%
+  );
+  --gradient-virt-card-text-amazing: linear-gradient(
+    90deg,
+    #fed731 0%,
+    #efb21b 100%
+  );
+  --gradient-service-card-primary: linear-gradient(
+    90deg,
+    #35eeb9 0%,
+    #2cd8a6 100%
+  );
+  --gradient-service-card-secondary: linear-gradient(
+    90deg,
+    #116c72 0%,
+    #0d5b60 100%
   );
 
   --app-panel-foreground: rgba(19, 22, 35, 1);
@@ -421,7 +516,6 @@
   --app-highlight-shadow: var(--aqua-26-shadow);
 }
 
-/* Telegram Desktop / широкий Web: без верхних отступов; mobile Mini App — без изменений */
 html[data-tg-desktop="true"] {
   --app-telegram-top-clearance: 0px;
   --app-telegram-popup-top-clearance: 0px;
@@ -431,7 +525,6 @@ html[data-tg-desktop="true"] [data-tg-dialog-popup] {
   top: 0 !important;
 }
 
-/* Скролл только внутри layout (main); иначе body тащит fixed bottom-nav в Telegram WebView */
 html,
 body {
   height: 100%;
@@ -456,7 +549,6 @@ body {
   font-family: var(--font-montserrat);
 }
 
-/* Мини-апп: без системной вспышки; обратная связь — в классах (Button / active) */
 button,
 [data-slot="button"] {
   -webkit-tap-highlight-color: transparent;
@@ -501,7 +593,6 @@ input[type="number"]::-webkit-outer-spin-button {
   display: none;
 }
 
-/* Вертикальный скролл (заметный трек) — Telegram WebView иногда прячет `thin` */
 .scrollbar-app {
   scrollbar-gutter: stable;
   scrollbar-width: auto;
@@ -523,7 +614,6 @@ input[type="number"]::-webkit-outer-spin-button {
   border: 2px solid rgba(26, 26, 26, 0.95);
 }
 
-/* Список в Radix Select: скролл на обёртке (у Viewport часто overflow:hidden), фон светлый */
 .scrollbar-select-list {
   box-sizing: border-box;
   scrollbar-gutter: stable;

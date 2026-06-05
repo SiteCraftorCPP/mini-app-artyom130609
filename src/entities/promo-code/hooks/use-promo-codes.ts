@@ -5,7 +5,6 @@ import { resolvePromoCodesListUrl } from "@/shared/lib/virt-order-endpoints";
 import type { PromoCode } from "../model";
 
 type UseGetPromoCodesOptions = {
-  /** По умолчанию `true`: список для сопоставления с полем при вводе. */
   enabled?: boolean;
 };
 

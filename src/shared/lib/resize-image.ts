@@ -1,6 +1,3 @@
-/**
- * Сжатие в JPEG data URL, чтобы localStorage не ломать гигабайтными снимками.
- */
 export async function readImageAsResizedJpeg(
   file: File,
   maxEdge: number,

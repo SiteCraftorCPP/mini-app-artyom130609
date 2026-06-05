@@ -1,6 +1,3 @@
-/** Согласовано с `bot/src/other-services-types.ts` и JSON `get_other_services`. */
-
-/** `info` / `pay` — legacy. */
 export type OtherServicePaymentMode =
   | "manager"
   | "auto"

@@ -1,4 +1,3 @@
-/** Макет фона (светящиеся круги). Мелкие круги не рендерим — меньше «точек» в WebView. */
 export const APP_BACKGROUND_FRAME = {
   height: 1346,
   width: 402,

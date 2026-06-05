@@ -1,19 +1,14 @@
 import { useWebApp } from "@vkruglikov/react-telegram-web-app";
 import { useEffect, useMemo, useState } from "react";
 
-import { AppText } from "@/ui/app-text";
-import { TAG } from "@/ui/app-text/model";
+import { AppText, TAG } from "@/ui/app-text";
 import { Button } from "@/ui/button";
 import {
   PaymentMethodDialog,
   type PaymentDialogContext,
 } from "@/features/payment/payment-method-dialog";
+import { ServiceCard } from "@/entities/service";
 import { SUPPORT_CHAT_URL } from "@/shared/constants/common";
-import {
-  HOME_ACTION_GRADIENTS,
-  HOME_ACTION_GRADIENT_TOKEN,
-  HOME_ACTION_ICON,
-} from "@/shared/constants/home-screen";
 import type {
   OtherServiceItem,
   OtherServiceMain,
@@ -22,11 +17,6 @@ import type {
 } from "@/shared/types/other-services-catalog";
 import { cn } from "@/shared/utils";
 
-const SERVICES_PILL_GRADIENT =
-  HOME_ACTION_GRADIENTS[HOME_ACTION_GRADIENT_TOKEN.green];
-const SERVICES_PILL_ICON = HOME_ACTION_ICON.services;
-
-/** Строки «Ключ: значение» или произвольный текст в одной колонке. */
 function descriptionToRows(description: string): { label: string; value: string }[] {
   const lines = description
     .split(/\r?\n/)
@@ -77,77 +67,6 @@ function PayOptionsBar({ options }: { options: OtherServicePayOption[] }) {
         </li>
       ))}
     </ul>
-  );
-}
-
-function SectionPill({
-  title,
-  subtitle,
-  onClick,
-}: {
-  title: string;
-  subtitle?: string;
-  onClick?: () => void;
-}) {
-  const hasSubtitle = Boolean(subtitle?.trim());
-  const shellClass = cn(
-    "relative flex w-full justify-start overflow-hidden rounded-full border border-white/30 px-8 text-left",
-    SERVICES_PILL_GRADIENT,
-    hasSubtitle ? "h-auto min-h-20 items-start py-3" : "h-20 items-center",
-  );
-
-  const inner = (
-    <>
-      <div
-        className={cn(
-          "relative z-10 min-w-0 max-w-[calc(100%-4.5rem)]",
-          !hasSubtitle && "self-center",
-        )}
-      >
-        <AppText
-          className="relative z-10 text-[22px] font-bold leading-tight tracking-tight"
-          variant="heroButton"
-          size="heroButton"
-        >
-          {title}
-        </AppText>
-        {hasSubtitle ? (
-          <AppText
-            tag={TAG.p}
-            variant="primaryMedium"
-            size="small"
-            className="!mt-1 !line-clamp-6 !whitespace-pre-wrap !text-left !text-white/90"
-          >
-            {subtitle!.trim()}
-          </AppText>
-        ) : null}
-      </div>
-      <span className="pointer-events-none absolute top-0 right-0 z-0 block text-white [&_svg]:size-auto [&_svg]:max-h-none [&_svg]:max-w-none">
-        {SERVICES_PILL_ICON}
-      </span>
-    </>
-  );
-
-  if (onClick) {
-    return (
-      <Button
-        type="button"
-        variant="brand"
-        size="pill"
-        onClick={onClick}
-        className={shellClass}
-      >
-        {inner}
-      </Button>
-    );
-  }
-
-  return (
-    <div
-      className={cn(shellClass, "shadow-[0_10px_30px_var(--app-shadow)]")}
-    >
-      {inner}
-    </div>
   );
 }
 
@@ -433,8 +352,13 @@ export const OtherServicesCatalogView = ({
           <ul className="flex flex-col gap-3 px-4 pt-1">
             {games.map((g) => (
               <li key={g.id} className="w-full min-w-0">
-                <SectionPill
-                  title={g.name}
+                <ServiceCard
+                  service={{
+                    id: g.id,
+                    title: g.name,
+                    gradientToken: "primary",
+                    iconToken: "service",
+                  }}
                   onClick={() => {
                     onDrillGame(g.id);
                     onDrillMain(null);
@@ -494,9 +418,14 @@ export const OtherServicesCatalogView = ({
         <ul className="flex flex-col gap-3 px-4 pt-1">
           {subs.map((main: OtherServiceMain) => (
             <li key={main.id} className="w-full min-w-0">
-              <SectionPill
-                title={main.name}
-                subtitle={main.description}
+              <ServiceCard
+                service={{
+                  id: main.id,
+                  title: main.name,
+                  subtitle: main.description,
+                  gradientToken: "secondary",
+                  iconToken: "subService",
+                }}
                 onClick={() => onDrillMain(main.id)}
               />
             </li>

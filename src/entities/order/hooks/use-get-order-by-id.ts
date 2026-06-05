@@ -59,7 +59,6 @@ function findOrderInMocks(normalized: string, isAdmin: boolean): Order | null {
   );
 }
 
-/** Текущие (в т.ч. админ-очередь) + история; с API — только свои заказы. */
 export const useGetOrderById = ({
   enabled = true,
   id,

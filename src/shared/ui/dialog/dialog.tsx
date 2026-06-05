@@ -10,7 +10,6 @@ export const Dialog = DialogPrimitive.Root;
 export const DialogTrigger = DialogPrimitive.Trigger;
 export const DialogClose = DialogPrimitive.Close;
 
-/** Крестик в строке с бейджем (PopupAppHeader), не absolute */
 export const dialogPopupCloseButtonClassName =
   "inline-flex size-8 shrink-0 items-center justify-center rounded-[4px] border border-app-border-soft bg-app-highlight text-app-highlight-foreground shadow-[0_4px_10px_var(--app-highlight-shadow)] transition hover:cursor-pointer hover:brightness-105";
 
@@ -21,17 +20,10 @@ const dialogContentVariants = cva(
       variant: {
         default:
           "top-1/2 max-w-sm -translate-y-1/2 rounded-[16px] p-6 text-text-primary shadow-[0_24px_60px_var(--app-shadow)]",
-        /**
-         * Высота и отступ от верха от `var(--app-stable-vh-px)`: в Telegram — viewportStableHeight,
-         * не уменьшается при клавиатуре, поэтому панель не «улетает вверх».
-         * Без `bottom: …` в vh, чтобы динамическое dvh/lvh не пересчитывало кадр.
-         */
         popup:
           "top-[min(3.25rem,max(0.25rem,calc(0.065*100dvh)))] bottom-[var(--popup-viewport-offset)] w-[calc(100vw-(var(--popup-viewport-offset)*2))] max-w-md translate-y-0 overflow-hidden rounded-[16px] shadow-[0_24px_60px_var(--app-shadow)]",
-        /** Узкий блок по центру экрана (FAQ и т.п.), без растягивания на всю высоту */
         popupCentered:
           "top-1/2 max-h-[min(85vh,560px)] w-[min(100vw-2rem,22rem)] max-w-[22rem] -translate-y-1/2 overflow-hidden rounded-[16px] shadow-[0_24px_60px_var(--app-shadow)]",
-        /** «Купить вирты» / «Купить аккаунт»: по центру экрана, ширина как у полноэкранного popup */
         popupFormCentered:
           "top-1/2 max-h-[min(90dvh,720px)] w-[min(100vw-(var(--popup-viewport-offset)*2),28rem)] max-w-md -translate-y-1/2 overflow-hidden rounded-[16px] shadow-[0_24px_60px_var(--app-shadow)]",
       },
@@ -85,7 +77,6 @@ export const DialogContent = ({
   children,
   lockBodyScroll = false,
   variant,
-  /** Вложенный диалог (например, оплата) выше полноэкранного магазина, не «под» родителем. */
   stackOnTop = false,
   ...props
 }: ComponentProps<typeof DialogPrimitive.Content> &

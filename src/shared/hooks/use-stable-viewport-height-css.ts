@@ -15,10 +15,6 @@ function getTelegramWebApp(): TelegramWebAppApi | undefined {
     .Telegram?.WebApp;
 }
 
-/**
- * Снимок «стабильной» высоты: Telegram `viewportStableHeight` не уменьшается от клавиатуры,
- * поэтому fixed-попапы с height/top на базе `var(--app-stable-vh-px)` не смещаются.
- */
 export function useStableViewportHeightCss() {
   useEffect(() => {
     const apply = () => {

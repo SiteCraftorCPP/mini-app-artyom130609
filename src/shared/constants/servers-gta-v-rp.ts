@@ -1,7 +1,3 @@
-/**
- * Серверы GTA V RP (мини-апп: выбор в форме). Обновлять по списку с сервера.
- * Формат: "№ | ИМЯ" — как в игре/от заказчика.
- */
 export const GTA_V_RP_SERVER_OPTIONS: string[] = [
   "1 | Downtown",
   "2 | StrawBerry",

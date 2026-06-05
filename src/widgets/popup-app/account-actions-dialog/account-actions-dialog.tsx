@@ -26,9 +26,7 @@ export type AccountActionId =
 type AccountActionsDialogProps = {
   actionId: AccountActionId;
   children: ReactNode;
-  /** Deep link: /profile?open=currentOrders|orderHistory&orderId=… */
   defaultOpen?: boolean;
-  /** &orderId=… — сразу деталка (актуальный заказ или запись в истории) */
   initialOrderIdFromLink?: string | null;
 };
 

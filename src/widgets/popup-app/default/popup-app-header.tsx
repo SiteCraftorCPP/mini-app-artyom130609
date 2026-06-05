@@ -10,7 +10,6 @@ import ArrowLeft from "@/assets/icon/button-back.svg";
 type PopupAppHeaderProps = {
   onBack?: () => void;
   title: string;
-  /** `plain` — без «плашки», текст переносится (успех оплаты, длинные заголовки). */
   titleVariant?: "badge" | "plain";
 };
 

@@ -1,5 +1,4 @@
 export const BASE_API_URL = import.meta.env.VITE_API_URL;
-/** Дефолт совпадает с реф-ссылкой на бэкенде; env может переопределить. */
 const BOT_HANDLE_FOR_LINKS =
   import.meta.env.VITE_BOT_ADDRESS?.replace(/^@/, "").trim() || "artshopvirts_bot";
 export const LINK_SHARED = `https://t.me/${BOT_HANDLE_FOR_LINKS}?start=`;

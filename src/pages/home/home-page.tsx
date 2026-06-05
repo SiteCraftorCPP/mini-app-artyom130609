@@ -68,7 +68,6 @@ export const HomePage = () => {
             })}
           </ul>
 
-          {/* Тянет фон карточки вниз; кнопки и gap между ними не трогаем */}
           <div className="min-h-0 flex-1" aria-hidden />
         </Card>
       </section>

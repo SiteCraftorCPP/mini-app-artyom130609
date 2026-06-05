@@ -15,6 +15,8 @@ const textVariants = {
   popupBody: "text-text-primary",
   primaryStrong: "font-bold text-white",
   primaryMedium: "font-medium text-white",
+  serviceBadge: "font-semibold text-black",
+  serviceTitle: "font-semibold text-white",
 } as const;
 
 const textSizes = {
@@ -23,6 +25,7 @@ const textSizes = {
   popupBadge: "text-[16px] leading-none",
   popupBody: "text-[20px] leading-[120%]",
   medium: "text-[14px] leading-[100%] md:text-[14px]",
+  service: "text-[20px] leading-none",
   headerInfo: "text-base leading-none",
   heroButton: "text-[18px] leading-none",
   xxxl: "text-[24px] leading-[100%] md:text-[24px]",

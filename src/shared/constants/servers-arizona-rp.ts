@@ -1,7 +1,3 @@
-/**
- * Серверы Arizona RP (мини-апп: выбор в форме). Обновлять по списку с сервера.
- * Формат: "№ | ИМЯ" — как в игре/от заказчика.
- */
 export const ARIZONA_RP_SERVER_OPTIONS: string[] = [
   "0 | Vice City",
   "1 | Phoenix",

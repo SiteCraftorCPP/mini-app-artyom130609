@@ -44,9 +44,6 @@ export const SelectContent = ({
         )}
         {...props}
       >
-        {/*
-          Скролл здесь, не на Viewport: Radix выставляет на Viewport overflow, из‑за чего в TG WebView нет полосы.
-        */}
         <div
           className={cn(
             "scrollbar-select-list min-h-0 min-w-0 flex-1 touch-pan-y overflow-y-scroll overscroll-contain px-1 py-1 [-webkit-overflow-scrolling:touch]",

@@ -1,7 +1,3 @@
-/**
- * Уведомление бота после «успешной» заявки: POST на /notify/virt-order-webapp с initData.
- * WebApp.sendData в Telegram часто недоступен для мини-аппа с inline-кнопки — поэтому HTTP + проверка подписи на боте.
- */
 const LOG = "[virt-order]";
 
 function resolveNotifyUrl(): string {
@@ -40,18 +36,12 @@ function resolveInitData(webApp: WebAppLike | null | undefined): string {
 export type VirtOrderNotifyKind = "virt" | "account" | "other_service";
 
 export type VirtOrderNotifyDetails = {
-  /** Название игры/услуги (карточка в мини-аппе) */
   game?: string;
   server?: string;
-  /** Номер счёта / реквизит */
   bankAccount?: string;
-  /** Сумма в рублях */
   amountRub?: number;
-  /** Сумма в виртах — строка для отображения в боте */
   virtAmountLabel?: string;
-  /** Как доставка / вариант (напр. «По уровню: …») */
   transferMethod?: string;
-  /** Промокод, если был применён */
   promoCode?: string;
 };
 

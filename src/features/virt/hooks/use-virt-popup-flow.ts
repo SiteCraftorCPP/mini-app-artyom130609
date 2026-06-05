@@ -14,7 +14,6 @@ type UseVirtPopupFlowParams = {
 export const useVirtPopupFlow = ({ enabled, type }: UseVirtPopupFlowParams) => {
   const [selectedVirtId, setSelectedVirtId] = useState<string | null>(null);
   const nestedBackHandlerRef = useRef<(() => boolean) | null>(null);
-  /** После «назад» с экрана единственной игры не подставлять авто-id, пока не закроют попап. */
   const buyAccountBackFromSingleListRef = useRef(false);
   const { data, isLoading } = useVirtsPopupContent({ enabled, type });
 

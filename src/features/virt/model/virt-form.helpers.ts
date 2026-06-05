@@ -103,7 +103,6 @@ export const formatAmountVirtsShort = (value: string) => {
   return String(normalizedAmount);
 };
 
-/** Отображение КК и согласованных целых виртов при пересчёте из ₽ (округление до 0.1 КК). */
 export function roundKkTenthsFromVirts(virtsStr: string): {
   kkDisplay: string;
   virtsRounded: string;

@@ -11,7 +11,6 @@ export const HOME_SCREEN_TEXT = {
   popups: {
     ctaLabel: "Скоро будет доступно",
     close: "Закрыть",
-    /** Текст в popup «Другие услуги» — список из каталога (бот / get_other_services). */
     servicesBody: "",
   },
 } as const;

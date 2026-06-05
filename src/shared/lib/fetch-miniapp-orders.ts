@@ -1,6 +1,5 @@
 import type { Order } from "@/entities/order/model";
 
-/** База для `/notify/sell-virt-webapp` (заказы, каталог «Другие услуги»). */
 export function resolveMiniappNotifyApiBase(): string {
   const notifyUrl = import.meta.env.VITE_VIRT_ORDER_NOTIFY_URL?.trim();
   if (notifyUrl) {

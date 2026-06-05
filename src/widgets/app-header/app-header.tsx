@@ -6,7 +6,6 @@ import Wallet from "@/assets/icon/wallet.svg";
 import { CardInfoHeader } from "./ui/card-info-header";
 import { useAuthMe } from "@/entities/user";
 
-/** Поставьте `true` — снова показывается вся плашка: «N LVL» + «Новичок». */
 const SHOW_USER_STATUS_BADGE = false;
 
 export const AppHeader = () => {

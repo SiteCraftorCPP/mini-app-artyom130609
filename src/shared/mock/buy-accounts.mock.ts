@@ -17,7 +17,6 @@ const ACCOUNT_LEVEL_OPTIONS = ACCOUNT_LEVEL_PRICE_LIST.map((amountRub, index) =>
   };
 });
 
-/** Только Black Russia: «Купить аккаунт» / «по виртам» с произвольным кк. */
 export const BUY_ACCOUNTS_MOCK: Virt[] = [
   {
     id: "black-russia",

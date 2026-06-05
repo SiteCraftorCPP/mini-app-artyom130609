@@ -1,4 +1,3 @@
-/** Дублирует src/shared/mock/order-demo-constants.ts (отдельная сборка бота). */
 const ORDER_REF_ALPHABET = "0123456789ABCDEFGHJKLMNPQRSTUVWXYZ";
 
 export const DEMO_ORDER_BUYERS: ReadonlyArray<{

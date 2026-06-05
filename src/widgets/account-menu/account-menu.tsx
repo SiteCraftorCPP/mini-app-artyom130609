@@ -21,9 +21,7 @@ import { ACCOUNT_POPUP_MENU_ITEMS, type AccountPopupMenuItem } from "./model";
 type ProfileDeepLinkAction = "currentOrders" | "orderHistory";
 
 type AccountMenuProps = {
-  /** /profile?open=… из бота — какой раздел раскрыть (актуальные / история) */
   deepLinkActionId?: ProfileDeepLinkAction | null;
-  /** &orderId=… — сразу карточка заказа */
   orderIdFromLink?: string | null;
 };
 

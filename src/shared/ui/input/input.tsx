@@ -13,9 +13,6 @@ export type InputProps = Omit<
   value?: string;
   defaultValue?: string;
   variant?: "default" | "form";
-  /**
-   * Отключает auto-scroll на фокус (в Telegram WebView может дёргать попап вверх при появлении клавиатуры).
-   */
   disableAutoScrollOnFocus?: boolean;
 };
 

@@ -5,7 +5,6 @@ import {
   demoOrderPublicId,
 } from "@/shared/mock/order-demo-constants";
 
-/** Порядок как в магазине; в моках истории идут по кругу. */
 export const ORDER_MOCK_PROJECT_KEYS: VirtProjectIconKey[] = [
   "black-russia",
   "matryoshka-rp",
@@ -35,9 +34,7 @@ export type AccountOrderMock = {
   completedAt: string;
   game: string;
   id: string;
-  /** URL иконки, если `projectKey` нет (например, от API). */
   logo: string;
-  /** Ключ проекта — иконка из `VIRTS_ICONS`, как в магазине. */
   projectKey?: VirtProjectIconKey;
   number: string;
   paidAt: string;
@@ -46,9 +43,7 @@ export type AccountOrderMock = {
   server: string;
   time: string;
   title: string;
-  /** Админ: для списка `#id (Вирты) - @user` */
   categoryLabel?: string;
-  /** Админ: заголовок «Детали заказа …» */
   publicOrderId?: string;
   telegramUserId?: string;
   telegramUsername?: string;
@@ -56,9 +51,7 @@ export type AccountOrderMock = {
   transferMethod?: string;
   virtAmountLabel?: string;
   amountRub?: number;
-  /** Счёт в банке (если отличается от accountNumber при отображении) */
   bankAccount?: string;
-  /** Завершённый админ-заказ: время/дата закрытия (поиск по номеру). */
   closedAtLine?: string;
 };
 
@@ -80,7 +73,6 @@ export const ACCOUNT_CURRENT_ORDERS_MOCK: AccountOrderMock[] = [
   },
 ];
 
-/** Оплаченные заказы для админки (мок; позже — API). */
 export const ACCOUNT_ADMIN_CURRENT_ORDERS_MOCK: AccountOrderMock[] = [
   {
     id: "72NN9IPP",
@@ -132,7 +124,6 @@ export const ACCOUNT_ADMIN_CURRENT_ORDERS_MOCK: AccountOrderMock[] = [
   },
 ];
 
-/** Завершённые оплаченные заказы (мок; поиск «Найти заказ» для админа). */
 export const ACCOUNT_ADMIN_ORDER_ARCHIVE_MOCK: AccountOrderMock[] = [
   {
     id: "ZZ99CLOS",
@@ -161,7 +152,6 @@ export const ACCOUNT_ADMIN_ORDER_ARCHIVE_MOCK: AccountOrderMock[] = [
   },
 ];
 
-/** Обычная «История» (16): номер как в уведомлении + покупатели из демо-пула. */
 export const ACCOUNT_ORDER_HISTORY_MOCK: AccountOrderMock[] = Array.from(
   { length: 16 },
   (_, index) => {
@@ -189,7 +179,6 @@ export const ACCOUNT_ORDER_HISTORY_MOCK: AccountOrderMock[] = Array.from(
   },
 );
 
-/** Последние 50 админ-заказов (тот же набор, что в боте; позже — API). */
 export const ACCOUNT_ADMIN_HISTORY_50_MOCK: AccountOrderMock[] = Array.from(
   { length: 50 },
   (_, i) => {

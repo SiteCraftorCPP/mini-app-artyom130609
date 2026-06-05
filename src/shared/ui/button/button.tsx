@@ -22,10 +22,12 @@ const buttonVariants = cva(
         menu: "inline-flex rounded-[16px] border transition active:brightness-90",
         popupSubmit:
           "tw-bg-popup-submit border border-app-border-soft text-white shadow-[0_8px_20px_var(--app-shadow)] hover:brightness-110 active:brightness-90",
+        serviceCard:
+          "h-auto w-full justify-start overflow-hidden rounded-full p-0 text-left whitespace-normal hover:brightness-105 active:brightness-90",
         support:
           "bg-background-card w-full justify-start rounded-[8px] text-white shadow-[0_8px_20px_var(--app-shadow)] hover:brightness-110 active:brightness-90",
         virtCard:
-          "tw-bg-gradient-virt-card-border h-auto w-full justify-start overflow-hidden rounded-[12px] p-px text-left whitespace-normal hover:brightness-105 active:brightness-90",
+          "tw-bg-gradient-virt-card-border h-auto w-full justify-start overflow-hidden rounded-full p-[2px] text-left whitespace-normal hover:brightness-105 active:brightness-90",
         accouuntVirt: "flex-col gap-1 rounded-[6px] p-0 justify-start",
       },
       menuState: {
@@ -46,6 +48,7 @@ const buttonVariants = cva(
         pill: "h-16 rounded-full px-7 text-xl has-[>svg]:px-5",
         menu: "size-12",
         popupSubmit: "h-7 rounded-full px-6 text-[14px] font-semibold",
+        serviceCard: "px-0 py-0",
         virtCard: "px-0 py-0",
         supportLink: "h-14.5",
       },

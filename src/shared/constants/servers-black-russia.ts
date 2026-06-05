@@ -1,7 +1,3 @@
-/**
- * Серверы Black Russia (мини-апп: выбор в форме). Обновлять по списку с сервера.
- * Формат: "№ | ИМЯ" — как в игре/от заказчика.
- */
 export const BLACK_RUSSIA_SERVER_OPTIONS: string[] = [
   "1 | RED",
   "2 | GREEN",

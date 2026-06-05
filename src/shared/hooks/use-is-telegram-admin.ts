@@ -3,7 +3,6 @@ import { useMemo } from "react";
 
 import { getAdminTelegramIdSet } from "@/shared/lib/admin-telegram-ids";
 
-/** Доступ к админ-данным в мини-аппе, если реальный TG user id в `VITE_ADMIN_TELEGRAM_IDS`. */
 export function useIsTelegramAdmin(): boolean {
   const [initDataUnsafe] = useInitData();
   return useMemo(() => {

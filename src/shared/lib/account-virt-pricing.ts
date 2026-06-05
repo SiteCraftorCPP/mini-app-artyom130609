@@ -1,4 +1,3 @@
-/** Парсинг ввода «кк» (запятая или точка). */
 export function parseKkFromUserInput(s: string): number | null {
   const t = s.trim().replace(",", ".");
   if (!t) {
@@ -11,10 +10,6 @@ export function parseKkFromUserInput(s: string): number | null {
   return n;
 }
 
-/**
- * Black Russia: rubPerKk за каждые 1кк + accountFeeRub за аккаунт.
- * Пример: 6кк при 100/100 → 6·100+100 = 700 ₽
- */
 export function accountWithVirtsPriceRub(
   kk: number,
   p: { accountFeeRub: number; rubPerKk: number },

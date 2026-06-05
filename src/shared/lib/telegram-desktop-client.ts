@@ -1,10 +1,3 @@
-/**
- * «ПК-подобный» клиент Telegram: без большого верхнего отступа под системную шапку Mini App.
- *
- * Важно: окно Mini App на Telegram Desktop часто **узкое** (как телефон), поэтому нельзя
- * опираться только на `innerWidth >= 600` для platform `web` / `weba`.
- */
-
 const MOBILE_PLATFORMS = new Set([
   "android",
   "android_x",

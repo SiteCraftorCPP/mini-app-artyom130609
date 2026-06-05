@@ -1,4 +1,3 @@
-/** Есть контекст Telegram Mini App (не «голый» браузер). */
 export function isLikelyTelegramMiniApp(): boolean {
   if (typeof window === "undefined") {
     return false;

@@ -1,13 +1,13 @@
 export type VirtGradientToken =
+  | "amazing"
   | "blue"
   | "dark"
   | "pink"
+  | "province"
   | "purple"
+  | "radmir"
   | "red"
-  | "yellow"
-  | "orange"
-  | "grey"
-  | "gold";
+  | "yellow";
 
 export type AccountPurchaseOption = {
   amountRub: number;
@@ -16,24 +16,14 @@ export type AccountPurchaseOption = {
 };
 
 export type AccountVirtsCustomPricing = {
-  /** ₽ за каждые 1кк виртов на аккаунте */
   rubPerKk: number;
-  /** ₽ фиксировано за сам аккаунт (к любой сумме кк) */
   accountFeeRub: number;
 };
 
 export type Virt = {
   accountNumber: string;
   accountLevelOptions?: AccountPurchaseOption[];
-  /**
-   * Фиксированные варианты «по виртам» (дропдаун). Не задавать вместе с
-   * `accountVirtsCustomPricing`.
-   */
   accountVirtOptions?: AccountPurchaseOption[];
-  /**
-   * Произвольное кол-во кк на аккаунте; цена: kk * rubPerKk + accountFeeRub
-   * (только Black Russia).
-   */
   accountVirtsCustomPricing?: AccountVirtsCustomPricing;
   amountRub: number;
   amountVirts: number;

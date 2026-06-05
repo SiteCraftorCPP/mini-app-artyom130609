@@ -11,7 +11,6 @@ import {
 
 import { cn } from "@/shared/utils";
 
-/** `popup` — на весь экран по вертикали; `popupCentered` / `popupFormCentered` — по центру (FAQ, формы «купить»). */
 export type PopupAppDialogVariant =
   | "popup"
   | "popupCentered"
@@ -21,15 +20,11 @@ type PopupAppProps = {
   children: ReactNode;
   content: ReactNode;
   contentClassName?: string;
-  /** Классы для прокручиваемой области под шапкой (напр. `justify-center`). */
   contentBodyClassName?: string;
-  /** Видимый скроллбар (ТЗ мини-апп) вместо `hide-scrollbar`. */
   scrollAreaVariant?: "hidden" | "visible";
-  /** Вариант `DialogContent`: по умолчанию `popup`. */
   dialogVariant?: PopupAppDialogVariant;
   open?: boolean;
   setOpen?: Dispatch<SetStateAction<boolean>>;
-  /** Если задан, вызывается вместо прямой передачи `setOpen` в `Dialog` (например, сброс вложенного state перед закрытием). */
   onOpenChange?: (open: boolean) => void;
   slot?: ReactNode;
   title?: string;

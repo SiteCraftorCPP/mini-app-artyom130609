@@ -5,12 +5,10 @@ function formatOrderRef(orderNumber: string): string {
   return `#${t}`;
 }
 
-/** Заголовок окна (как вопрос в FAQ): одна строка со статусом. */
 export function buildPostPaymentReturnTitle(orderNumber: string): string {
   return `✅ Заказ ${formatOrderRef(orderNumber)} успешно оформлен!`;
 }
 
-/** Текст ответа (как тело ответа в FAQ): без дубля заголовка. */
 export function buildPostPaymentReturnBody(n: StoredPostPaymentNotice): string {
   if (n.orderKind === "other_service" && n.otherMode === "auto") {
     return [

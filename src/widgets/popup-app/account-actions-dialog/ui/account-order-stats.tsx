@@ -12,7 +12,6 @@ function sumOrdersRub(orders: { amountRub?: number }[]) {
   );
 }
 
-/** Сумма и количество актуальных заказов (для админов; те же данные, что в боте). */
 export const AccountOrderStats = () => {
   const isAdmin = useIsTelegramAdmin();
   const { data: orders = [], isLoading } = useGetOrders();

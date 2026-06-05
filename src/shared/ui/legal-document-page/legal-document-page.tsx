@@ -7,9 +7,6 @@ type LegalDocumentPageProps = {
   body: string;
 };
 
-/**
- * Пользовательское соглашение / политика: прокрутка, отступ снизу под нижнюю навигацию, компактный текст.
- */
 export const LegalDocumentPage = ({ title, body }: LegalDocumentPageProps) => {
   useEffect(() => {
     const scrollEl = document.querySelector("main");

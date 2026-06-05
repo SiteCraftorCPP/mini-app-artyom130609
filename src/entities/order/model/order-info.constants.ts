@@ -12,11 +12,9 @@ export const ORDER_INFO_TEXT = {
 export const ORDER_ADMIN_TEXT = {
   statsTitle: "💰 Статистика актуальных заказов на выдачу:",
   statsOrderCount: (n: number) => `📦 Количество заказов: ${n}`,
-  /** Сумма полей заказа в рублях по всем актуальным заказам. */
   statsTotalRub: (formatted: string) =>
     `💵 Общая сумма (сейчас оформлено): ${formatted} RUB`,
   amountRub: "Сумма заказа в рублях:",
-  /** Заказ выполнен (архив) — в поиске по номеру. */
   closedAt: "🕐 Закрыт:",
   bank: "Счет в банке:",
   copyAll: "Скопировать все данные",
@@ -52,13 +50,11 @@ export type OrderPeriodKey = (typeof ORDER_PERIOD_OPTIONS)[number]["key"];
 
 export const ORDER_PERIOD_STATS_UI = {
   prompt: "Выберите период:",
-  resultHint: (label: string) =>
-    `Период: ${label}. Сейчас — демо-числа; после API здесь будут фактические данные.`,
+  resultHint: (label: string) => `Период: ${label}.`,
   countLine: (n: number) => `📦 Заказов: ${n}`,
   totalLine: (rub: string) => `💵 Оборот: ${rub} RUB`,
 } as const;
 
-/** Мок-агрегаты по периоду (позже — API). */
 export function getOrderPeriodMockStats(period: OrderPeriodKey): {
   count: number;
   totalRub: number;

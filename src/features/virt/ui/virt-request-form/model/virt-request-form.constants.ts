@@ -1,5 +1,4 @@
 export const VIRT_REQUEST_FORM_CLASSNAMES = {
-  /** Плотнее блок подпись → поле (как до увеличения высоты input). */
   formItem: "relative space-y-1",
   formMessage: "absolute left-6 top-full text-xs leading-none",
 } as const;

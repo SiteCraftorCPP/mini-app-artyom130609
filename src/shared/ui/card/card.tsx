@@ -28,7 +28,6 @@ export const Card = ({
         !bordered && "rounded-[16px]",
         glowClassNames[glow],
         className,
-        /* На 1px меньше внешнего радиуса из-за p-px у обводки — иначе в углах «квадрат» */
         bordered && "rounded-[15px]",
       )}
       {...props}

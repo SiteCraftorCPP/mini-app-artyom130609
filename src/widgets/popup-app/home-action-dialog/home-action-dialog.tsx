@@ -72,7 +72,6 @@ export const HomeActionDialog = ({
   const isFormCenteredFlow = isBuyVirtsAction || isBuyAccountAction;
   const isServicesAction = actionId === "services";
 
-  /** «Назад»: вложенный virt / подразделы «Другие услуги». */
   const shouldShowBackButton =
     (Boolean(virtPopupFlow.activeVirtId) &&
       (isBuyVirtsAction || isSellVirtsAction || isBuyAccountAction)) ||
@@ -110,7 +109,6 @@ export const HomeActionDialog = ({
       contentBodyClassName={
         isFormCenteredFlow ? "flex flex-1 flex-col justify-start" : undefined
       }
-      /** Видимый скролл только в выпадашках (сервер и т.д.), не на всём попапе — иначе двойной трек у края экрана. */
       scrollAreaVariant="hidden"
       dialogVariant="popup"
       open={open}

@@ -13,7 +13,6 @@ import { VirtCard } from "@/entities/virt";
 type VirtsPopupContentProps = {
   enabled: boolean;
   type: VirtPopupType;
-  /** Экран раздела «Другие услуги»: id выбранной игры или null — список разделов. */
   otherServicesDrilledGameId?: string | null;
   onOtherServicesDrillGame?: (gameId: string | null) => void;
   otherServicesDrilledMainId?: string | null;

@@ -100,7 +100,6 @@ export const useVirtRequestForm = ({ virt }: UseVirtRequestFormParams) => {
   );
   const discount = activePromoCode ? activePromoCode.discount : 0;
   const effectiveExchangeRate = virt.exchangeRate * (1 - discount / 100);
-  /** С промо цена в ₽ снижается при том же количестве КК, а не наоборот. */
   const lockVirtsForPromo = Boolean(activePromoCode);
 
   useEffect(() => {

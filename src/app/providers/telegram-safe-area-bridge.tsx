@@ -10,10 +10,6 @@ type WebAppWithInsets = ReturnType<typeof useWebApp> & {
   contentSafeAreaInset?: Inset;
 };
 
-/**
- * Пишет отступы из Telegram WebApp в CSS-переменные.
- * На ПК (tdesktop, macos, web/weba не на телефоне) — data-tg-desktop и нули сверху (см. index.css).
- */
 export function TelegramSafeAreaBridge() {
   const webApp = useWebApp() as WebAppWithInsets;
 
