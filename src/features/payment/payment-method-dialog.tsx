@@ -78,7 +78,12 @@ const RUB_METHODS: {
 ];
 
 const methodBtnClass =
-  "min-h-14 w-full justify-center rounded-[14px] border border-app-border-soft px-3 py-3.5 text-left text-sm leading-snug font-semibold text-white shadow-[0_8px_20px_var(--app-shadow)] tw-bg-popup-submit hover:brightness-110 active:brightness-90 sm:text-[15px]";
+  "min-h-14 w-full justify-center rounded-[14px] border border-app-border-soft px-3 py-3.5 text-center text-sm leading-snug font-semibold text-white shadow-[0_8px_20px_var(--app-shadow)] tw-bg-popup-submit hover:brightness-110 active:brightness-90 sm:text-[15px]";
+
+const partialBalanceToggleClass = cn(
+  methodBtnClass,
+  "grid grid-cols-[1fr_auto_1fr] items-center gap-2 px-3 py-3.5",
+);
 
 function buildPrepareInput(
   method: PaymentMethodCode | "balance",
@@ -367,7 +372,7 @@ export function PaymentMethodDialog({
                   role="switch"
                   aria-checked={useBalance}
                   tabIndex={0}
-                  className="border-app-border-soft relative flex min-h-14 cursor-pointer items-center justify-center rounded-[14px] border px-14 py-3 shadow-[0_4px_12px_var(--app-shadow)] tw-bg-popup-submit hover:brightness-110 active:brightness-90"
+                  className={cn(partialBalanceToggleClass, "cursor-pointer")}
                   onClick={() => !busy && setUseBalance(!useBalance)}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" || e.key === " ") {
@@ -378,16 +383,13 @@ export function PaymentMethodDialog({
                     }
                   }}
                 >
-                  <AppText
-                    tag={TAG.span}
-                    variant="primaryStrong"
-                    className="text-center text-[15px] font-bold text-white"
-                  >
+                  <span aria-hidden className="col-start-1" />
+                  <span className="col-start-2 text-center text-[15px] font-bold leading-snug text-white">
                     Частично с баланса
-                  </AppText>
+                  </span>
                   <div
                     className={cn(
-                      "absolute top-1/2 right-4 inline-flex h-6 w-11 shrink-0 -translate-y-1/2 cursor-pointer items-center rounded-full transition-colors duration-200 ease-in-out",
+                      "col-start-3 inline-flex h-6 w-11 shrink-0 items-center justify-self-end rounded-full transition-colors duration-200 ease-in-out",
                       useBalance ? "bg-app-highlight" : "bg-app-border-soft",
                     )}
                   >
