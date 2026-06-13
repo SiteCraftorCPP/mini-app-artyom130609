@@ -364,19 +364,39 @@ export function PaymentMethodDialog({
 
               {balance > 0 && balance < amountRub && (
                 <div
-                  className="border-app-border-soft flex cursor-pointer items-center justify-between rounded-[14px] border px-4 py-3 shadow-[0_4px_12px_var(--app-shadow)] tw-bg-popup-submit hover:brightness-110 active:brightness-90"
+                  role="switch"
+                  aria-checked={useBalance}
+                  tabIndex={0}
+                  className="border-app-border-soft relative flex min-h-14 cursor-pointer items-center justify-center rounded-[14px] border px-14 py-3 shadow-[0_4px_12px_var(--app-shadow)] tw-bg-popup-submit hover:brightness-110 active:brightness-90"
                   onClick={() => !busy && setUseBalance(!useBalance)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      if (!busy) {
+                        setUseBalance(!useBalance);
+                      }
+                    }
+                  }}
                 >
-                  <div className="flex flex-col">
-                    <AppText tag={TAG.span} variant="primaryStrong" className="text-[15px] font-bold text-white">
-                      Частично с баланса
-                    </AppText>
-                    <AppText tag={TAG.span} variant="darkStrong" className="text-app-text-muted mt-0.5 text-xs font-medium">
-                      Списать {formatNumberWithSpaces(Math.min(balance, amountRub))} {CURRENCY.RUB}, остальное — картой / СБП
-                    </AppText>
-                  </div>
-                  <div className={cn("relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors duration-200 ease-in-out", useBalance ? "bg-app-highlight" : "bg-app-border-soft")}>
-                    <span className={cn("pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out", useBalance ? "translate-x-5" : "translate-x-0.5")} />
+                  <AppText
+                    tag={TAG.span}
+                    variant="primaryStrong"
+                    className="text-center text-[15px] font-bold text-white"
+                  >
+                    Частично с баланса
+                  </AppText>
+                  <div
+                    className={cn(
+                      "absolute top-1/2 right-4 inline-flex h-6 w-11 shrink-0 -translate-y-1/2 cursor-pointer items-center rounded-full transition-colors duration-200 ease-in-out",
+                      useBalance ? "bg-app-highlight" : "bg-app-border-soft",
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out",
+                        useBalance ? "translate-x-5" : "translate-x-0.5",
+                      )}
+                    />
                   </div>
                 </div>
               )}
@@ -391,11 +411,6 @@ export function PaymentMethodDialog({
                   onClick={() => void submitPayment(m.method, m.streampayPreset)}
                 >
                   {m.label}
-                  {useBalance && (
-                    <span className="ml-2 text-xs opacity-80">
-                      (к доплате {formatNumberWithSpaces(Math.round(amountToPay * 100) / 100)} {CURRENCY.RUB})
-                    </span>
-                  )}
                 </Button>
               ))}
             </div>
