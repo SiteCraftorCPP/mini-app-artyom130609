@@ -2172,6 +2172,13 @@ export function startOrderNotifyHttpServer(
           });
         }
         putPendingPayment(merchantOrderId, payload);
+        console.info("[payment] prepare ok", {
+          method: body.method,
+          merchantOrderId,
+          orderNumber: payload.orderNumber,
+          amount: oa,
+          methodId: i,
+        });
         res.writeHead(200, { "Content-Type": "application/json", ...corsNotifyHeaders });
         res.end(
           JSON.stringify({
@@ -2350,6 +2357,12 @@ export function startOrderNotifyHttpServer(
       }
       try {
         const fields = await collectFreeKassaFormFields(req, req.url ?? "/");
+        console.info("[freekassa] callback", {
+          method: req.method,
+          ip,
+          order: fields.MERCHANT_ORDER_ID ?? "",
+          amount: fields.AMOUNT ?? "",
+        });
         const amount = fields.AMOUNT ?? "";
         const mId = fields.MERCHANT_ID ?? "";
         const mOrder = fields.MERCHANT_ORDER_ID ?? "";
@@ -2402,9 +2415,18 @@ export function startOrderNotifyHttpServer(
         if (intid) {
           markIntidProcessed(intid);
         }
-        await deliverPaidPendingOrder(bot, miniAppUrl, pending);
         markPendingSent(mOrder);
         res.writeHead(200, { "Content-Type": "text/plain" }).end("YES");
+        void deliverPaidPendingOrder(bot, miniAppUrl, pending)
+          .then(() => {
+            console.info("[freekassa] paid ok", {
+              merchantOrderId: mOrder,
+              orderNumber: pending.orderNumber,
+            });
+          })
+          .catch((e) => {
+            console.error("[freekassa] deliver after YES", mOrder, e);
+          });
       } catch (e) {
         console.error("[freekassa] handler", e);
         res.writeHead(500, corsNotifyHeaders).end("error");
