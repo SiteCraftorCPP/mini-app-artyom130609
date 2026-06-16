@@ -1377,6 +1377,7 @@ type BuildPendingResult = BuildPendingOk | BuildPendingFail;
     if (!Number.isFinite(amountNum) || amountNum <= 0) {
       return { ok: false, status: 400, error: "amount" };
     }
+    const fullAmountRub = amountNum;
     const webUser = parseValidatedWebAppUser(body.initData, botToken);
     if (!webUser) {
       return { ok: false, status: 401, error: "bad initData" };
@@ -1435,7 +1436,7 @@ type BuildPendingResult = BuildPendingOk | BuildPendingFail;
     if (
       expectedRub == null ||
       !Number.isFinite(expectedRub) ||
-      Math.abs(expectedRub - amountNum) > 0.009
+      Math.abs(expectedRub - fullAmountRub) > 0.009
     ) {
       return { ok: false, status: 400, error: "amount mismatch" };
     }
@@ -1455,7 +1456,7 @@ type BuildPendingResult = BuildPendingOk | BuildPendingFail;
       game: game.name,
       server: main?.name ?? "—",
       bankAccount: "",
-      amountRub: amountNum,
+      amountRub: fullAmountRub,
       virtAmountLabel: item.description.slice(0, 400),
       transferMethod: transferOs,
       otherService: {
@@ -1491,7 +1492,7 @@ type BuildPendingResult = BuildPendingOk | BuildPendingFail;
     game: body.game,
     server: body.server,
     bankAccount: body.bankAccount,
-    amountRub: amountNum,
+    amountRub: fullAmountRub,
     virtAmountLabel: body.virtAmountLabel,
     transferMethod: transfer,
     promoCode: body.promoCode?.trim() || undefined,
@@ -1728,29 +1729,7 @@ export function startOrderNotifyHttpServer(
           const telegramUserId = payload.telegramUserId;
 
           if (amountNum === 0) {
-            if (payload.balanceToDeduct) {
-              changeBalanceAdmin(telegramUserId, payload.balanceToDeduct, false, "system");
-            }
-            if (payload.promoCode) {
-              consumePromoCode(payload.promoCode);
-            }
-            const successPayload: VirtOrderSuccessPayload = {
-              telegramUserId,
-              telegramUsername: payload.telegramUsername,
-              telegramFirstName: payload.telegramFirstName,
-              orderNumber: payload.orderNumber,
-              orderId: payload.orderId,
-              orderKind: payload.orderKind,
-              game: payload.game,
-              server: payload.server,
-              bankAccount: payload.bankAccount,
-              amountRub: payload.amountRub,
-              virtAmountLabel: payload.virtAmountLabel,
-              transferMethod: payload.transferMethod,
-              promoCode: payload.promoCode,
-              otherService: payload.otherService,
-            };
-            await sendVirtOrderSuccess(bot, miniAppUrl, successPayload);
+            await deliverPaidPendingOrder(bot, miniAppUrl, payload);
             res.writeHead(200, { "Content-Type": "application/json", ...corsNotifyHeaders });
             res.end(JSON.stringify({ payUrl: "balance_success", merchantOrderId: "balance", orderId: payload.orderId, orderNumber: payload.orderNumber }));
             return;
