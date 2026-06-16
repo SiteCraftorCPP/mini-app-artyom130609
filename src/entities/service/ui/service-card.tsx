@@ -34,7 +34,7 @@ export const ServiceCard = ({
         <AppText
           variant="serviceTitle"
           size="service"
-          className="relative z-10 truncate"
+          className="relative z-10 min-w-0 max-w-[55%] line-clamp-2 whitespace-normal break-words [overflow-wrap:anywhere] !leading-[1.15]"
         >
           {service.title}
         </AppText>
