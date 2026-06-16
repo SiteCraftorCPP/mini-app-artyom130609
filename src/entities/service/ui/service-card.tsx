@@ -2,7 +2,6 @@ import type { Service } from "../model";
 
 import { SERVICE_GRADIENT_CLASSES } from "@/shared/constants/service-gradients";
 import { SERVICE_ICONS } from "@/shared/constants/service-icons";
-import { SERVICE_PLAQUE_TITLE } from "@/shared/lib/plaque-title-class";
 import { cn } from "@/shared/utils";
 import { AppText, TAG } from "@/ui/app-text";
 import { Button } from "@/ui/button";
@@ -20,6 +19,7 @@ export const ServiceCard = ({
 }: ServiceCardProps) => {
   const hasSubtitle = Boolean(service.subtitle?.trim());
   const title = service.title.trim();
+  const multiLine = hasSubtitle || title.length > 20;
 
   return (
     <Button
@@ -31,15 +31,16 @@ export const ServiceCard = ({
     >
       <span
         className={cn(
-          "relative flex w-full min-h-16 min-w-0 items-center rounded-full border border-white/30 py-3 pl-5 pr-[38%]",
+          "relative flex w-full items-center overflow-hidden rounded-full border border-white/30 px-5",
           SERVICE_GRADIENT_CLASSES[service.gradientToken],
+          hasSubtitle ? "min-h-16 h-auto py-3" : multiLine ? "min-h-16 h-auto py-2" : "h-16",
         )}
       >
-        <div className="relative z-10 min-w-0 flex-1">
+        <div className="relative z-10 min-w-0 max-w-[58%]">
           <AppText
             variant="serviceTitle"
             size="service"
-            className={SERVICE_PLAQUE_TITLE}
+            className="whitespace-normal break-words [overflow-wrap:anywhere] !leading-snug"
           >
             {title}
           </AppText>
@@ -57,7 +58,7 @@ export const ServiceCard = ({
         <img
           src={SERVICE_ICONS[service.iconToken]}
           alt=""
-          className="pointer-events-none absolute top-1/2 right-2 z-0 h-[78%] max-h-14 w-[34%] -translate-y-1/2 object-contain object-right"
+          className="pointer-events-none absolute right-2 bottom-0 h-[90%] w-[40%] object-contain object-right"
           width="100%"
           height="100%"
         />

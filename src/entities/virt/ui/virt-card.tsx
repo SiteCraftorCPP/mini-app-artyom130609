@@ -4,7 +4,6 @@ import {
   VIRT_GRADIENT_CLASSES,
   VIRT_TEXT_GRADIENT_CLASSES,
 } from "@/shared/constants/virt-gradients";
-import { VIRT_PLAQUE_TITLE } from "@/shared/lib/plaque-title-class";
 import { cn } from "@/shared/utils";
 import { AppText } from "@/ui/app-text";
 import { Button } from "@/ui/button";
@@ -28,8 +27,6 @@ export const VirtCard = ({
   onClick,
   interactive = true,
 }: VirtCardProps) => {
-  const name = virt.name.trim();
-
   return (
     <Button
       type="button"
@@ -43,19 +40,19 @@ export const VirtCard = ({
     >
       <span
         className={cn(
-          "relative flex w-full min-h-20 min-w-0 items-center rounded-full py-2",
+          "relative flex h-20 w-full items-center overflow-hidden rounded-full",
           VIRT_GRADIENT_CLASSES[virt.gradientToken],
         )}
       >
         <AppText
           variant="primaryStrong"
+          size="xxxl"
           className={cn(
-            "relative z-10 min-w-0 max-w-[58%] flex-1 items-center justify-center rounded-full px-2 py-2 md:max-w-[62%] md:px-4",
+            "relative z-10 flex h-full w-[60%] md:w-[66.5%] shrink-0 items-center justify-center truncate rounded-full px-3 md:px-5 text-center text-[19px] leading-none",
             VIRT_TEXT_GRADIENT_CLASSES[virt.gradientToken],
-            VIRT_PLAQUE_TITLE,
           )}
         >
-          {name}
+          {virt.name}
         </AppText>
         <span
           className={cn(
