@@ -4,6 +4,10 @@ import {
   VIRT_GRADIENT_CLASSES,
   VIRT_TEXT_GRADIENT_CLASSES,
 } from "@/shared/constants/virt-gradients";
+import {
+  plaqueNeedsTallLayout,
+  plaqueTitleClass,
+} from "@/shared/lib/plaque-title-class";
 import { cn } from "@/shared/utils";
 import { AppText } from "@/ui/app-text";
 import { Button } from "@/ui/button";
@@ -27,6 +31,9 @@ export const VirtCard = ({
   onClick,
   interactive = true,
 }: VirtCardProps) => {
+  const name = virt.name.trim();
+  const tall = plaqueNeedsTallLayout(name);
+
   return (
     <Button
       type="button"
@@ -40,19 +47,20 @@ export const VirtCard = ({
     >
       <span
         className={cn(
-          "relative flex h-20 w-full items-center overflow-hidden rounded-full",
+          "relative flex w-full min-w-0 items-center rounded-full",
           VIRT_GRADIENT_CLASSES[virt.gradientToken],
+          tall ? "min-h-20 h-auto py-2" : "h-20",
         )}
       >
         <AppText
           variant="primaryStrong"
-          size="xxxl"
           className={cn(
-            "relative z-10 flex h-full w-[60%] md:w-[66.5%] shrink-0 items-center justify-center truncate rounded-full px-3 md:px-5 text-center text-[19px] leading-none",
+            "relative z-10 min-w-0 max-w-[58%] flex-1 items-center justify-center rounded-full px-2 py-2 text-center md:max-w-[62%] md:px-4",
             VIRT_TEXT_GRADIENT_CLASSES[virt.gradientToken],
+            plaqueTitleClass(name, "virt"),
           )}
         >
-          {virt.name}
+          {name}
         </AppText>
         <span
           className={cn(
