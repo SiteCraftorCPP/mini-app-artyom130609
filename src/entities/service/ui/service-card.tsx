@@ -3,7 +3,7 @@ import type { Service } from "../model";
 import { SERVICE_GRADIENT_CLASSES } from "@/shared/constants/service-gradients";
 import { SERVICE_ICONS } from "@/shared/constants/service-icons";
 import { cn } from "@/shared/utils";
-import { AppText, TAG } from "@/ui/app-text";
+import { AppText } from "@/ui/app-text";
 import { Button } from "@/ui/button";
 
 type ServiceCardProps = {
@@ -17,10 +17,6 @@ export const ServiceCard = ({
   onClick,
   service,
 }: ServiceCardProps) => {
-  const hasSubtitle = Boolean(service.subtitle?.trim());
-  const title = service.title.trim();
-  const multiLine = hasSubtitle || title.length > 20;
-
   return (
     <Button
       type="button"
@@ -31,30 +27,17 @@ export const ServiceCard = ({
     >
       <span
         className={cn(
-          "relative flex w-full items-center overflow-hidden rounded-full border border-white/30 px-5",
+          "relative flex h-16 w-full items-center overflow-hidden rounded-full border border-white/30 px-5",
           SERVICE_GRADIENT_CLASSES[service.gradientToken],
-          hasSubtitle ? "min-h-16 h-auto py-3" : multiLine ? "min-h-16 h-auto py-2" : "h-16",
         )}
       >
-        <div className="relative z-10 min-w-0 max-w-[58%]">
-          <AppText
-            variant="serviceTitle"
-            size="service"
-            className="whitespace-normal break-words [overflow-wrap:anywhere] !leading-snug"
-          >
-            {title}
-          </AppText>
-          {hasSubtitle ? (
-            <AppText
-              tag={TAG.p}
-              variant="primaryMedium"
-              size="small"
-              className="!mt-1 !line-clamp-4 !whitespace-pre-wrap !text-left !leading-snug !text-white/90"
-            >
-              {service.subtitle!.trim()}
-            </AppText>
-          ) : null}
-        </div>
+        <AppText
+          variant="serviceTitle"
+          size="service"
+          className="relative z-10 min-w-0 max-w-[58%] truncate"
+        >
+          {service.title}
+        </AppText>
         <img
           src={SERVICE_ICONS[service.iconToken]}
           alt=""
