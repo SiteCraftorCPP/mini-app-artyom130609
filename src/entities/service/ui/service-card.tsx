@@ -2,10 +2,7 @@ import type { Service } from "../model";
 
 import { SERVICE_GRADIENT_CLASSES } from "@/shared/constants/service-gradients";
 import { SERVICE_ICONS } from "@/shared/constants/service-icons";
-import {
-  plaqueNeedsTallLayout,
-  plaqueTitleClass,
-} from "@/shared/lib/plaque-title-class";
+import { SERVICE_PLAQUE_TITLE } from "@/shared/lib/plaque-title-class";
 import { cn } from "@/shared/utils";
 import { AppText, TAG } from "@/ui/app-text";
 import { Button } from "@/ui/button";
@@ -23,7 +20,6 @@ export const ServiceCard = ({
 }: ServiceCardProps) => {
   const hasSubtitle = Boolean(service.subtitle?.trim());
   const title = service.title.trim();
-  const tall = plaqueNeedsTallLayout(title, hasSubtitle);
 
   return (
     <Button
@@ -35,15 +31,15 @@ export const ServiceCard = ({
     >
       <span
         className={cn(
-          "relative flex w-full min-w-0 items-center rounded-full border border-white/30 py-3 pl-5 pr-[38%]",
+          "relative flex w-full min-h-16 min-w-0 items-center rounded-full border border-white/30 py-3 pl-5 pr-[38%]",
           SERVICE_GRADIENT_CLASSES[service.gradientToken],
-          tall ? "min-h-16 h-auto" : "h-16",
         )}
       >
         <div className="relative z-10 min-w-0 flex-1">
           <AppText
             variant="serviceTitle"
-            className={plaqueTitleClass(title, "service")}
+            size="service"
+            className={SERVICE_PLAQUE_TITLE}
           >
             {title}
           </AppText>
