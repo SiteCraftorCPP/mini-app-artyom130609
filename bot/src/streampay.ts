@@ -251,17 +251,20 @@ export function streamPayBuildCreatePaymentJson(
   if (i.merchantFee != null && Number.isFinite(i.merchantFee)) {
     o.merchant_fee = i.merchantFee;
   }
-  if (i.successUrl) {
-    o.success_url = i.successUrl;
-  }
-  if (i.failUrl) {
-    o.fail_url = i.failUrl;
-  }
-  if (i.cancelUrl) {
-    o.cancel_url = i.cancelUrl;
-  }
-  if (i.lang) {
-    o.lang = i.lang;
+  const includeOptionalUrls = legacyFull || i.paymentType !== 2;
+  if (includeOptionalUrls) {
+    if (i.successUrl) {
+      o.success_url = i.successUrl;
+    }
+    if (i.failUrl) {
+      o.fail_url = i.failUrl;
+    }
+    if (i.cancelUrl) {
+      o.cancel_url = i.cancelUrl;
+    }
+    if (i.lang) {
+      o.lang = i.lang;
+    }
   }
   if (extraFromEnv && typeof extraFromEnv === "object" && !Array.isArray(extraFromEnv)) {
     for (const [k, v] of Object.entries(extraFromEnv)) {

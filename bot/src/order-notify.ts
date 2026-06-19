@@ -1844,23 +1844,27 @@ export function startOrderNotifyHttpServer(
           }
           const storeId = Number(storeRaw);
           const merchantOrderId = buildMerchantOrderId();
+          const invoiceCurrency = systemCurrency.replace(/^\ufeff/, "").trim();
 
           let streamPayAmount: number;
           let amountSource: string;
           try {
-            const targetCurrency = presetLabel || systemCurrency.replace(/^\ufeff/, "").trim();
-            const manualRateRaw = process.env[`STREAMPAY_RATE_${targetCurrency.toUpperCase()}`]?.trim();
+            // payment_type=2 + USDT: amount в единицах system_currency (ЛК), не в KZT/UAH с кнопки
+            const amountCurrency =
+              paymentType === 2 ? invoiceCurrency : presetLabel || invoiceCurrency;
+            const manualRateRaw =
+              process.env[`STREAMPAY_RATE_${amountCurrency.toUpperCase()}`]?.trim();
 
             if (manualRateRaw && Number.isFinite(Number(manualRateRaw.replace(",", ".")))) {
               const rate = Number(manualRateRaw.replace(",", "."));
               streamPayAmount = amountNum * rate;
-              amountSource = `env_STREAMPAY_RATE_${targetCurrency.toUpperCase()}`;
+              amountSource = `env_STREAMPAY_RATE_${amountCurrency.toUpperCase()}`;
             } else if (streamPayAutoFiatRatesEnabled()) {
               streamPayAmount = await streamPayConvertRubToFiatAmount(
                 amountNum,
-                targetCurrency
+                amountCurrency,
               );
-              amountSource = "cbr_" + targetCurrency.toUpperCase();
+              amountSource = "cbr_" + amountCurrency.toUpperCase();
 
               const marginRaw = process.env.STREAMPAY_FIAT_MARGIN_PERCENT?.trim();
               if (marginRaw) {
@@ -1894,7 +1898,7 @@ export function startOrderNotifyHttpServer(
           }
           const normalized = streamPayNormalizeUsdtInvoiceAmount(
             paymentType,
-            presetLabel || systemCurrency,
+            invoiceCurrency,
             streamPayAmount,
             amountSource,
           );
