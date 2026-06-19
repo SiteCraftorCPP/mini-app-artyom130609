@@ -26,15 +26,29 @@ export function streamPayUtcMinute(d: Date): string {
 }
 
 function normalizeHex64(label: string, hex: string): string {
-  const s = hex.trim().toLowerCase();
+  const s = hex.trim().toLowerCase().replace(/^0x/, "");
   if (!/^[0-9a-f]{64}$/.test(s)) {
     throw new Error(`${label}: ожидается 64 hex-символа (32 байта)`);
   }
   return s;
 }
 
+/** ЛК StreamPay часто показывает private+public одной строкой (128 hex) — берём первые 32 байта. */
+function normalizePrivateKeyHex(hex: string): string {
+  const s = hex.trim().toLowerCase().replace(/^0x/, "");
+  if (/^[0-9a-f]{64}$/.test(s)) {
+    return s;
+  }
+  if (/^[0-9a-f]{128}$/.test(s)) {
+    return s.slice(0, 64);
+  }
+  throw new Error(
+    "STREAMPAY_PRIVATE_KEY_HEX: ожидается 64 hex-символа (32 байта) или 128 (private+public из ЛК StreamPay)",
+  );
+}
+
 export function streamPayCreatePrivateKey(seedHex64: string): ReturnType<typeof createPrivateKey> {
-  const seed = normalizeHex64("STREAMPAY_PRIVATE_KEY_HEX", seedHex64);
+  const seed = normalizePrivateKeyHex(seedHex64);
   return createPrivateKey({
     key: Buffer.concat([
       Buffer.from(STREAMPAY_PRIVATE_DER_PREFIX_HEX, "hex"),
