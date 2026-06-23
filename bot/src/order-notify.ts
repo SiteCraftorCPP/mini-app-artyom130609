@@ -2398,18 +2398,18 @@ export function startOrderNotifyHttpServer(
         if (intid) {
           markIntidProcessed(intid);
         }
-        markPendingSent(mOrder);
-        res.writeHead(200, { "Content-Type": "text/plain" }).end("YES");
-        void deliverPaidPendingOrder(bot, miniAppUrl, pending)
-          .then(() => {
-            console.info("[freekassa] paid ok", {
-              merchantOrderId: mOrder,
-              orderNumber: pending.orderNumber,
-            });
-          })
-          .catch((e) => {
-            console.error("[freekassa] deliver after YES", mOrder, e);
+        try {
+          await deliverPaidPendingOrder(bot, miniAppUrl, pending);
+          markPendingSent(mOrder);
+          console.info("[freekassa] paid ok", {
+            merchantOrderId: mOrder,
+            orderNumber: pending.orderNumber,
           });
+          res.writeHead(200, { "Content-Type": "text/plain" }).end("YES");
+        } catch (e) {
+          console.error("[freekassa] deliver failed", mOrder, e);
+          res.writeHead(500, corsNotifyHeaders).end("error");
+        }
       } catch (e) {
         console.error("[freekassa] handler", e);
         res.writeHead(500, corsNotifyHeaders).end("error");
