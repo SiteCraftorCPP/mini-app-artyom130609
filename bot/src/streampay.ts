@@ -4,7 +4,7 @@
  * Подпись: JSON-тело (UTF-8) + UTC YYYYMMDD:HHMM, Ed25519 PKCS#8 seed 32 байта.
  * Пример тела: store_id, customer, external_id, description, system_currency (напр. "USDT"), payment_type: 2, amount.
  */
-import { createPrivateKey, createPublicKey, sign, verify } from "node:crypto";
+import { createPrivateKey, createPublicKey, sign, verify, type KeyObject } from "node:crypto";
 
 const utf8Encoder = new TextEncoder();
 
@@ -71,6 +71,25 @@ export function streamPayCreatePublicKey(pubHex64: string): ReturnType<typeof cr
   });
 }
 
+/** Публичный ключ Ed25519 (64 hex), выведенный из приватного seed — для сверки с ЛК. */
+export function streamPayDerivePublicKeyHex(privateSeedHex: string): string {
+  const priv = streamPayCreatePrivateKey(privateSeedHex);
+  const der = createPublicKey(priv).export({ type: "spki", format: "der" }) as Buffer;
+  return der.subarray(der.length - 32).toString("hex");
+}
+
+/** Ключи из пары в .env должны совпадать; иначе callback GET/POST не пройдёт проверку. */
+export function streamPayPublicKeyMatchesPrivate(
+  privateSeedHex: string,
+  publicHex64: string,
+): boolean {
+  try {
+    return streamPayDerivePublicKeyHex(privateSeedHex) === normalizeHex64("public", publicHex64);
+  } catch {
+    return false;
+  }
+}
+
 /** Подпись тела запроса к /api/payment/create (строка JSON UTF-8) — как в доке: TextEncoder + Ed25519. */
 export function streamPaySignUtf8Payload(bodyUtf8: string, seedHex64: string): string {
   const now = new Date();
@@ -84,10 +103,13 @@ export function streamPaySignUtf8Payload(bodyUtf8: string, seedHex64: string): s
  * Проверка callback StreamPay: буфер подписываемых данных + суффикс времени (как в CallbackPostJs / CallbackGetJs).
  * Два окна: текущая минута и −1 минута.
  */
+const STREAMPAY_CALLBACK_QUERY_SKIP_KEYS = new Set(["signature", "sign"]);
+
 export function streamPayVerifySignedPayload(
   payloadBuf: Buffer,
   signatureHex: string,
   publicKeyHex64: string,
+  opts?: { minuteSkew?: number },
 ): boolean {
   let sig: Buffer;
   try {
@@ -98,14 +120,15 @@ export function streamPayVerifySignedPayload(
   if (sig.length === 0) {
     return false;
   }
-  let pub: ReturnType<typeof createPublicKey>;
+  let pub: KeyObject;
   try {
     pub = streamPayCreatePublicKey(publicKeyHex64);
   } catch {
     return false;
   }
+  const skew = Math.min(Math.max(opts?.minuteSkew ?? 5, 1), 15);
   const now = new Date();
-  for (let i = 0; i < 2; i++) {
+  for (let i = 0; i < skew; i++) {
     const tm = streamPayUtcMinute(now);
     const bufToSign = Buffer.concat([payloadBuf, Buffer.from(tm, "ascii")]);
     try {
@@ -120,13 +143,65 @@ export function streamPayVerifySignedPayload(
   return false;
 }
 
-/** GET callback: ключи сортируются, строка key=value через &. */
+/** GET callback: ключи сортируются, строка key=value через & (без signature/sign — как в CallbackGetJs). */
 export function streamPaySortedQueryString(params: Record<string, string>): string {
   return Object.keys(params)
-    .filter((k) => params[k] != null && params[k] !== "")
+    .filter((k) => !STREAMPAY_CALLBACK_QUERY_SKIP_KEYS.has(k.toLowerCase()))
+    .filter((k) => params[k] != null)
     .sort()
     .map((k) => `${k}=${params[k]}`)
     .join("&");
+}
+
+/** Параметры GET callback из req.url — значения как в query (декодированные). */
+export function streamPayParseCallbackQuery(fullUrl: string): Record<string, string> {
+  const u = new URL(fullUrl, "http://streampay.callback");
+  const rec: Record<string, string> = {};
+  u.searchParams.forEach((v, k) => {
+    if (!(k in rec)) {
+      rec[k] = v;
+    }
+  });
+  return rec;
+}
+
+/** Подпись из заголовка или query (?signature= / ?sign=). */
+export function streamPayExtractCallbackSignature(
+  headers: Record<string, string | string[] | undefined>,
+  query: Record<string, string>,
+): string {
+  const sigRaw = headers["signature"] ?? headers["Signature"];
+  const fromHeader =
+    typeof sigRaw === "string" ? sigRaw : Array.isArray(sigRaw) ? (sigRaw[0] ?? "") : "";
+  if (fromHeader.trim()) {
+    return fromHeader.trim();
+  }
+  return (query.signature ?? query.sign ?? "").trim();
+}
+
+/** Публичный ключ для verify: из .env или выведенный из приватного (если пара совпадает с ЛК). */
+export function streamPayResolveVerifyPublicKeyHex(): string | null {
+  const pubEnv = process.env.STREAMPAY_PUBLIC_KEY_HEX?.trim();
+  const privEnv = process.env.STREAMPAY_PRIVATE_KEY_HEX?.trim();
+  if (pubEnv) {
+    if (privEnv && !streamPayPublicKeyMatchesPrivate(privEnv, pubEnv)) {
+      const derived = streamPayDerivePublicKeyHex(privEnv);
+      console.warn(
+        "[streampay] STREAMPAY_PUBLIC_KEY_HEX не совпадает с парой к приватному; для callback используем выведенный ключ",
+        { envPrefix: pubEnv.slice(0, 8), derivedPrefix: derived.slice(0, 8) },
+      );
+      return derived;
+    }
+    return pubEnv;
+  }
+  if (privEnv) {
+    try {
+      return streamPayDerivePublicKeyHex(privEnv);
+    } catch {
+      return null;
+    }
+  }
+  return null;
 }
 
 export type StreamPayCreatePaymentFields = {

@@ -73,10 +73,13 @@ import {
   STREAMPAY_DEFAULT_API_BASE,
   streamPayBuildCreatePaymentJson,
   streamPayExtractCallbackFields,
+  streamPayExtractCallbackSignature,
   streamPayIsPaidStatus,
+  streamPayParseCallbackQuery,
   streamPayParseExtraCreateFieldsJson,
   streamPayPayUrlWithOptionalFiatParam,
   streamPayPostCreate,
+  streamPayResolveVerifyPublicKeyHex,
   streamPaySanitizeExtraForMerge,
   streamPaySortedQueryString,
   streamPayVerifySignedPayload,
@@ -2180,32 +2183,40 @@ export function startOrderNotifyHttpServer(
     }
 
     if ((req.method === "GET" || req.method === "POST") && url === "/notify/streampay") {
-      const pubHex = process.env.STREAMPAY_PUBLIC_KEY_HEX?.trim();
+      const pubHex = streamPayResolveVerifyPublicKeyHex();
       if (!pubHex) {
         res.writeHead(503, corsNotifyHeaders).end("no streampay public key");
         return;
       }
       const sigRaw = req.headers["signature"] ?? req.headers["Signature"];
-      const signatureHex =
+      const signatureFromHeader =
         typeof sigRaw === "string" ? sigRaw : Array.isArray(sigRaw) ? (sigRaw[0] ?? "") : "";
-      if (!signatureHex) {
-        res.writeHead(400, corsNotifyHeaders).end("no signature");
-        return;
-      }
       try {
         if (req.method === "GET") {
           const fullUrl = req.url ?? "/";
-          const u = new URL(fullUrl, "http://streampay.callback");
-          const rec: Record<string, string> = {};
-          u.searchParams.forEach((v, k) => {
-            if (!(k in rec)) {
-              rec[k] = v;
-            }
-          });
+          const rec = streamPayParseCallbackQuery(fullUrl);
+          const signatureHex = streamPayExtractCallbackSignature(req.headers, rec);
+          if (!signatureHex) {
+            res.writeHead(400, corsNotifyHeaders).end("no signature");
+            return;
+          }
           const sorted = streamPaySortedQueryString(rec);
           const paramsBuf = Buffer.from(sorted, "utf8");
           if (!streamPayVerifySignedPayload(paramsBuf, signatureHex, pubHex)) {
-            console.warn("[streampay] неверная подпись (GET)");
+            const verbose =
+              process.env.STREAMPAY_LOG === "1" || process.env.STREAMPAY_LOG === "true";
+            console.warn("[streampay] неверная подпись (GET)", {
+              sortedQuery: sorted.slice(0, 500),
+              queryKeys: Object.keys(rec).sort(),
+              signatureLen: signatureHex.length,
+              pubPrefix: pubHex.slice(0, 8),
+              ...(verbose
+                ? {
+                    externalId: rec.external_id ?? null,
+                    status: rec.status ?? null,
+                  }
+                : {}),
+            });
             res.writeHead(403, corsNotifyHeaders).end("sign");
             return;
           }
@@ -2259,8 +2270,19 @@ export function startOrderNotifyHttpServer(
         }
 
         const rawBuf = await readRequestBodyBuffer(req);
+        const signatureHex =
+          signatureFromHeader.trim() ||
+          streamPayExtractCallbackSignature(req.headers, {});
+        if (!signatureHex) {
+          res.writeHead(400, corsNotifyHeaders).end("no signature");
+          return;
+        }
         if (!streamPayVerifySignedPayload(rawBuf, signatureHex, pubHex)) {
-          console.warn("[streampay] неверная подпись (POST)");
+          console.warn("[streampay] неверная подпись (POST)", {
+            bodyLen: rawBuf.length,
+            signatureLen: signatureHex.length,
+            pubPrefix: pubHex.slice(0, 8),
+          });
           res.writeHead(403, corsNotifyHeaders).end("sign");
           return;
         }
