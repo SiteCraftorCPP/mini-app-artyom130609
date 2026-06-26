@@ -1210,6 +1210,36 @@ function streamPayInvoiceUnitsPerRubFromEnv(): number | null {
   return n;
 }
 
+/** Наценка к цене заказа при оплате через StreamPay (по умолчанию 20%). 0 / off — отключить. */
+function streamPayPaymentMarkupPercent(): number {
+  const raw = process.env.STREAMPAY_PAYMENT_MARKUP_PERCENT?.trim();
+  if (raw === "0" || raw?.toLowerCase() === "off" || raw?.toLowerCase() === "false") {
+    return 0;
+  }
+  if (raw) {
+    const n = Number(raw.replace(",", "."));
+    if (Number.isFinite(n) && n >= 0) {
+      return n;
+    }
+  }
+  return 20;
+}
+
+/** ₽ к выставлению в StreamPay: (цена заказа + наценка) − списание с баланса. */
+function streamPayRubAmountForInvoice(
+  payload: PendingPaymentOrder,
+  amountNumAfterBalance: number,
+): number {
+  const markup = streamPayPaymentMarkupPercent();
+  if (markup <= 0) {
+    return amountNumAfterBalance;
+  }
+  const orderRub = payload.amountRub ?? amountNumAfterBalance;
+  const markedUp = orderRub * (1 + markup / 100);
+  const balance = payload.balanceToDeduct ?? 0;
+  return Math.max(0, Math.round((markedUp - balance) * 100) / 100);
+}
+
 /** Подпись в заказе / лог: какая кнопка в мини-аппе (API всегда по ЛК: USDT + payment_type из env). */
 const STREAMPAY_UI_PRESET_LABEL: Record<string, string> = {
   tenge: "KZT",
@@ -1851,6 +1881,8 @@ export function startOrderNotifyHttpServer(
 
           let streamPayAmount: number;
           let amountSource: string;
+          const streamPayRubBase = streamPayRubAmountForInvoice(payload, amountNum);
+          const markupPct = streamPayPaymentMarkupPercent();
           try {
             // payment_type=2 + USDT: amount в единицах system_currency (ЛК), не в KZT/UAH с кнопки
             const amountCurrency =
@@ -1860,11 +1892,11 @@ export function startOrderNotifyHttpServer(
 
             if (manualRateRaw && Number.isFinite(Number(manualRateRaw.replace(",", ".")))) {
               const rate = Number(manualRateRaw.replace(",", "."));
-              streamPayAmount = amountNum * rate;
+              streamPayAmount = streamPayRubBase * rate;
               amountSource = `env_STREAMPAY_RATE_${amountCurrency.toUpperCase()}`;
             } else if (streamPayAutoFiatRatesEnabled()) {
               streamPayAmount = await streamPayConvertRubToFiatAmount(
-                amountNum,
+                streamPayRubBase,
                 amountCurrency,
               );
               amountSource = "cbr_" + amountCurrency.toUpperCase();
@@ -1880,12 +1912,15 @@ export function startOrderNotifyHttpServer(
             } else {
               const legacy = streamPayInvoiceUnitsPerRubFromEnv();
               if (legacy != null) {
-                streamPayAmount = Math.round(amountNum * legacy * 100) / 100;
+                streamPayAmount = Math.round(streamPayRubBase * legacy * 100) / 100;
                 amountSource = "env_ORDER_RUB_TO_INVOICE_RATE";
               } else {
-                streamPayAmount = amountNum;
+                streamPayAmount = streamPayRubBase;
                 amountSource = "rub_as_invoice_units";
               }
+            }
+            if (markupPct > 0) {
+              amountSource += `+order_markup_${markupPct}%`;
             }
           } catch (e) {
             const msg = e instanceof Error ? e.message : String(e);
@@ -1950,6 +1985,9 @@ export function startOrderNotifyHttpServer(
               paymentType,
               currencyForApi: paymentType === 1 ? currencyOpt : null,
               storeId,
+              orderRub: payload.amountRub ?? amountNum,
+              streamPayRubBase,
+              paymentMarkupPercent: markupPct,
               amount: streamPayAmount,
               amountSource,
               amountInvalidMaxTries: maxAmountTries,
