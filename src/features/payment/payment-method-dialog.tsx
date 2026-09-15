@@ -339,7 +339,7 @@ export function PaymentMethodDialog({
                 size="default"
                 disabled={busy || balance <= 0}
                 className={cn(methodBtnClass, "flex-col items-center gap-0.5 py-3", balance <= 0 && "opacity-60")}
-                onClick={() => void submitPayment("balance", undefined, true)}
+                onClick={() => void submitPayment("balance", true)}
               >
                 <span>Оплатить с баланса</span>
                 <span className="text-xs font-medium opacity-90">
