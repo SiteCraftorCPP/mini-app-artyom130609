@@ -11,7 +11,6 @@ import { formatNumberWithSpaces } from "@/shared/lib/format-numbers";
 import {
   type PaymentMethodCode,
   type PaymentPrepareInput,
-  type StreampayFiatPreset,
   openPaymentUrl,
   requestPaymentPrepare,
 } from "@/shared/lib/prepare-payment";
@@ -66,15 +65,10 @@ const RUB_METHODS: {
   rowKey: string;
   method: PaymentMethodCode;
   label: string;
-  streampayPreset?: StreampayFiatPreset;
 }[] = [
   { rowKey: "sbp", method: "sbp", label: PAYMENT_TEXT.methodSbp },
   { rowKey: "mir", method: "mir", label: PAYMENT_TEXT.methodMir },
   { rowKey: "card_rub", method: "card_rub", label: PAYMENT_TEXT.methodCard },
-  { rowKey: "streampay-tenge", method: "streampay", label: "Тенге (Казахстан)", streampayPreset: "tenge" },
-  { rowKey: "streampay-uah", method: "streampay", label: "Гривны (Украина)", streampayPreset: "uah" },
-  { rowKey: "streampay-aze", method: "streampay", label: "Манат (Азербайджан)", streampayPreset: "azn" },
-  { rowKey: "streampay-byn", method: "streampay", label: "Белорусский рубль", streampayPreset: "byn" },
 ];
 
 const methodBtnClass =
@@ -90,11 +84,8 @@ function buildPrepareInput(
   initData: string,
   amountRub: number,
   ctx: PaymentDialogContext,
-  streampayPreset?: StreampayFiatPreset,
   useBalance?: boolean,
 ): PaymentPrepareInput & { useBalance?: boolean } {
-  const sp =
-    method === "streampay" && streampayPreset ? { streampayPreset } : {};
   if (ctx.orderKind === "virt") {
     return {
       initData,
@@ -108,7 +99,6 @@ function buildPrepareInput(
       transferMethod: ctx.transferMethod,
       promoCode: ctx.promoCode,
       useBalance,
-      ...sp,
     };
   }
   if (ctx.orderKind === "account") {
@@ -123,7 +113,6 @@ function buildPrepareInput(
       accountMode: ctx.accountMode,
       accountOptionLabel: ctx.accountOptionLabel,
       useBalance,
-      ...sp,
     };
   }
   return {
@@ -133,7 +122,6 @@ function buildPrepareInput(
     amountRub,
     otherService: ctx.otherService,
     useBalance,
-    ...sp,
   };
 }
 
@@ -180,7 +168,6 @@ export function PaymentMethodDialog({
   const submitPayment = useCallback(
     async (
       method: PaymentMethodCode | "balance",
-      streampayPreset?: StreampayFiatPreset,
       deductFromBalance = false,
     ) => {
       if (!initData.trim() || !context) {
@@ -207,26 +194,22 @@ export function PaymentMethodDialog({
           return;
         }
       } else if (willUseBalance && remainder > 0) {
-        const minRub = minRubForPaymentMethod(method, streampayPreset);
+        const minRub = minRubForPaymentMethod(method);
         if (remainder + 1e-9 < minRub) {
           showErrorMessage(
             method === "sbp"
               ? PAYMENT_TEXT.paymentMinSbp(minRub)
-              : method === "streampay"
-                ? PAYMENT_TEXT.paymentMinStreamPay(minRub, streampayPreset)
-                : PAYMENT_TEXT.paymentMinCard(minRub),
+              : PAYMENT_TEXT.paymentMinCard(minRub),
           );
           return;
         }
       } else if (!willUseBalance) {
-        const minRub = minRubForPaymentMethod(method, streampayPreset);
+        const minRub = minRubForPaymentMethod(method);
         if (amountRub + 1e-9 < minRub) {
           showErrorMessage(
             method === "sbp"
               ? PAYMENT_TEXT.paymentMinSbp(minRub)
-              : method === "streampay"
-                ? PAYMENT_TEXT.paymentMinStreamPay(minRub, streampayPreset)
-                : PAYMENT_TEXT.paymentMinCard(minRub),
+              : PAYMENT_TEXT.paymentMinCard(minRub),
           );
           return;
         }
@@ -239,7 +222,6 @@ export function PaymentMethodDialog({
           initData,
           amountRub,
           context,
-          streampayPreset,
           method === "balance" ? true : willUseBalance,
         );
         const res = await requestPaymentPrepare(body as PaymentPrepareInput & { useBalance?: boolean });
@@ -410,7 +392,7 @@ export function PaymentMethodDialog({
                   size="default"
                   disabled={busy}
                   className={methodBtnClass}
-                  onClick={() => void submitPayment(m.method, m.streampayPreset)}
+                  onClick={() => void submitPayment(m.method)}
                 >
                   {m.label}
                 </Button>

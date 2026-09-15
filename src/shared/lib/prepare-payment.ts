@@ -13,16 +13,13 @@ function resolveBaseUrl(): string {
   return "";
 }
 
-export type PaymentMethodCode = "sbp" | "mir" | "card_rub" | "streampay";
-
-export type StreampayFiatPreset = "tenge" | "uah" | "byn" | "azn";
+export type PaymentMethodCode = "sbp" | "mir" | "card_rub";
 
 export type PaymentPrepareInput = {
   initData: string;
   orderKind: VirtOrderNotifyKind;
   method: PaymentMethodCode;
   amountRub: number;
-  streampayPreset?: StreampayFiatPreset;
   game?: string;
   server?: string;
   bankAccount?: string;
@@ -55,38 +52,6 @@ function mapPrepareError(status: number, body: string): string {
     detail = typeof j?.detail === "string" ? j.detail.trim() : undefined;
   } catch {
     /* не JSON — nginx/html */
-  }
-  if (code === "streampay rates") {
-    return detail
-      ? `Оплата: ${detail}`
-      : "Не удалось получить курс валюты (ЦБ или сеть). Повторите позже.";
-  }
-  if (code === "streampay preset") {
-    return "Оплата: обновите мини-апп или выберите способ снова.";
-  }
-  if (code === "streampay store") {
-    return "Платёж StreamPay: на сервере не задан STREAMPAY_STORE_ID.";
-  }
-  if (code === "streampay private key") {
-    return "Платёж StreamPay: задайте STREAMPAY_PRIVATE_KEY_HEX в .env бота (ключ из кабинета).";
-  }
-  if (code === "streampay system_currency") {
-    return detail ?? "StreamPay: в .env бота задайте STREAMPAY_SYSTEM_CURRENCY из примера Payment Create в ЛК.";
-  }
-  if (code === "streampay payment_type") {
-    return detail ?? "StreamPay: задайте STREAMPAY_PAYMENT_TYPE (число из примера ЛК).";
-  }
-  if (code === "streampay currency") {
-    return detail ?? "StreamPay: при payment_type=1 нужен STREAMPAY_CURRENCY из ЛК.";
-  }
-  if (code === "streampay extra fields") {
-    return detail ?? "StreamPay: неверный JSON в STREAMPAY_EXTRA_CREATE_FIELDS.";
-  }
-  if (code === "streampay api") {
-    if (detail) {
-      return `StreamPay: ${detail}`;
-    }
-    return "StreamPay отклонил создание счёта. Проверьте ключи и настройки магазина.";
   }
   if (code === "freekassa not configured") {
     return "На сервере не задан FREEKASSA_SECRET1 в .env у бота — попросите администратора.";

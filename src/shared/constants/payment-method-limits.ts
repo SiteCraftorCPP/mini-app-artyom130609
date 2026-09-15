@@ -1,13 +1,8 @@
-import type { PaymentMethodCode, StreampayFiatPreset } from "@/shared/lib/prepare-payment";
+import type { PaymentMethodCode } from "@/shared/lib/prepare-payment";
 
 export const PAYMENT_MIN_RUB_SBP = 10;
 export const PAYMENT_MIN_RUB_MIR = 50;
 export const PAYMENT_MIN_RUB_CARD = 50;
-
-export const PAYMENT_MIN_RUB_STREAMPAY_KZT = 145; // ~1000 KZT
-export const PAYMENT_MIN_RUB_STREAMPAY_UAH = 465; // ~300 UAH
-export const PAYMENT_MIN_RUB_STREAMPAY_BYN = 240; // ~10 BYN
-export const PAYMENT_MIN_RUB_STREAMPAY_AZN = 375; // ~10 AZN
 
 export const VIRT_CATALOG_LEGACY_MIN_RUB_PLACEHOLDER = 500;
 
@@ -21,14 +16,7 @@ export function effectiveVirtFormMinAmountRub(catalogMinRub: number): number {
   return catalogMinRub;
 }
 
-export function minRubForPaymentMethod(method: PaymentMethodCode, preset?: StreampayFiatPreset): number {
-  if (method === "streampay") {
-    if (preset === "tenge") return PAYMENT_MIN_RUB_STREAMPAY_KZT;
-    if (preset === "uah") return PAYMENT_MIN_RUB_STREAMPAY_UAH;
-    if (preset === "byn") return PAYMENT_MIN_RUB_STREAMPAY_BYN;
-    if (preset === "azn") return PAYMENT_MIN_RUB_STREAMPAY_AZN;
-    return PAYMENT_MIN_RUB_STREAMPAY_KZT;
-  }
+export function minRubForPaymentMethod(method: PaymentMethodCode): number {
   if (method === "sbp") {
     return PAYMENT_MIN_RUB_SBP;
   }
